@@ -30,7 +30,7 @@ export default async function HomePage() {
   const { data: matches } = await supabase
     .from('matches')
     .select('*')
-    .gte('kickoff_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+    .gte('kickoff_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
     .order('kickoff_at', { ascending: true })
     .limit(50)
 

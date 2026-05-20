@@ -35,6 +35,9 @@ export async function GET(request) {
       )
 
       const data = await response.json()
+      console.log('API response:', JSON.stringify(data).substring(0, 500))
+      console.log('Fixtures count:', data.response?.length)
+      console.log('API errors:', data.errors)
 
       if (!data.response?.length) continue
 

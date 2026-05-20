@@ -33,7 +33,9 @@ export default async function HomePage() {
     .gte('kickoff_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
     .order('kickoff_at', { ascending: true })
     .limit(50)
-
+    console.log('Matches found:', matches?.length, matches)
+    console.log('Tournaments found:', tournaments?.length, tournaments)
+ 
   let userPredictions = {}
   if (userId) {
     const { data: predictions } = await supabase

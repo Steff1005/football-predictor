@@ -49,9 +49,6 @@ export default async function HomePage() {
 
   return (
     <div>
-      <div style={{background:'red', color:'white', padding:'10px'}}>
-        DEBUG: matches={matches?.length || 0}, tournaments={tournaments?.length || 0}
-      </div>
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-white">⚽ Прогнози на матчі</h1>
         {!userId && (

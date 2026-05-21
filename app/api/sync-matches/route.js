@@ -2,20 +2,16 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY  // Використовуємо service key для обходу RLS
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-const API_KEY = process.env.API_FOOTBALL_KEY
-
 export async function GET(request) {
-  // Захист: тільки Vercel Cron або авторизований запит
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    // Беремо всі активні турніри
     const { data: tournaments } = await supabase
       .from('tournaments')
       .select('*')
@@ -24,37 +20,34 @@ export async function GET(request) {
     let totalSynced = 0
 
     for (const tournament of tournaments) {
-      // Запит до API-Football
       const response = await fetch(
-        `https://v3.football.api-sports.io/fixtures?league=${tournament.league_id}&season=${tournament.season}&next=30`,
-        {
-          headers: {
-            'x-apisports-key': API_KEY,
-          }
-        }
+        `https://api.football-data.org/v4/competitions/${tournament.league_id}/matches?season=${tournament.season}`,
+        { headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_KEY } }
       )
 
       const data = await response.json()
-      console.log('API response:', JSON.stringify(data).substring(0, 500))
-      console.log('Fixtures count:', data.response?.length)
-      console.log('API errors:', data.errors)
+      if (!data.matches?.length) continue
 
-      if (!data.response?.length) continue
+      // Беремо тільки матчі з відомими командами
+      const matchesData = data.matches
+        .filter(m => m.homeTeam?.name && m.awayTeam?.name)
+        .map(m => ({
+          tournament_id: tournament.id,
+          external_id: m.id,
+          home_team: m.homeTeam.name,
+          away_team: m.awayTeam.name,
+          home_logo: m.homeTeam.crest || null,
+          away_logo: m.awayTeam.crest || null,
+          kickoff_at: new Date(m.utcDate).toISOString(),
+          status: m.status === 'FINISHED' ? 'finished' :
+                  m.status === 'IN_PLAY' ? 'live' : 'scheduled',
+          home_score: m.score?.fullTime?.home ?? null,
+          away_score: m.score?.fullTime?.away ?? null,
+          round: m.group || m.stage || 'Round',
+        }))
 
-      // Готуємо дані для вставки
-      const matchesData = data.response.map(fixture => ({
-        tournament_id: tournament.id,
-        external_id: fixture.fixture.id,
-        home_team: fixture.teams.home.name,
-        away_team: fixture.teams.away.name,
-        home_logo: fixture.teams.home.logo,
-        away_logo: fixture.teams.away.logo,
-        kickoff_at: new Date(fixture.fixture.timestamp * 1000).toISOString(),
-        status: 'scheduled',
-        round: fixture.league.round,
-      }))
+      if (!matchesData.length) continue
 
-      // Вставляємо або оновлюємо (upsert по external_id)
       const { error } = await supabase
         .from('matches')
         .upsert(matchesData, { onConflict: 'external_id', ignoreDuplicates: true })

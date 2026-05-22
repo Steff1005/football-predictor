@@ -49,28 +49,14 @@ export default async function HomePage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-white">⚽ Прогнози на матчі</h1>
-        {!userId && (
-          <a href="/auth" className="bg-green-500 hover:bg-green-400 text-white px-6 py-2 rounded-lg font-medium">
-            Увійди щоб прогнозувати
-          </a>
-        )}
-      </div>
-
-      <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-4 mb-8 flex gap-6 text-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-yellow-400 font-bold">🎯 4 бали</span>
-          <span className="text-gray-400">— точний рахунок</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-green-400 font-bold">✅ 1 бал</span>
-          <span className="text-gray-400">— вгадав результат</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-gray-500 font-bold">❌ 0 балів</span>
-          <span className="text-gray-400">— не вгадав</span>
-        </div>
+<div className="mb-6">
+  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3">⚽ Прогнози на матчі</h1>
+  {!userId && (
+    <a href="/auth" className="inline-block bg-green-500 hover:bg-green-400 text-white px-5 py-2 rounded-lg font-medium text-sm">
+      Увійди щоб прогнозувати →
+    </a>
+  )}
+</div>
       </div>
 
       {tournaments?.map(tournament => {

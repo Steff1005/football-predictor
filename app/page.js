@@ -33,9 +33,7 @@ export default async function HomePage() {
     .gte('kickoff_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
     .order('kickoff_at', { ascending: true })
     .limit(300)
-    console.log('Matches found:', matches?.length, matches)
-    console.log('Tournaments found:', tournaments?.length, tournaments)
- 
+
   let userPredictions = {}
   if (userId) {
     const { data: predictions } = await supabase
@@ -49,14 +47,15 @@ export default async function HomePage() {
 
   return (
     <div>
-<div className="mb-6">
-  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3">⚽ Прогнози на матчі</h1>
-  {!userId && (
-    <a href="/auth" className="inline-block bg-green-500 hover:bg-green-400 text-white px-5 py-2 rounded-lg font-medium text-sm">
-      Увійди щоб прогнозувати →
-    </a>
-  )}
-</div>
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+          ⚽ Прогнози на матчі
+        </h1>
+        {!userId && (
+          <a href="/auth" className="inline-block bg-green-500 hover:bg-green-400 text-white px-5 py-2 rounded-lg font-medium text-sm">
+            Увійди щоб прогнозувати →
+          </a>
+        )}
       </div>
 
       {tournaments?.map(tournament => {
@@ -64,7 +63,9 @@ export default async function HomePage() {
         if (!tournamentMatches?.length) return null
         return (
           <div key={tournament.id} className="mb-10">
-            <h2 className="text-xl font-semibold text-gray-300 mb-4">🏆 {tournament.name}</h2>
+            <h2 className="text-xl font-semibold text-gray-300 mb-4">
+              🏆 {tournament.name}
+            </h2>
             <div className="space-y-3">
               {tournamentMatches.map(match => (
                 <MatchCard

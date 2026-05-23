@@ -165,18 +165,15 @@ export default async function TournamentPage({ params, searchParams }) {
   )
 }
 
-// Fixed sort order for known knockout/group stage round keys
-const ROUND_ORDER = [
+const GROUP_STAGE_ROUNDS = new Set([
   'GROUP_A', 'GROUP_B', 'GROUP_C', 'GROUP_D',
   'GROUP_E', 'GROUP_F', 'GROUP_G', 'GROUP_H',
   'GROUP_I', 'GROUP_J', 'GROUP_K', 'GROUP_L',
-  'LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'THIRD_PLACE', 'FINAL',
-]
+])
 
-const ROUND_LABELS = {
-  GROUP_A: 'Група A', GROUP_B: 'Група B', GROUP_C: 'Група C', GROUP_D: 'Група D',
-  GROUP_E: 'Група E', GROUP_F: 'Група F', GROUP_G: 'Група G', GROUP_H: 'Група H',
-  GROUP_I: 'Група I', GROUP_J: 'Група J', GROUP_K: 'Група K', GROUP_L: 'Група L',
+const KNOCKOUT_ORDER = ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'THIRD_PLACE', 'FINAL']
+
+const KNOCKOUT_LABELS = {
   LAST_32: '1/32 фіналу',
   LAST_16: '1/16 фіналу',
   QUARTER_FINALS: '1/4 фіналу',
@@ -185,25 +182,66 @@ const ROUND_LABELS = {
   FINAL: 'Фінал',
 }
 
-function getRoundLabel(round) {
-  return ROUND_LABELS[round] ?? round
-}
-
 function groupAndSortMatches(matches) {
-  const groups = {}
-  for (const match of matches) {
-    const key = match.round ?? ''
-    if (!groups[key]) groups[key] = []
-    groups[key].push(match)
+  const groupStage = matches.filter(m => GROUP_STAGE_ROUNDS.has(m.round))
+  const knockout = matches.filter(m => KNOCKOUT_ORDER.includes(m.round))
+  const other = matches.filter(m => !GROUP_STAGE_ROUNDS.has(m.round) && !KNOCKOUT_ORDER.includes(m.round))
+
+  const result = []
+
+  // Group stage: assign matchday by position within each group sorted by kickoff_at
+  if (groupStage.length > 0) {
+    const byGroup = {}
+    for (const match of groupStage) {
+      if (!byGroup[match.round]) byGroup[match.round] = []
+      byGroup[match.round].push(match)
+    }
+    for (const group of Object.values(byGroup)) {
+      group.sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))
+    }
+
+    // Assign matchday: positions 0-1 → 1, 2-3 → 2, 4-5 → 3
+    const byMatchday = { 1: [], 2: [], 3: [] }
+    for (const groupMatches of Object.values(byGroup)) {
+      groupMatches.forEach((match, i) => {
+        const matchday = Math.floor(i / 2) + 1
+        byMatchday[matchday].push(match)
+      })
+    }
+
+    for (const day of [1, 2, 3]) {
+      const dayMatches = byMatchday[day]
+      if (!dayMatches?.length) continue
+      dayMatches.sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))
+      result.push({ label: `Тур ${day}`, matches: dayMatches })
+    }
   }
 
-  const knownKeys = ROUND_ORDER.filter(k => groups[k])
-  // Unknown rounds (e.g. "Regular Season - 1") sorted alphabetically after known ones
-  const unknownKeys = Object.keys(groups)
-    .filter(k => !ROUND_ORDER.includes(k))
-    .sort()
+  // Knockout rounds in fixed order
+  const knockoutByRound = {}
+  for (const match of knockout) {
+    if (!knockoutByRound[match.round]) knockoutByRound[match.round] = []
+    knockoutByRound[match.round].push(match)
+  }
+  for (const round of KNOCKOUT_ORDER) {
+    if (!knockoutByRound[round]) continue
+    const roundMatches = knockoutByRound[round].sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))
+    result.push({ label: KNOCKOUT_LABELS[round], matches: roundMatches })
+  }
 
-  return [...knownKeys, ...unknownKeys].map(key => ({ round: key, matches: groups[key] }))
+  // Unknown rounds (e.g. Champions League "Regular Season - 1") sorted alphabetically
+  const otherByRound = {}
+  for (const match of other) {
+    const key = match.round ?? ''
+    if (!otherByRound[key]) otherByRound[key] = []
+    otherByRound[key].push(match)
+  }
+  for (const key of Object.keys(otherByRound).sort()) {
+    const roundMatches = otherByRound[key].sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))
+    result.push({ label: key, matches: roundMatches })
+  }
+
+  return result
 }
 
 function MatchesByRound({ matches, userPredictions, userId }) {
@@ -220,10 +258,10 @@ function MatchesByRound({ matches, userPredictions, userId }) {
 
   return (
     <div className="space-y-8">
-      {groups.map(({ round, matches: groupMatches }) => (
-        <div key={round}>
+      {groups.map(({ label, matches: groupMatches }) => (
+        <div key={label}>
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-            {getRoundLabel(round)}
+            {label}
           </h2>
           <div className="space-y-3">
             {groupMatches.map(match => (

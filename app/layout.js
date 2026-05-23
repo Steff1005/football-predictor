@@ -21,7 +21,7 @@ export default function RootLayout({ children }) {
               <a href="/leaderboard" className="text-gray-300 hover:text-white text-sm px-2 py-1">
                 Рейтинг
               </a>
-              <a href="/rules" className="text-gray-300 hover:text-white text-sm px-2 py-1 hidden sm:block">
+              <a href="/rules" className="text-gray-300 hover:text-white text-sm px-2 py-1">
                 Правила
               </a>
               <a href="/auth" className="bg-green-500 hover:bg-green-400 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0">

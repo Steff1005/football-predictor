@@ -31,15 +31,15 @@ export default function MatchCard({ match, userPrediction, userId }) {
   const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
 
   return (
-    <div className={`bg-gray-900 rounded-xl p-4 border ${
-      isFinished ? 'border-gray-700' : 'border-gray-800'
+    <div className={`bg-white dark:bg-gray-900 rounded-xl p-4 border ${
+      isFinished ? 'border-gray-200 dark:border-gray-700' : 'border-gray-200 dark:border-gray-800'
     }`}>
-      {/* Верхній рядок: тур + дата + статус */}
-      <div className="flex justify-between items-center mb-3 text-xs text-gray-500">
+      {/* Top row: round + date + status */}
+      <div className="flex justify-between items-center mb-3 text-xs text-gray-400 dark:text-gray-500">
         <span className="truncate max-w-[120px]">{match.round?.replace('GROUP_', 'Гр. ') || ''}</span>
         <span>{dateStr} {timeStr}</span>
         <span className={`px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${
-          isFinished ? 'bg-gray-700 text-gray-400' :
+          isFinished ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' :
           match.status === 'live' ? 'bg-red-500/20 text-red-400' :
           'bg-green-500/20 text-green-400'
         }`}>
@@ -47,22 +47,22 @@ export default function MatchCard({ match, userPrediction, userId }) {
         </span>
       </div>
 
-      {/* Команди і рахунок — вертикально на мобілі */}
+      {/* Teams and score */}
       <div className="flex items-center gap-2 sm:gap-4">
-        {/* Хазяї */}
+        {/* Home */}
         <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
-         <span className="font-semibold text-white text-sm sm:text-base break-words leading-tight text-right">
-         {match.home_team}
-         </span>
+          <span className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base break-words leading-tight text-right">
+            {match.home_team}
+          </span>
           {match.home_logo && (
             <img src={match.home_logo} alt="" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
           )}
         </div>
 
-        {/* Центр: рахунок або форма прогнозу */}
+        {/* Center: score or prediction inputs */}
         <div className="flex items-center gap-1 flex-shrink-0">
           {isFinished ? (
-            <div className="bg-gray-800 px-3 py-1.5 rounded-lg font-bold text-lg text-white whitespace-nowrap">
+            <div className="bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg font-bold text-lg text-gray-900 dark:text-white whitespace-nowrap">
               {match.home_score} : {match.away_score}
             </div>
           ) : (
@@ -72,36 +72,36 @@ export default function MatchCard({ match, userPrediction, userId }) {
                 value={home}
                 onChange={e => setHome(e.target.value)}
                 disabled={isPast}
-                className="w-11 h-11 text-center bg-gray-800 border border-gray-700 rounded-lg font-bold text-white text-lg disabled:opacity-40"
+                className="w-11 h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-lg disabled:opacity-40"
                 placeholder="0"
               />
-              <span className="text-gray-500 font-bold">:</span>
+              <span className="text-gray-400 dark:text-gray-500 font-bold">:</span>
               <input
                 type="number" min="0" max="20"
                 value={away}
                 onChange={e => setAway(e.target.value)}
                 disabled={isPast}
-                className="w-11 h-11 text-center bg-gray-800 border border-gray-700 rounded-lg font-bold text-white text-lg disabled:opacity-40"
+                className="w-11 h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-lg disabled:opacity-40"
                 placeholder="0"
               />
             </div>
           )}
         </div>
 
-        {/* Гості */}
+        {/* Away */}
         <div className="flex-1 flex items-center justify-start gap-2 min-w-0">
           {match.away_logo && (
             <img src={match.away_logo} alt="" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
           )}
-         <span className="font-semibold text-white text-sm sm:text-base break-words leading-tight">
-         {match.away_team}
-         </span>
+          <span className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base break-words leading-tight">
+            {match.away_team}
+          </span>
         </div>
       </div>
 
-      {/* Нижній рядок: прогноз + кнопка */}
+      {/* Bottom row: prediction + button */}
       <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="text-xs text-gray-500 truncate">
+        <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
           {userPrediction && !isFinished && (
             <span>Прогноз: {userPrediction.predicted_home}:{userPrediction.predicted_away}</span>
           )}
@@ -111,7 +111,7 @@ export default function MatchCard({ match, userPrediction, userId }) {
           <div className={`px-3 py-1 rounded-full text-xs font-bold ml-auto ${
             userPrediction.points === 4 ? 'bg-yellow-500/20 text-yellow-400' :
             userPrediction.points === 1 ? 'bg-green-500/20 text-green-400' :
-            'bg-gray-700 text-gray-400'
+            'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
           }`}>
             {userPrediction.points === 4 ? '🎯 +4' :
              userPrediction.points === 1 ? '✅ +1' : '❌ 0'}
@@ -127,7 +127,7 @@ export default function MatchCard({ match, userPrediction, userId }) {
             {saving ? '...' : saved ? '✅ Збережено' : 'Зберегти'}
           </button>
         ) : isPast && !isFinished ? (
-          <span className="text-xs text-gray-600 ml-auto">Закрито</span>
+          <span className="text-xs text-gray-400 dark:text-gray-600 ml-auto">Закрито</span>
         ) : null}
       </div>
     </div>

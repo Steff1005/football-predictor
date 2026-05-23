@@ -36,8 +36,8 @@ export default function AuthPage() {
 
   return (
     <div className="max-w-md mx-auto mt-20">
-      <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
-        <h1 className="text-2xl font-bold mb-6 text-center">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 border border-gray-200 dark:border-gray-800">
+        <h1 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-white">
           {isLogin ? '🔑 Вхід' : '📝 Реєстрація'}
         </h1>
 
@@ -48,7 +48,7 @@ export default function AuthPage() {
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white"
+            className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400"
           />
           <input
             type="password"
@@ -56,7 +56,7 @@ export default function AuthPage() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white"
+            className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400"
           />
           <button
             type="submit"
@@ -68,12 +68,12 @@ export default function AuthPage() {
         </form>
 
         {message && (
-          <p className="mt-4 text-center text-sm text-yellow-400">{message}</p>
+          <p className="mt-4 text-center text-sm text-yellow-500 dark:text-yellow-400">{message}</p>
         )}
 
         <button
           onClick={() => setIsLogin(!isLogin)}
-          className="mt-4 w-full text-gray-400 hover:text-white text-sm"
+          className="mt-4 w-full text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm"
         >
           {isLogin ? 'Немає акаунту? Зареєструватися' : 'Вже є акаунт? Увійти'}
         </button>

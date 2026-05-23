@@ -79,25 +79,25 @@ export default async function TournamentPage({ params, searchParams }) {
   return (
     <div>
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-        <a href="/" className="hover:text-gray-300 transition-colors">Турніри</a>
+      <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 mb-4">
+        <a href="/" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Турніри</a>
         <span>/</span>
-        <span className="text-gray-300 truncate">{tournament.name}</span>
+        <span className="text-gray-600 dark:text-gray-300 truncate">{tournament.name}</span>
       </div>
 
-      <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6">{tournament.name}</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6">{tournament.name}</h1>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-900 p-1 rounded-xl border border-gray-800 w-fit">
+      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-900 p-1 rounded-xl border border-gray-200 dark:border-gray-800 w-fit">
         <a href={`/tournaments/${id}?tab=matches`}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === 'matches' ? 'bg-green-500 text-white' : 'text-gray-400 hover:text-white'
+            tab === 'matches' ? 'bg-green-500 text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
           }`}>
           Матчі
         </a>
         <a href={`/tournaments/${id}?tab=standings`}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === 'standings' ? 'bg-green-500 text-white' : 'text-gray-400 hover:text-white'
+            tab === 'standings' ? 'bg-green-500 text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
           }`}>
           Рейтинг
         </a>
@@ -110,43 +110,43 @@ export default async function TournamentPage({ params, searchParams }) {
           {/* Mobile — cards */}
           <div className="sm:hidden space-y-2">
             {leaderboard.map((player, index) => (
-              <div key={player.username} className="bg-gray-900 rounded-xl px-4 py-3 border border-gray-800 flex items-center justify-between">
+              <div key={player.username} className="bg-white dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-lg w-8">
                     {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' :
-                      <span className="text-gray-500 text-sm">{index + 1}</span>}
+                      <span className="text-gray-400 dark:text-gray-500 text-sm">{index + 1}</span>}
                   </span>
-                  <span className="font-medium text-white">{player.username}</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{player.username}</span>
                 </div>
                 <div className="text-right">
-                  <div className="font-bold text-green-400 text-lg">{player.points}</div>
-                  <div className="text-xs text-gray-500">{player.predictions} прогнозів</div>
+                  <div className="font-bold text-green-500 dark:text-green-400 text-lg">{player.points}</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500">{player.predictions} прогнозів</div>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Desktop — table */}
-          <div className="hidden sm:block bg-gray-900 rounded-2xl overflow-hidden border border-gray-800">
+          <div className="hidden sm:block bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-800">
-                  <th className="text-left px-6 py-4 text-gray-400 font-medium w-12">#</th>
-                  <th className="text-left px-6 py-4 text-gray-400 font-medium">Учасник</th>
-                  <th className="text-right px-6 py-4 text-gray-400 font-medium">Прогнози</th>
-                  <th className="text-right px-6 py-4 text-gray-400 font-medium">Бали</th>
+                <tr className="border-b border-gray-200 dark:border-gray-800">
+                  <th className="text-left px-6 py-4 text-gray-500 dark:text-gray-400 font-medium w-12">#</th>
+                  <th className="text-left px-6 py-4 text-gray-500 dark:text-gray-400 font-medium">Учасник</th>
+                  <th className="text-right px-6 py-4 text-gray-500 dark:text-gray-400 font-medium">Прогнози</th>
+                  <th className="text-right px-6 py-4 text-gray-500 dark:text-gray-400 font-medium">Бали</th>
                 </tr>
               </thead>
               <tbody>
                 {leaderboard.map((player, index) => (
-                  <tr key={player.username} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                  <tr key={player.username} className="border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30">
                     <td className="px-6 py-4 font-bold text-lg">
                       {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' :
-                        <span className="text-gray-500">{index + 1}</span>}
+                        <span className="text-gray-400 dark:text-gray-500">{index + 1}</span>}
                     </td>
-                    <td className="px-6 py-4 font-medium text-white">{player.username}</td>
-                    <td className="px-6 py-4 text-right text-gray-400">{player.predictions}</td>
-                    <td className="px-6 py-4 text-right font-bold text-green-400 text-lg">{player.points}</td>
+                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{player.username}</td>
+                    <td className="px-6 py-4 text-right text-gray-500 dark:text-gray-400">{player.predictions}</td>
+                    <td className="px-6 py-4 text-right font-bold text-green-500 dark:text-green-400 text-lg">{player.points}</td>
                   </tr>
                 ))}
               </tbody>
@@ -154,7 +154,7 @@ export default async function TournamentPage({ params, searchParams }) {
           </div>
 
           {leaderboard.length === 0 && (
-            <div className="text-center py-20 text-gray-600">
+            <div className="text-center py-20 text-gray-400 dark:text-gray-600">
               <p className="text-5xl mb-4">📊</p>
               <p>Поки немає прогнозів</p>
             </div>
@@ -247,7 +247,7 @@ function groupAndSortMatches(matches) {
 function MatchesByRound({ matches, userPredictions, userId }) {
   if (!matches.length) {
     return (
-      <div className="text-center py-20 text-gray-600">
+      <div className="text-center py-20 text-gray-400 dark:text-gray-600">
         <p className="text-5xl mb-4">⚽</p>
         <p>Матчі ще не завантажені</p>
       </div>
@@ -260,7 +260,7 @@ function MatchesByRound({ matches, userPredictions, userId }) {
     <div className="space-y-8">
       {groups.map(({ label, matches: groupMatches }) => (
         <div key={label}>
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          <h2 className="text-sm font-semibold text-gray-400 dark:text-gray-400 uppercase tracking-wider mb-3">
             {label}
           </h2>
           <div className="space-y-3">

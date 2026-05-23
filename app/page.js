@@ -23,19 +23,19 @@ export default async function HomePage() {
 
   return (
     <div>
-      <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6">🏆 Турніри</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6">🏆 Турніри</h1>
 
       {active.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Активні</h2>
+          <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Активні</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {active.map(tournament => (
               <a key={tournament.id} href={`/tournaments/${tournament.id}`}
-                className="bg-gray-900 rounded-xl p-5 border border-gray-800 hover:border-green-500/50 transition-colors group flex items-center justify-between">
-                <span className="font-semibold text-white group-hover:text-green-400 transition-colors">
+                className="bg-white dark:bg-gray-900 rounded-xl p-5 border border-gray-200 dark:border-gray-800 hover:border-green-500/50 transition-colors group flex items-center justify-between">
+                <span className="font-semibold text-gray-900 dark:text-white group-hover:text-green-500 dark:group-hover:text-green-400 transition-colors">
                   {tournament.name}
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium flex-shrink-0 ml-3">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-500 dark:text-green-400 font-medium flex-shrink-0 ml-3">
                   Активний
                 </span>
               </a>
@@ -46,15 +46,15 @@ export default async function HomePage() {
 
       {finished.length > 0 && (
         <div>
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Завершені</h2>
+          <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Завершені</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {finished.map(tournament => (
               <a key={tournament.id} href={`/tournaments/${tournament.id}`}
-                className="bg-gray-900 rounded-xl p-5 border border-gray-800 hover:border-gray-600 transition-colors group flex items-center justify-between">
-                <span className="font-semibold text-gray-400 group-hover:text-white transition-colors">
+                className="bg-white dark:bg-gray-900 rounded-xl p-5 border border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600 transition-colors group flex items-center justify-between">
+                <span className="font-semibold text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
                   {tournament.name}
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-800 text-gray-500 font-medium flex-shrink-0 ml-3">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 font-medium flex-shrink-0 ml-3">
                   Завершений
                 </span>
               </a>
@@ -64,7 +64,7 @@ export default async function HomePage() {
       )}
 
       {!tournaments?.length && (
-        <div className="text-center py-20 text-gray-600">
+        <div className="text-center py-20 text-gray-400 dark:text-gray-600">
           <p className="text-5xl mb-4">🏆</p>
           <p>Турніри ще не додані</p>
         </div>

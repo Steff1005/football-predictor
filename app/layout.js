@@ -16,7 +16,7 @@ export default function RootLayout({ children }) {
             </a>
             <div className="flex items-center gap-2 sm:gap-4">
               <a href="/" className="text-gray-300 hover:text-white text-sm px-2 py-1">
-                Матчі
+                Турніри
               </a>
               <a href="/leaderboard" className="text-gray-300 hover:text-white text-sm px-2 py-1">
                 Рейтинг

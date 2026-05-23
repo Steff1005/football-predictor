@@ -1,6 +1,5 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
-import MatchCard from '../components/MatchCard'
 
 export const revalidate = 60
 
@@ -10,13 +9,7 @@ export default async function HomePage() {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-      },
-    }
+    { cookies: { getAll() { return cookieStore.getAll() } } }
   )
 
   const { data: { session } } = await supabase.auth.getSession()
@@ -25,32 +18,16 @@ export default async function HomePage() {
   const { data: tournaments } = await supabase
     .from('tournaments')
     .select('*')
-    .eq('is_active', true)
+    .order('is_active', { ascending: false })
+    .order('name', { ascending: true })
 
-  const { data: matches } = await supabase
-    .from('matches')
-    .select('*')
-    .gte('kickoff_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-    .order('kickoff_at', { ascending: true })
-    .limit(300)
-
-  let userPredictions = {}
-  if (userId) {
-    const { data: predictions } = await supabase
-      .from('predictions')
-      .select('*')
-      .eq('user_id', userId)
-    predictions?.forEach(p => {
-      userPredictions[p.match_id] = p
-    })
-  }
+  const active = tournaments?.filter(t => t.is_active) ?? []
+  const finished = tournaments?.filter(t => !t.is_active) ?? []
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-          ⚽ Прогнози на матчі
-        </h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3">🏆 Турніри</h1>
         {!userId && (
           <a href="/auth" className="inline-block bg-green-500 hover:bg-green-400 text-white px-5 py-2 rounded-lg font-medium text-sm">
             Увійди щоб прогнозувати →
@@ -58,32 +35,48 @@ export default async function HomePage() {
         )}
       </div>
 
-      {tournaments?.map(tournament => {
-        const tournamentMatches = matches?.filter(m => m.tournament_id === tournament.id)
-        if (!tournamentMatches?.length) return null
-        return (
-          <div key={tournament.id} className="mb-10">
-            <h2 className="text-xl font-semibold text-gray-300 mb-4">
-              🏆 {tournament.name}
-            </h2>
-            <div className="space-y-3">
-              {tournamentMatches.map(match => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  userPrediction={userPredictions[match.id]}
-                  userId={userId}
-                />
-              ))}
-            </div>
+      {active.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Активні</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {active.map(tournament => (
+              <a key={tournament.id} href={`/tournaments/${tournament.id}`}
+                className="bg-gray-900 rounded-xl p-5 border border-gray-800 hover:border-green-500/50 transition-colors group flex items-center justify-between">
+                <span className="font-semibold text-white group-hover:text-green-400 transition-colors">
+                  {tournament.name}
+                </span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium flex-shrink-0 ml-3">
+                  Активний
+                </span>
+              </a>
+            ))}
           </div>
-        )
-      })}
+        </div>
+      )}
 
-      {!matches?.length && (
+      {finished.length > 0 && (
+        <div>
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Завершені</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {finished.map(tournament => (
+              <a key={tournament.id} href={`/tournaments/${tournament.id}`}
+                className="bg-gray-900 rounded-xl p-5 border border-gray-800 hover:border-gray-600 transition-colors group flex items-center justify-between">
+                <span className="font-semibold text-gray-400 group-hover:text-white transition-colors">
+                  {tournament.name}
+                </span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-800 text-gray-500 font-medium flex-shrink-0 ml-3">
+                  Завершений
+                </span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!tournaments?.length && (
         <div className="text-center py-20 text-gray-600">
-          <p className="text-5xl mb-4">⚽</p>
-          <p>Матчі ще не завантажені</p>
+          <p className="text-5xl mb-4">🏆</p>
+          <p>Турніри ще не додані</p>
         </div>
       )}
     </div>

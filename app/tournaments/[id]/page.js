@@ -104,22 +104,7 @@ export default async function TournamentPage({ params, searchParams }) {
       </div>
 
       {tab === 'matches' ? (
-        <div className="space-y-3">
-          {matches?.map(match => (
-            <MatchCard
-              key={match.id}
-              match={match}
-              userPrediction={userPredictions[match.id]}
-              userId={userId}
-            />
-          ))}
-          {!matches?.length && (
-            <div className="text-center py-20 text-gray-600">
-              <p className="text-5xl mb-4">⚽</p>
-              <p>Матчі ще не завантажені</p>
-            </div>
-          )}
-        </div>
+        <MatchesByRound matches={matches ?? []} userPredictions={userPredictions} userId={userId} />
       ) : (
         <div>
           {/* Mobile — cards */}
@@ -176,6 +161,82 @@ export default async function TournamentPage({ params, searchParams }) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// Fixed sort order for known knockout/group stage round keys
+const ROUND_ORDER = [
+  'GROUP_A', 'GROUP_B', 'GROUP_C', 'GROUP_D',
+  'GROUP_E', 'GROUP_F', 'GROUP_G', 'GROUP_H',
+  'GROUP_I', 'GROUP_J', 'GROUP_K', 'GROUP_L',
+  'LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'THIRD_PLACE', 'FINAL',
+]
+
+const ROUND_LABELS = {
+  GROUP_A: 'Група A', GROUP_B: 'Група B', GROUP_C: 'Група C', GROUP_D: 'Група D',
+  GROUP_E: 'Група E', GROUP_F: 'Група F', GROUP_G: 'Група G', GROUP_H: 'Група H',
+  GROUP_I: 'Група I', GROUP_J: 'Група J', GROUP_K: 'Група K', GROUP_L: 'Група L',
+  LAST_32: '1/32 фіналу',
+  LAST_16: '1/16 фіналу',
+  QUARTER_FINALS: '1/4 фіналу',
+  SEMI_FINALS: '1/2 фіналу',
+  THIRD_PLACE: 'Матч за 3 місце',
+  FINAL: 'Фінал',
+}
+
+function getRoundLabel(round) {
+  return ROUND_LABELS[round] ?? round
+}
+
+function groupAndSortMatches(matches) {
+  const groups = {}
+  for (const match of matches) {
+    const key = match.round ?? ''
+    if (!groups[key]) groups[key] = []
+    groups[key].push(match)
+  }
+
+  const knownKeys = ROUND_ORDER.filter(k => groups[k])
+  // Unknown rounds (e.g. "Regular Season - 1") sorted alphabetically after known ones
+  const unknownKeys = Object.keys(groups)
+    .filter(k => !ROUND_ORDER.includes(k))
+    .sort()
+
+  return [...knownKeys, ...unknownKeys].map(key => ({ round: key, matches: groups[key] }))
+}
+
+function MatchesByRound({ matches, userPredictions, userId }) {
+  if (!matches.length) {
+    return (
+      <div className="text-center py-20 text-gray-600">
+        <p className="text-5xl mb-4">⚽</p>
+        <p>Матчі ще не завантажені</p>
+      </div>
+    )
+  }
+
+  const groups = groupAndSortMatches(matches)
+
+  return (
+    <div className="space-y-8">
+      {groups.map(({ round, matches: groupMatches }) => (
+        <div key={round}>
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            {getRoundLabel(round)}
+          </h2>
+          <div className="space-y-3">
+            {groupMatches.map(match => (
+              <MatchCard
+                key={match.id}
+                match={match}
+                userPrediction={userPredictions[match.id]}
+                userId={userId}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

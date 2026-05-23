@@ -12,9 +12,6 @@ export default async function HomePage() {
     { cookies: { getAll() { return cookieStore.getAll() } } }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
-  const userId = session?.user?.id
-
   const { data: tournaments } = await supabase
     .from('tournaments')
     .select('*')
@@ -26,14 +23,7 @@ export default async function HomePage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3">🏆 Турніри</h1>
-        {!userId && (
-          <a href="/auth" className="inline-block bg-green-500 hover:bg-green-400 text-white px-5 py-2 rounded-lg font-medium text-sm">
-            Увійди щоб прогнозувати →
-          </a>
-        )}
-      </div>
+      <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6">🏆 Турніри</h1>
 
       {active.length > 0 && (
         <div className="mb-8">

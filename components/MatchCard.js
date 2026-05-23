@@ -51,9 +51,9 @@ export default function MatchCard({ match, userPrediction, userId }) {
       <div className="flex items-center gap-2 sm:gap-4">
         {/* Хазяї */}
         <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
-          <span className="font-semibold text-white text-sm sm:text-base truncate text-right">
-            {match.home_team}
-          </span>
+         <span className="font-semibold text-white text-sm sm:text-base break-words leading-tight text-right">
+         {match.home_team}
+         </span>
           {match.home_logo && (
             <img src={match.home_logo} alt="" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
           )}
@@ -93,9 +93,9 @@ export default function MatchCard({ match, userPrediction, userId }) {
           {match.away_logo && (
             <img src={match.away_logo} alt="" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
           )}
-          <span className="font-semibold text-white text-sm sm:text-base truncate">
-            {match.away_team}
-          </span>
+         <span className="font-semibold text-white text-sm sm:text-base break-words leading-tight">
+         {match.away_team}
+         </span>
         </div>
       </div>
 

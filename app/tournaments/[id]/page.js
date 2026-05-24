@@ -4,8 +4,333 @@ import MatchCard from '../../../components/MatchCard'
 
 export const revalidate = 60
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function pluralMatches(n) {
+  if (n % 10 === 1 && n % 100 !== 11) return 'матч'
+  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return 'матчі'
+  return 'матчів'
+}
+
+function displayName(profile) {
+  return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
+}
+
+// ── Round grouping ────────────────────────────────────────────────────────────
+
+const GROUP_STAGE_ROUNDS = new Set([
+  'GROUP_A', 'GROUP_B', 'GROUP_C', 'GROUP_D',
+  'GROUP_E', 'GROUP_F', 'GROUP_G', 'GROUP_H',
+  'GROUP_I', 'GROUP_J', 'GROUP_K', 'GROUP_L',
+])
+
+const KNOCKOUT_ORDER  = ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'THIRD_PLACE', 'FINAL']
+const KNOCKOUT_LABELS = {
+  LAST_32: '1/32 фіналу', LAST_16: '1/16 фіналу',
+  QUARTER_FINALS: '1/4 фіналу', SEMI_FINALS: '1/2 фіналу',
+  THIRD_PLACE: 'Матч за 3 місце', FINAL: 'Фінал',
+}
+
+function groupAndSortMatches(matches) {
+  const groupStage = matches.filter(m => GROUP_STAGE_ROUNDS.has(m.round))
+  const knockout   = matches.filter(m => KNOCKOUT_ORDER.includes(m.round))
+  const other      = matches.filter(m => !GROUP_STAGE_ROUNDS.has(m.round) && !KNOCKOUT_ORDER.includes(m.round))
+
+  const result = []
+
+  if (groupStage.length > 0) {
+    const byGroup = {}
+    for (const m of groupStage) {
+      if (!byGroup[m.round]) byGroup[m.round] = []
+      byGroup[m.round].push(m)
+    }
+    for (const g of Object.values(byGroup)) g.sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))
+
+    const byMatchday = { 1: [], 2: [], 3: [] }
+    for (const gm of Object.values(byGroup)) {
+      gm.forEach((m, i) => { byMatchday[Math.floor(i / 2) + 1].push(m) })
+    }
+    for (const day of [1, 2, 3]) {
+      const dm = byMatchday[day]
+      if (!dm?.length) continue
+      dm.sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))
+      result.push({ label: `Тур ${day}`, matches: dm })
+    }
+  }
+
+  const knockoutByRound = {}
+  for (const m of knockout) {
+    if (!knockoutByRound[m.round]) knockoutByRound[m.round] = []
+    knockoutByRound[m.round].push(m)
+  }
+  for (const round of KNOCKOUT_ORDER) {
+    if (!knockoutByRound[round]) continue
+    result.push({ label: KNOCKOUT_LABELS[round], matches: knockoutByRound[round].sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at)) })
+  }
+
+  const otherByRound = {}
+  for (const m of other) {
+    const k = m.round ?? ''
+    if (!otherByRound[k]) otherByRound[k] = []
+    otherByRound[k].push(m)
+  }
+  for (const k of Object.keys(otherByRound).sort()) {
+    result.push({ label: k, matches: otherByRound[k].sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at)) })
+  }
+
+  return result
+}
+
+// ── Shared components ─────────────────────────────────────────────────────────
+
+function Avatar({ profile }) {
+  const name     = displayName(profile)
+  const initials = name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
+  return (
+    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+      {profile?.avatar_url
+        ? <img src={profile.avatar_url} alt={name} className="w-full h-full object-cover" />
+        : <span className="text-xs font-bold text-green-600 dark:text-green-400">{initials}</span>
+      }
+    </div>
+  )
+}
+
+function EmptyState({ icon, text }) {
+  return (
+    <div className="text-center py-20 text-gray-400 dark:text-gray-600">
+      <p className="text-5xl mb-4">{icon}</p>
+      <p>{text}</p>
+    </div>
+  )
+}
+
+// ── Matches tab ───────────────────────────────────────────────────────────────
+
+function MatchesByRound({ matches, userPredictions, userId }) {
+  if (!matches.length) return <EmptyState icon="⚽" text="Матчі ще не завантажені" />
+
+  const now    = new Date()
+  const groups = groupAndSortMatches(matches)
+
+  return (
+    <div className="space-y-8">
+      {groups.map(({ label, matches: gm }) => (
+        <div key={label}>
+          <h2 className="text-sm font-semibold text-gray-400 dark:text-gray-400 uppercase tracking-wider mb-3">{label}</h2>
+          <div className="space-y-3">
+            {gm.map(match => {
+              const isUpcoming = match.status !== 'finished' && new Date(match.kickoff_at) > now
+              return (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  userPrediction={userPredictions[match.id]}
+                  userId={userId}
+                  highlight={!!userId && isUpcoming && !userPredictions[match.id]}
+                />
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Predictions tab ───────────────────────────────────────────────────────────
+
+function PredsTab({ startedMatches, predsByMatch, profileMap }) {
+  if (!startedMatches.length) return <EmptyState icon="🔒" text="Прогнози стануть доступні після початку матчів" />
+
+  return (
+    <div className="space-y-4">
+      {startedMatches.map(match => {
+        const preds    = (predsByMatch[match.id] ?? [])
+          .filter(p => profileMap[p.user_id])
+          .sort((a, b) => (b.points ?? -1) - (a.points ?? -1))
+        const kickoff  = new Date(match.kickoff_at)
+        const dateStr  = kickoff.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: '2-digit' })
+        const timeStr  = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+        const hasScore = match.home_score != null && match.away_score != null
+
+        return (
+          <div key={match.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            {/* Match header */}
+            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.home_team}</span>
+                  <span className="bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-lg font-bold font-mono text-sm text-gray-900 dark:text-white flex-shrink-0">
+                    {hasScore ? `${match.home_score}:${match.away_score}` : '–:–'}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.away_team}</span>
+                </div>
+                <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">{dateStr} {timeStr}</span>
+              </div>
+            </div>
+
+            {/* Predictions list */}
+            {preds.length === 0 ? (
+              <div className="px-5 py-4 text-sm text-center text-gray-400 dark:text-gray-600">Прогнозів немає</div>
+            ) : (
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {preds.map(pred => {
+                  const profile = profileMap[pred.user_id]
+                  const pts = pred.points
+                  const badgeCls = pts === 4
+                    ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400'
+                    : pts === 1
+                    ? 'bg-green-500/15 text-green-600 dark:text-green-400'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                  return (
+                    <div key={pred.user_id} className="flex items-center justify-between px-5 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar profile={profile} />
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">{displayName(profile)}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-sm text-gray-600 dark:text-gray-300">
+                          {pred.predicted_home}:{pred.predicted_away}
+                        </span>
+                        <span className={`w-9 h-7 rounded-full flex items-center justify-center text-xs font-bold ${badgeCls}`}>
+                          {pts != null ? `+${pts}` : '–'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Standings tab ─────────────────────────────────────────────────────────────
+
+function StandingsTab({ standings }) {
+  if (!standings.length) return <EmptyState icon="📊" text="Поки немає прогнозів" />
+
+  return (
+    <div>
+      {/* Mobile — cards */}
+      <div className="sm:hidden space-y-2">
+        {standings.map((s, i) => (
+          <div key={s.uid} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="w-7 text-center text-lg">
+                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : <span className="text-sm text-gray-400 dark:text-gray-500">{i + 1}</span>}
+              </span>
+              <Avatar profile={s.profile} />
+              <span className="font-medium text-gray-900 dark:text-white flex-1 min-w-0 truncate">{displayName(s.profile)}</span>
+              <span className="font-bold text-green-500 dark:text-green-400 text-xl">{s.total}</span>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 dark:text-gray-500 pl-10">
+              <span>Прогн: <b className="text-gray-600 dark:text-gray-300">{s.predictions}</b></span>
+              <span>×1: <b className="text-gray-600 dark:text-gray-300">{s.results}</b></span>
+              <span>Точних: <b className="text-gray-600 dark:text-gray-300">{s.exact}</b></span>
+              <span>×4 балів: <b className="text-blue-500 dark:text-blue-400">{s.exact * 4}</b></span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop — table */}
+      <div className="hidden sm:block bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-gray-800">
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide w-10">Місце</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Учасник</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Прогнози</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Бали ×1</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Точні (к-сть)</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Бали ×4</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Разом</th>
+              </tr>
+            </thead>
+            <tbody>
+              {standings.map((s, i) => (
+                <tr key={s.uid} className="border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                  <td className="px-4 py-3 text-center text-lg">
+                    {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉'
+                      : <span className="text-sm text-gray-400 dark:text-gray-500">{i + 1}</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <Avatar profile={s.profile} />
+                      <span className="font-medium text-gray-900 dark:text-white">{displayName(s.profile)}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{s.predictions}</td>
+                  <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{s.results}</td>
+                  <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{s.exact}</td>
+                  <td className="px-4 py-3 text-right font-medium text-blue-600 dark:text-blue-400">{s.exact * 4}</td>
+                  <td className="px-4 py-3 text-right font-bold text-green-500 dark:text-green-400 text-lg">{s.total}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── By-round tab ──────────────────────────────────────────────────────────────
+
+function RoundsTab({ roundTables }) {
+  if (!roundTables.length) return <EmptyState icon="📅" text="Поки немає даних по турах" />
+
+  return (
+    <div className="space-y-5">
+      {roundTables.map(({ label, rows, maxPts, matchCount }) => (
+        <div key={label} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <h2 className="font-semibold text-gray-900 dark:text-white">{label}</h2>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{matchCount} {pluralMatches(matchCount)}</span>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {rows.map((r, i) => {
+              const isTop = maxPts > 0 && r.pts === maxPts
+              return (
+                <div key={r.uid} className={`flex items-center justify-between px-5 py-3 ${isTop ? 'bg-yellow-50 dark:bg-yellow-500/[0.07]' : ''}`}>
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-5 text-xs text-center text-gray-400 dark:text-gray-500 flex-shrink-0">{i + 1}</span>
+                    <Avatar profile={r.profile} />
+                    <span className={`text-sm font-medium ${isTop ? 'text-yellow-700 dark:text-yellow-300' : 'text-gray-900 dark:text-white'}`}>
+                      {displayName(r.profile)}
+                    </span>
+                    {isTop && <span className="text-sm leading-none">🥇</span>}
+                  </div>
+                  <span className={`font-bold tabular-nums ${isTop ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                    +{r.pts}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+const TABS = [
+  { id: 'matches',   label: 'Матчі' },
+  { id: 'preds',     label: 'Прогнози' },
+  { id: 'standings', label: 'Рейтинг' },
+  { id: 'rounds',    label: 'По турах' },
+]
+
 export default async function TournamentPage({ params, searchParams }) {
-  const { id } = await params
+  const { id }          = await params
   const { tab = 'matches' } = await searchParams
 
   const cookieStore = await cookies()
@@ -32,67 +357,104 @@ export default async function TournamentPage({ params, searchParams }) {
     )
   }
 
+  const matchIds       = matches?.map(m => m.id) ?? []
+  const now            = new Date()
+  const startedMatchIds = (matches ?? []).filter(m => new Date(m.kickoff_at) <= now).map(m => m.id)
+
+  // Current user's predictions (for matches tab progress bar)
   let userPredictions = {}
   if (userId) {
-    const { data: predictions } = await supabase
-      .from('predictions')
-      .select('*')
-      .eq('user_id', userId)
-    predictions?.forEach(p => { userPredictions[p.match_id] = p })
+    const { data: preds } = await supabase
+      .from('predictions').select('*').eq('user_id', userId)
+    preds?.forEach(p => { userPredictions[p.match_id] = p })
   }
 
-  // Tournament leaderboard — aggregate predictions for this tournament's matches
-  const matchIds = matches?.map(m => m.id) ?? []
-  let leaderboard = []
-
+  // Calculated predictions → standings + по-турах
+  let calcPreds = []
   if (matchIds.length > 0) {
-    const { data: allPredictions } = await supabase
+    const { data } = await supabase
       .from('predictions')
-      .select('user_id, points')
+      .select('user_id, match_id, predicted_home, predicted_away, points')
       .in('match_id', matchIds)
       .not('points', 'is', null)
-
-    const userStats = {}
-    allPredictions?.forEach(p => {
-      if (!userStats[p.user_id]) userStats[p.user_id] = { points: 0, predictions: 0 }
-      userStats[p.user_id].points += p.points ?? 0
-      userStats[p.user_id].predictions += 1
-    })
-
-    const userIds = Object.keys(userStats)
-    if (userIds.length > 0) {
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, username, first_name, last_name')
-        .in('id', userIds)
-
-      leaderboard = (profiles ?? [])
-        .map(profile => ({
-          key: profile.id,
-          name: [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username || '—',
-          points: userStats[profile.id]?.points ?? 0,
-          predictions: userStats[profile.id]?.predictions ?? 0,
-        }))
-        .sort((a, b) => b.points - a.points)
-    }
+    calcPreds = data ?? []
   }
 
-  // Progress bar stats (logged-in users only)
-  const now = new Date()
-  const upcomingMatches = (matches ?? []).filter(
-    m => m.status !== 'finished' && new Date(m.kickoff_at) > now
-  )
+  // Public predictions (started matches) → прогнози tab
+  let publicPreds = []
+  if (startedMatchIds.length > 0) {
+    const { data } = await supabase
+      .from('predictions')
+      .select('user_id, match_id, predicted_home, predicted_away, points')
+      .in('match_id', startedMatchIds)
+    publicPreds = data ?? []
+  }
+
+  // Profiles for everyone who has predictions
+  const allUserIds = [...new Set([...calcPreds.map(p => p.user_id), ...publicPreds.map(p => p.user_id)])]
+  let profileMap = {}
+  if (allUserIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username, first_name, last_name, avatar_url')
+      .in('id', allUserIds)
+    ;(profiles ?? []).forEach(p => { profileMap[p.id] = p })
+  }
+
+  // ── Standings ─────────────────────────────────────────────────────────────
+  const userStats = {}
+  for (const p of calcPreds) {
+    if (!userStats[p.user_id]) userStats[p.user_id] = { results: 0, exact: 0, total: 0, predictions: 0 }
+    userStats[p.user_id].predictions++
+    userStats[p.user_id].total += p.points ?? 0
+    if (p.points === 1) userStats[p.user_id].results++
+    if (p.points === 4) userStats[p.user_id].exact++
+  }
+  const standings = Object.entries(userStats)
+    .map(([uid, stats]) => ({ uid, ...stats, profile: profileMap[uid] }))
+    .filter(s => s.profile)
+    .sort((a, b) => b.total - a.total || b.exact - a.exact)
+
+  // ── По-турах ──────────────────────────────────────────────────────────────
+  const roundedGroups  = groupAndSortMatches(matches ?? [])
+  const matchRoundLabel = {}
+  roundedGroups.forEach(({ label, matches: gm }) => gm.forEach(m => { matchRoundLabel[m.id] = label }))
+
+  const byRound = {}
+  for (const p of calcPreds) {
+    const label = matchRoundLabel[p.match_id]
+    if (!label) continue
+    if (!byRound[label]) byRound[label] = {}
+    byRound[label][p.user_id] = (byRound[label][p.user_id] ?? 0) + (p.points ?? 0)
+  }
+
+  const roundTables = roundedGroups
+    .filter(({ label }) => byRound[label])
+    .map(({ label, matches: gm }) => {
+      const rows = Object.entries(byRound[label])
+        .map(([uid, pts]) => ({ uid, pts, profile: profileMap[uid] }))
+        .filter(r => r.profile)
+        .sort((a, b) => b.pts - a.pts)
+      return { label, rows, maxPts: rows[0]?.pts ?? 0, matchCount: gm.length }
+    })
+
+  // ── Прогнози ──────────────────────────────────────────────────────────────
+  const predsByMatch = {}
+  for (const p of publicPreds) {
+    if (!predsByMatch[p.match_id]) predsByMatch[p.match_id] = []
+    predsByMatch[p.match_id].push(p)
+  }
+  const startedMatches = (matches ?? [])
+    .filter(m => new Date(m.kickoff_at) <= now)
+    .sort((a, b) => new Date(b.kickoff_at) - new Date(a.kickoff_at))
+
+  // ── Progress bar (matches tab) ────────────────────────────────────────────
+  const upcomingMatches  = (matches ?? []).filter(m => m.status !== 'finished' && new Date(m.kickoff_at) > now)
   const predictedCount   = userId ? upcomingMatches.filter(m => userPredictions[m.id]).length : 0
   const unpredictedCount = userId ? upcomingMatches.length - predictedCount : 0
   const progressPct = upcomingMatches.length > 0
     ? Math.round((predictedCount / upcomingMatches.length) * 100)
     : 100
-
-  function pluralMatches(n) {
-    if (n % 10 === 1 && n % 100 !== 11) return 'матч'
-    if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return 'матчі'
-    return 'матчів'
-  }
 
   return (
     <div>
@@ -106,229 +468,49 @@ export default async function TournamentPage({ params, searchParams }) {
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6">{tournament.name}</h1>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-900 p-1 rounded-xl border border-gray-200 dark:border-gray-800 w-fit">
-        <a href={`/tournaments/${id}?tab=matches`}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === 'matches' ? 'bg-green-500 text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}>
-          Матчі
-        </a>
-        <a href={`/tournaments/${id}?tab=standings`}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === 'standings' ? 'bg-green-500 text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}>
-          Рейтинг
-        </a>
+      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-900 p-1 rounded-xl border border-gray-200 dark:border-gray-800 w-fit flex-wrap">
+        {TABS.map(t => (
+          <a key={t.id} href={`/tournaments/${id}?tab=${t.id}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              tab === t.id ? 'bg-green-500 text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}>
+            {t.label}
+          </a>
+        ))}
       </div>
 
-      {tab === 'matches' ? (
+      {/* ── Matches ─────────────────────────────────────────────────────── */}
+      {tab === 'matches' && (
         <>
           {userId && upcomingMatches.length > 0 && (
             <div className="mb-5 bg-white dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Прогнози на майбутні матчі
-                </span>
-                <span className="text-xs text-gray-400 dark:text-gray-500">
-                  {predictedCount} / {upcomingMatches.length}
-                </span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Прогнози на майбутні матчі</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">{predictedCount} / {upcomingMatches.length}</span>
               </div>
               <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 mb-2">
-                <div
-                  className="bg-green-500 rounded-full h-2 transition-all duration-500"
-                  style={{ width: `${progressPct}%` }}
-                />
+                <div className="bg-green-500 rounded-full h-2 transition-all duration-500" style={{ width: `${progressPct}%` }} />
               </div>
-              {unpredictedCount > 0 && (
-                <p className="text-xs text-amber-500 dark:text-amber-400">
-                  Не спрогнозовано: {unpredictedCount} {pluralMatches(unpredictedCount)}
-                </p>
-              )}
-              {unpredictedCount === 0 && (
-                <p className="text-xs text-green-500 dark:text-green-400">
-                  ✅ Всі майбутні матчі спрогнозовано
-                </p>
-              )}
+              {unpredictedCount > 0
+                ? <p className="text-xs text-amber-500 dark:text-amber-400">Не спрогнозовано: {unpredictedCount} {pluralMatches(unpredictedCount)}</p>
+                : <p className="text-xs text-green-500 dark:text-green-400">✅ Всі майбутні матчі спрогнозовано</p>
+              }
             </div>
           )}
           <MatchesByRound matches={matches ?? []} userPredictions={userPredictions} userId={userId} />
         </>
-      ) : (
-        <div>
-          {/* Mobile — cards */}
-          <div className="sm:hidden space-y-2">
-            {leaderboard.map((player, index) => (
-              <div key={player.key} className="bg-white dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg w-8">
-                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' :
-                      <span className="text-gray-400 dark:text-gray-500 text-sm">{index + 1}</span>}
-                  </span>
-                  <span className="font-medium text-gray-900 dark:text-white">{player.name}</span>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold text-green-500 dark:text-green-400 text-lg">{player.points}</div>
-                  <div className="text-xs text-gray-400 dark:text-gray-500">{player.predictions} прогнозів</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Desktop — table */}
-          <div className="hidden sm:block bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-800">
-                  <th className="text-left px-6 py-4 text-gray-500 dark:text-gray-400 font-medium w-12">#</th>
-                  <th className="text-left px-6 py-4 text-gray-500 dark:text-gray-400 font-medium">Учасник</th>
-                  <th className="text-right px-6 py-4 text-gray-500 dark:text-gray-400 font-medium">Прогнози</th>
-                  <th className="text-right px-6 py-4 text-gray-500 dark:text-gray-400 font-medium">Бали</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaderboard.map((player, index) => (
-                  <tr key={player.key} className="border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                    <td className="px-6 py-4 font-bold text-lg">
-                      {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' :
-                        <span className="text-gray-400 dark:text-gray-500">{index + 1}</span>}
-                    </td>
-                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{player.name}</td>
-                    <td className="px-6 py-4 text-right text-gray-500 dark:text-gray-400">{player.predictions}</td>
-                    <td className="px-6 py-4 text-right font-bold text-green-500 dark:text-green-400 text-lg">{player.points}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {leaderboard.length === 0 && (
-            <div className="text-center py-20 text-gray-400 dark:text-gray-600">
-              <p className="text-5xl mb-4">📊</p>
-              <p>Поки немає прогнозів</p>
-            </div>
-          )}
-        </div>
       )}
-    </div>
-  )
-}
 
-const GROUP_STAGE_ROUNDS = new Set([
-  'GROUP_A', 'GROUP_B', 'GROUP_C', 'GROUP_D',
-  'GROUP_E', 'GROUP_F', 'GROUP_G', 'GROUP_H',
-  'GROUP_I', 'GROUP_J', 'GROUP_K', 'GROUP_L',
-])
+      {/* ── Predictions ─────────────────────────────────────────────────── */}
+      {tab === 'preds' && (
+        <PredsTab startedMatches={startedMatches} predsByMatch={predsByMatch} profileMap={profileMap} />
+      )}
 
-const KNOCKOUT_ORDER = ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'THIRD_PLACE', 'FINAL']
+      {/* ── Standings ───────────────────────────────────────────────────── */}
+      {tab === 'standings' && <StandingsTab standings={standings} />}
 
-const KNOCKOUT_LABELS = {
-  LAST_32: '1/32 фіналу',
-  LAST_16: '1/16 фіналу',
-  QUARTER_FINALS: '1/4 фіналу',
-  SEMI_FINALS: '1/2 фіналу',
-  THIRD_PLACE: 'Матч за 3 місце',
-  FINAL: 'Фінал',
-}
-
-function groupAndSortMatches(matches) {
-  const groupStage = matches.filter(m => GROUP_STAGE_ROUNDS.has(m.round))
-  const knockout = matches.filter(m => KNOCKOUT_ORDER.includes(m.round))
-  const other = matches.filter(m => !GROUP_STAGE_ROUNDS.has(m.round) && !KNOCKOUT_ORDER.includes(m.round))
-
-  const result = []
-
-  // Group stage: assign matchday by position within each group sorted by kickoff_at
-  if (groupStage.length > 0) {
-    const byGroup = {}
-    for (const match of groupStage) {
-      if (!byGroup[match.round]) byGroup[match.round] = []
-      byGroup[match.round].push(match)
-    }
-    for (const group of Object.values(byGroup)) {
-      group.sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))
-    }
-
-    // Assign matchday: positions 0-1 → 1, 2-3 → 2, 4-5 → 3
-    const byMatchday = { 1: [], 2: [], 3: [] }
-    for (const groupMatches of Object.values(byGroup)) {
-      groupMatches.forEach((match, i) => {
-        const matchday = Math.floor(i / 2) + 1
-        byMatchday[matchday].push(match)
-      })
-    }
-
-    for (const day of [1, 2, 3]) {
-      const dayMatches = byMatchday[day]
-      if (!dayMatches?.length) continue
-      dayMatches.sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))
-      result.push({ label: `Тур ${day}`, matches: dayMatches })
-    }
-  }
-
-  // Knockout rounds in fixed order
-  const knockoutByRound = {}
-  for (const match of knockout) {
-    if (!knockoutByRound[match.round]) knockoutByRound[match.round] = []
-    knockoutByRound[match.round].push(match)
-  }
-  for (const round of KNOCKOUT_ORDER) {
-    if (!knockoutByRound[round]) continue
-    const roundMatches = knockoutByRound[round].sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))
-    result.push({ label: KNOCKOUT_LABELS[round], matches: roundMatches })
-  }
-
-  // Unknown rounds (e.g. Champions League "Regular Season - 1") sorted alphabetically
-  const otherByRound = {}
-  for (const match of other) {
-    const key = match.round ?? ''
-    if (!otherByRound[key]) otherByRound[key] = []
-    otherByRound[key].push(match)
-  }
-  for (const key of Object.keys(otherByRound).sort()) {
-    const roundMatches = otherByRound[key].sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))
-    result.push({ label: key, matches: roundMatches })
-  }
-
-  return result
-}
-
-function MatchesByRound({ matches, userPredictions, userId }) {
-  if (!matches.length) {
-    return (
-      <div className="text-center py-20 text-gray-400 dark:text-gray-600">
-        <p className="text-5xl mb-4">⚽</p>
-        <p>Матчі ще не завантажені</p>
-      </div>
-    )
-  }
-
-  const now = new Date()
-  const groups = groupAndSortMatches(matches)
-
-  return (
-    <div className="space-y-8">
-      {groups.map(({ label, matches: groupMatches }) => (
-        <div key={label}>
-          <h2 className="text-sm font-semibold text-gray-400 dark:text-gray-400 uppercase tracking-wider mb-3">
-            {label}
-          </h2>
-          <div className="space-y-3">
-            {groupMatches.map(match => {
-              const isUpcoming = match.status !== 'finished' && new Date(match.kickoff_at) > now
-              const highlight = !!userId && isUpcoming && !userPredictions[match.id]
-              return (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  userPrediction={userPredictions[match.id]}
-                  userId={userId}
-                  highlight={highlight}
-                />
-              )
-            })}
-          </div>
-        </div>
-      ))}
+      {/* ── By round ────────────────────────────────────────────────────── */}
+      {tab === 'rounds' && <RoundsTab roundTables={roundTables} />}
     </div>
   )
 }

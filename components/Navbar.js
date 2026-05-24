@@ -56,9 +56,6 @@ export default function Navbar() {
           <a href="/" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-sm px-2 py-1">
             Турніри
           </a>
-          <a href="/leaderboard" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-sm px-2 py-1">
-            Рейтинг
-          </a>
           <a href="/rules" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-sm px-2 py-1 hidden sm:block">
             Правила
           </a>

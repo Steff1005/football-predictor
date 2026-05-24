@@ -1,18 +1,16 @@
 'use client'
 import { useState } from 'react'
 
-const AVATAR_COLORS = [
-  'bg-blue-500', 'bg-purple-500', 'bg-amber-500', 'bg-rose-500',
-  'bg-emerald-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-orange-500',
-]
-
 function displayName(profile) {
   return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
 }
 
-function initials(profile) {
-  const name = displayName(profile)
-  return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
+function UserIcon() {
+  return (
+    <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 12c2.67 0 4.8-2.13 4.8-4.8S14.67 2.4 12 2.4 7.2 4.53 7.2 7.2 9.33 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+    </svg>
+  )
 }
 
 export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) {
@@ -21,12 +19,6 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
     () => finishedMatches.length > 0 ? { [finishedMatches[0].id]: true } : {}
   )
 
-  // Stable color assignment keyed by user_id (sorted for consistency across renders)
-  const allUserIds = [...new Set(
-    Object.values(predsByMatch).flatMap(ps => ps.map(p => p.user_id))
-  )].sort()
-  const colorMap = {}
-  allUserIds.forEach((uid, i) => { colorMap[uid] = AVATAR_COLORS[i % AVATAR_COLORS.length] })
 
   function toggleMatch(matchId) {
     setOpenMatches(prev => ({ ...prev, [matchId]: !prev[matchId] }))
@@ -107,16 +99,15 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
                   </div>
                 ) : preds.map(pred => {
                   const profile    = profileMap[pred.user_id]
-                  const pts        = pred.points ?? 0
-                  const avatarColor = colorMap[pred.user_id] ?? 'bg-gray-500'
+                  const pts = pred.points ?? 0
 
                   return (
                     <div key={pred.user_id} className="flex items-center px-4 py-2 border-t border-gray-100 dark:border-white/10 gap-3">
                       {/* Avatar */}
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium text-white flex-shrink-0 overflow-hidden ${profile?.avatar_url ? '' : avatarColor}`}>
+                      <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                         {profile?.avatar_url
                           ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                          : initials(profile)
+                          : <UserIcon />
                         }
                       </div>
 

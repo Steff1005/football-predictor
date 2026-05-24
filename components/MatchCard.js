@@ -31,7 +31,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
   const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
 
   return (
-    <div className={`bg-white dark:bg-gray-900 rounded-xl p-4 border ${
+    <div className={`bg-white dark:bg-gray-900 rounded-xl p-3 sm:p-4 border ${
       highlight
         ? 'border-gray-200 dark:border-gray-800 border-l-[3px] border-l-amber-400/70 dark:border-l-amber-400/50'
         : isFinished ? 'border-gray-200 dark:border-gray-700' : 'border-gray-200 dark:border-gray-800'
@@ -52,7 +52,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
       <div className="flex items-center gap-2 sm:gap-4">
         {/* Home */}
         <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
-          <span className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base break-words leading-tight text-right">
+          <span className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm leading-tight text-right truncate">
             {match.home_team}
           </span>
           {match.home_logo && (
@@ -73,7 +73,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
                 value={home}
                 onChange={e => setHome(e.target.value)}
                 disabled={isPast}
-                className="w-11 h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-lg disabled:opacity-40"
+                className="w-9 h-9 sm:w-11 sm:h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-base sm:text-lg disabled:opacity-40"
                 placeholder="0"
               />
               <span className="text-gray-400 dark:text-gray-500 font-bold">:</span>
@@ -82,7 +82,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
                 value={away}
                 onChange={e => setAway(e.target.value)}
                 disabled={isPast}
-                className="w-11 h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-lg disabled:opacity-40"
+                className="w-9 h-9 sm:w-11 sm:h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-base sm:text-lg disabled:opacity-40"
                 placeholder="0"
               />
             </div>
@@ -94,7 +94,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
           {match.away_logo && (
             <img src={match.away_logo} alt="" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
           )}
-          <span className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base break-words leading-tight">
+          <span className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm leading-tight truncate">
             {match.away_team}
           </span>
         </div>

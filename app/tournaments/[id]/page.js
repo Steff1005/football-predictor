@@ -28,18 +28,49 @@ const GROUP_STAGE_ROUNDS = new Set([
 
 const KNOCKOUT_ORDER  = ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'THIRD_PLACE', 'FINAL']
 const KNOCKOUT_LABELS = {
-  LAST_32: '1/32 фіналу', LAST_16: '1/16 фіналу',
+  LAST_32: '1/32 фіналу', LAST_16: '1/8 фіналу',
   QUARTER_FINALS: '1/4 фіналу', SEMI_FINALS: '1/2 фіналу',
   THIRD_PLACE: 'Матч за 3 місце', FINAL: 'Фінал',
+}
+
+// Country flags (flagcdn.com) — keyed by Ukrainian team name
+const COUNTRY_FLAG_CODES = {
+  'Іспанія': 'es', 'Англія': 'gb-eng', 'Франція': 'fr', 'Португалія': 'pt',
+  'Нідерланди': 'nl', 'Туреччина': 'tr', 'Швейцарія': 'ch', 'Австрія': 'at',
+  'Румунія': 'ro', 'Словаччина': 'sk', 'Угорщина': 'hu', 'Польща': 'pl',
+  'Бельгія': 'be', 'Чехія': 'cz', 'Данія': 'dk', 'Словенія': 'si',
+  'Сербія': 'rs', 'Хорватія': 'hr', 'Албанія': 'al', 'Грузія': 'ge',
+  'Шотландія': 'gb-sct', 'Україна': 'ua', 'Німеччина': 'de', 'Італія': 'it',
+}
+
+function getFlagUrl(name) {
+  const code = COUNTRY_FLAG_CODES[name]
+  return code ? `https://flagcdn.com/32x24/${code}.png` : null
+}
+
+// Matches numbered rounds like "Regular Season - 01" or "GROUP_STAGE_3"
+const NUMBERED_ROUND_RE = /^(Regular Season|GROUP_STAGE)/i
+
+function numberedRoundLabel(round) {
+  const m = round.match(/\d+$/)
+  return m ? `Тур ${parseInt(m[0], 10)}` : round
 }
 
 function groupAndSortMatches(matches) {
   const groupStage = matches.filter(m => GROUP_STAGE_ROUNDS.has(m.round))
   const knockout   = matches.filter(m => KNOCKOUT_ORDER.includes(m.round))
-  const other      = matches.filter(m => !GROUP_STAGE_ROUNDS.has(m.round) && !KNOCKOUT_ORDER.includes(m.round))
+  const numbered   = matches.filter(m =>
+    !GROUP_STAGE_ROUNDS.has(m.round) && !KNOCKOUT_ORDER.includes(m.round) &&
+    NUMBERED_ROUND_RE.test(m.round ?? '')
+  )
+  const other = matches.filter(m =>
+    !GROUP_STAGE_ROUNDS.has(m.round) && !KNOCKOUT_ORDER.includes(m.round) &&
+    !NUMBERED_ROUND_RE.test(m.round ?? '')
+  )
 
   const result = []
 
+  // Traditional group stage (GROUP_A … GROUP_L) → Тур 1/2/3
   if (groupStage.length > 0) {
     const byGroup = {}
     for (const m of groupStage) {
@@ -60,6 +91,23 @@ function groupAndSortMatches(matches) {
     }
   }
 
+  // Numbered rounds (Regular Season - N, GROUP_STAGE_N) — sorted numerically, before knockouts
+  const numberedByLabel = {}
+  for (const m of numbered) {
+    const label = numberedRoundLabel(m.round ?? '')
+    if (!numberedByLabel[label]) numberedByLabel[label] = []
+    numberedByLabel[label].push(m)
+  }
+  const numberedKeys = Object.keys(numberedByLabel).sort((a, b) => {
+    const na = parseInt(a.match(/\d+$/)?.[0] ?? '0', 10)
+    const nb = parseInt(b.match(/\d+$/)?.[0] ?? '0', 10)
+    return na - nb
+  })
+  for (const k of numberedKeys) {
+    result.push({ label: k, matches: numberedByLabel[k].sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at)) })
+  }
+
+  // Knockout rounds in defined order
   const knockoutByRound = {}
   for (const m of knockout) {
     if (!knockoutByRound[m.round]) knockoutByRound[m.round] = []
@@ -70,6 +118,7 @@ function groupAndSortMatches(matches) {
     result.push({ label: KNOCKOUT_LABELS[round], matches: knockoutByRound[round].sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at)) })
   }
 
+  // Anything else — alphabetical
   const otherByRound = {}
   for (const m of other) {
     const k = m.round ?? ''
@@ -143,11 +192,15 @@ function MatchesByRound({ matches, userPredictions, userId }) {
 
 // ── Standings tab ─────────────────────────────────────────────────────────────
 
-function StandingsTab({ standings }) {
+function StandingsTab({ standings, roundLabels, roundPointsMap }) {
   if (!standings.length) return <EmptyState icon="📊" text="Поки немає прогнозів" />
 
+  const colMaxes = (roundLabels ?? []).map(label =>
+    Math.max(0, ...standings.map(s => roundPointsMap?.[label]?.[s.uid] ?? 0))
+  )
+
   return (
-    <div>
+    <div className="space-y-6">
       {/* Mobile — cards */}
       <div className="sm:hidden space-y-2">
         {standings.map((s, i) => (
@@ -170,7 +223,7 @@ function StandingsTab({ standings }) {
         ))}
       </div>
 
-      {/* Desktop — table */}
+      {/* Desktop — summary table */}
       <div className="hidden sm:block bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -209,6 +262,54 @@ function StandingsTab({ standings }) {
           </table>
         </div>
       </div>
+
+      {/* Round-by-round breakdown (all screen sizes) */}
+      {roundLabels?.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+            <h2 className="font-semibold text-gray-900 dark:text-white text-sm">Очки по стадіях</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-gray-800">
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap sticky left-0 bg-white dark:bg-gray-900">Учасник</th>
+                  {roundLabels.map(label => (
+                    <th key={label} className="text-center px-3 py-2.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap">{label}</th>
+                  ))}
+                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap">Загалом</th>
+                </tr>
+              </thead>
+              <tbody>
+                {standings.map(s => (
+                  <tr key={s.uid} className="border-b border-gray-100 dark:border-gray-800/50 last:border-0">
+                    <td className="px-4 py-2.5 sticky left-0 bg-white dark:bg-gray-900">
+                      <div className="flex items-center gap-2">
+                        <Avatar profile={s.profile} />
+                        <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">{displayName(s.profile)}</span>
+                      </div>
+                    </td>
+                    {roundLabels.map((label, ci) => {
+                      const pts = roundPointsMap?.[label]?.[s.uid] ?? 0
+                      const isMax = colMaxes[ci] > 0 && pts === colMaxes[ci]
+                      return (
+                        <td key={label} className={`text-center px-3 py-2.5 tabular-nums ${
+                          isMax
+                            ? 'bg-green-500/10 text-green-600 dark:text-green-400 font-bold'
+                            : 'text-gray-700 dark:text-gray-300'
+                        }`}>
+                          {pts > 0 ? pts : '—'}
+                        </td>
+                      )
+                    })}
+                    <td className="text-center px-3 py-2.5 font-bold text-green-500 dark:text-green-400 tabular-nums">{s.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -298,9 +399,16 @@ export default async function TournamentPage({ params, searchParams }) {
     )
   }
 
-  const matchIds        = matches?.map(m => m.id) ?? []
+  // Enrich matches with flag URLs for tournaments without logos (e.g. Euro 2024)
+  const allMatches = (matches ?? []).map(m => ({
+    ...m,
+    home_logo: m.home_logo ?? getFlagUrl(m.home_team),
+    away_logo: m.away_logo ?? getFlagUrl(m.away_team),
+  }))
+
+  const matchIds        = allMatches.map(m => m.id)
   const now             = new Date()
-  const finishedMatchIds = (matches ?? []).filter(m => m.status === 'finished').map(m => m.id)
+  const finishedMatchIds = allMatches.filter(m => m.status === 'finished').map(m => m.id)
 
   // Current user's predictions (for matches tab progress bar)
   let userPredictions = {}
@@ -357,7 +465,7 @@ export default async function TournamentPage({ params, searchParams }) {
     .sort((a, b) => b.total - a.total || b.exact - a.exact)
 
   // ── По-турах ──────────────────────────────────────────────────────────────
-  const roundedGroups  = groupAndSortMatches(matches ?? [])
+  const roundedGroups  = groupAndSortMatches(allMatches)
   const matchRoundLabel = {}
   roundedGroups.forEach(({ label, matches: gm }) => gm.forEach(m => { matchRoundLabel[m.id] = label }))
 
@@ -385,16 +493,18 @@ export default async function TournamentPage({ params, searchParams }) {
     if (!predsByMatch[p.match_id]) predsByMatch[p.match_id] = []
     predsByMatch[p.match_id].push(p)
   }
-  const finishedMatches = (matches ?? [])
+  const finishedMatches = allMatches
     .filter(m => m.status === 'finished')
     .sort((a, b) => new Date(b.kickoff_at) - new Date(a.kickoff_at))
+
+  const roundLabels = roundTables.map(rt => rt.label)
 
   // ── Round analyses map ────────────────────────────────────────────────────
   const analysisMap = {}
   ;(roundAnalysesRows ?? []).forEach(r => { analysisMap[r.round_label] = r.analysis_text })
 
   // ── Progress bar (matches tab) ────────────────────────────────────────────
-  const matchesTabMatches = (matches ?? []).filter(m => m.status !== 'finished')
+  const matchesTabMatches = allMatches.filter(m => m.status !== 'finished')
   const upcomingMatches   = matchesTabMatches.filter(m => new Date(m.kickoff_at) > now)
   const predictedCount   = userId ? upcomingMatches.filter(m => userPredictions[m.id]).length : 0
   const unpredictedCount = userId ? upcomingMatches.length - predictedCount : 0
@@ -453,7 +563,7 @@ export default async function TournamentPage({ params, searchParams }) {
       )}
 
       {/* ── Standings ───────────────────────────────────────────────────── */}
-      {tab === 'standings' && <StandingsTab standings={standings} />}
+      {tab === 'standings' && <StandingsTab standings={standings} roundLabels={roundLabels} roundPointsMap={byRound} />}
 
       {/* ── By round ────────────────────────────────────────────────────── */}
       {tab === 'rounds' && (

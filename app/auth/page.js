@@ -5,6 +5,26 @@ import { useRouter } from 'next/navigation'
 
 const INPUT = 'w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400'
 
+const TRANSLIT = {
+  а:'a',б:'b',в:'v',г:'h',ґ:'g',д:'d',е:'e',є:'ie',ж:'zh',з:'z',
+  и:'y',і:'i',ї:'i',й:'i',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',
+  р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',
+  щ:'shch',ь:'',ю:'iu',я:'ia',
+  // Russian extras
+  ё:'yo',э:'e',ъ:'',ы:'y',
+}
+
+function transliterate(str) {
+  return str.toLowerCase().split('').map(ch => TRANSLIT[ch] ?? ch).join('')
+}
+
+function toUsername(first, last) {
+  const a = transliterate(first.trim()).replace(/[^a-z0-9]/g, '')
+  const b = transliterate(last.trim()).replace(/[^a-z0-9]/g, '')
+  if (a && b) return `${a}_${b}`
+  return (a || b) || ''
+}
+
 export default function AuthPage() {
   const [isLogin, setIsLogin]           = useState(true)
   const [email, setEmail]               = useState('')
@@ -20,7 +40,7 @@ export default function AuthPage() {
   // Auto-generate username from first + last name unless user has edited it
   useEffect(() => {
     if (!isLogin && !usernameEdited) {
-      setUsername(`${firstName}.${lastName}`.toLowerCase().replace(/\s+/g, ''))
+      setUsername(toUsername(firstName, lastName))
     }
   }, [firstName, lastName, isLogin, usernameEdited])
 

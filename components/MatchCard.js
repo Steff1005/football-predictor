@@ -27,7 +27,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
   }
 
   const kickoff = new Date(match.kickoff_at)
-  const dateStr = kickoff.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' })
+  const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })
   const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
 
   return (
@@ -36,16 +36,15 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
         ? 'border-gray-200 dark:border-gray-800 border-l-[3px] border-l-amber-400/70 dark:border-l-amber-400/50'
         : isFinished ? 'border-gray-200 dark:border-gray-700' : 'border-gray-200 dark:border-gray-800'
     }`}>
-      {/* Top row: round + date + status */}
+      {/* Top row: date + status */}
       <div className="flex justify-between items-center mb-3 text-xs text-gray-400 dark:text-gray-500">
-        <span className="truncate max-w-[120px]">{match.round?.replace('GROUP_', 'Гр. ') || ''}</span>
-        <span>{dateStr} {timeStr}</span>
+        <span>{dateStr}, {timeStr}</span>
         <span className={`px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${
           isFinished ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' :
           match.status === 'live' ? 'bg-red-500/20 text-red-400' :
           'bg-green-500/20 text-green-400'
         }`}>
-          {isFinished ? 'Фінал' : match.status === 'live' ? '🔴 Live' : 'Скоро'}
+          {isFinished ? 'Завершено' : match.status === 'live' ? '🔴 Live' : 'Скоро'}
         </span>
       </div>
 

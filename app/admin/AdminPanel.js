@@ -59,10 +59,10 @@ function MatchesTab({ matches, setMatches }) {
   async function recalculate(matchId) {
     setRecalcId(matchId)
     try {
-      const res  = await fetch(`/api/recalculate/${matchId}`, { method: 'POST' })
+      const res  = await fetch(`/api/recalculate/${matchId}`)
       const data = await res.json()
       if (data.error) flash('Помилка: ' + data.error)
-      else flash(`✅ Перераховано ${data.updated} прогнозів (${data.profilesAffected ?? 0} гравців)`)
+      else flash(`✅ Перераховано ${data.updated} прогнозів`)
     } catch (e) {
       flash('Помилка: ' + e.message)
     }

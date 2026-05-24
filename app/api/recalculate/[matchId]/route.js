@@ -15,20 +15,29 @@ function calculatePoints(predH, predA, realH, realA) {
   return pr === rr ? 1 : 0
 }
 
-export async function POST(request, { params }) {
+export async function GET(request, { params }) {
   const { matchId } = await params
 
-  // Auth — only admin
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    { cookies: { getAll() { return cookieStore.getAll() } } }
-  )
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session || session.user.email !== process.env.ADMIN_EMAIL) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  // Auth — CRON_SECRET Bearer token OR admin session
+  const authHeader  = request.headers.get('authorization')
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+  const cronSecret  = process.env.CRON_SECRET
+
+  let authorized = false
+  if (cronSecret && bearerToken === cronSecret) {
+    authorized = true
+  } else {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      { cookies: { getAll() { return cookieStore.getAll() } } }
+    )
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user?.email === process.env.ADMIN_EMAIL) authorized = true
   }
+
+  if (!authorized) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   // Fetch match
   const { data: match } = await adminDb
@@ -42,41 +51,38 @@ export async function POST(request, { params }) {
     return Response.json({ error: 'Match not finished or missing score' }, { status: 400 })
   }
 
-  // Fetch all predictions
+  // Fetch only already-calculated predictions
   const { data: predictions } = await adminDb
     .from('predictions')
-    .select('id, user_id, predicted_home, predicted_away, points')
+    .select('id, user_id, predicted_home, predicted_away')
     .eq('match_id', matchId)
+    .eq('is_calculated', true)
 
   if (!predictions?.length) return Response.json({ success: true, updated: 0 })
 
-  // Compute per-user point deltas
-  const userDiff = {}
+  // Recalculate and update each prediction
+  const affectedUsers = new Set()
   for (const pred of predictions) {
     const newPts = calculatePoints(pred.predicted_home, pred.predicted_away, match.home_score, match.away_score)
-    const diff   = newPts - (pred.points ?? 0)
-    if (diff !== 0) userDiff[pred.user_id] = (userDiff[pred.user_id] ?? 0) + diff
+    await adminDb.from('predictions').update({ points: newPts }).eq('id', pred.id)
+    affectedUsers.add(pred.user_id)
+  }
+
+  // Recompute each user's totals from scratch
+  for (const userId of affectedUsers) {
+    const { data: allPreds } = await adminDb
+      .from('predictions')
+      .select('points, is_calculated')
+      .eq('user_id', userId)
+
+    const totalPoints      = (allPreds ?? []).filter(p => p.is_calculated).reduce((s, p) => s + (p.points ?? 0), 0)
+    const totalPredictions = (allPreds ?? []).length
 
     await adminDb
-      .from('predictions')
-      .update({ points: newPts, is_calculated: true })
-      .eq('id', pred.id)
-  }
-
-  // Apply deltas to profile totals
-  for (const [userId, diff] of Object.entries(userDiff)) {
-    const { data: profile } = await adminDb
       .from('profiles')
-      .select('total_points')
+      .update({ total_points: totalPoints, total_predictions: totalPredictions })
       .eq('id', userId)
-      .single()
-    if (profile) {
-      await adminDb
-        .from('profiles')
-        .update({ total_points: (profile.total_points ?? 0) + diff })
-        .eq('id', userId)
-    }
   }
 
-  return Response.json({ success: true, updated: predictions.length, profilesAffected: Object.keys(userDiff).length })
+  return Response.json({ success: true, updated: predictions.length })
 }

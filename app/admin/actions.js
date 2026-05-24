@@ -3,13 +3,41 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 
-async function getAdminDb() {
+async function getSupabase() {
   const cookieStore = await cookies()
-  const supabase = createServerClient(
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     { cookies: { getAll() { return cookieStore.getAll() } } }
   )
+}
+
+export async function checkAdmin() {
+  try {
+    const supabase = await getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    const isAdmin = session?.user?.email === process.env.ADMIN_EMAIL
+    return { isAdmin, email: isAdmin ? session.user.email : null }
+  } catch {
+    return { isAdmin: false, email: null }
+  }
+}
+
+export async function fetchAdminData() {
+  const db = await getAdminDb()
+  const [{ data: matches }, { data: profiles }] = await Promise.all([
+    db.from('matches')
+      .select('id, tournament_id, home_team, away_team, home_score, away_score, status, kickoff_at, round')
+      .order('kickoff_at', { ascending: false }),
+    db.from('profiles')
+      .select('id, username, first_name, last_name, total_points, total_predictions')
+      .order('total_points', { ascending: false }),
+  ])
+  return { matches: matches ?? [], profiles: profiles ?? [] }
+}
+
+async function getAdminDb() {
+  const supabase = await getSupabase()
   const { data: { session } } = await supabase.auth.getSession()
   if (!session || session.user.email !== process.env.ADMIN_EMAIL) {
     throw new Error('Unauthorized')

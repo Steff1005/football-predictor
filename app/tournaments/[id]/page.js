@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import MatchCard from '../../../components/MatchCard'
+import RoundAnalysisSection from './RoundAnalysisSection'
 
 export const revalidate = 60
 
@@ -283,12 +284,12 @@ function StandingsTab({ standings }) {
 
 // ── By-round tab ──────────────────────────────────────────────────────────────
 
-function RoundsTab({ roundTables }) {
+function RoundsTab({ roundTables, tournamentId, analysisMap, isAdmin }) {
   if (!roundTables.length) return <EmptyState icon="📅" text="Поки немає даних по турах" />
 
   return (
     <div className="space-y-5">
-      {roundTables.map(({ label, rows, maxPts, matchCount }) => (
+      {roundTables.map(({ label, rows, maxPts, matchCount, matchIds }) => (
         <div key={label} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
             <h2 className="font-semibold text-gray-900 dark:text-white">{label}</h2>
@@ -314,6 +315,13 @@ function RoundsTab({ roundTables }) {
               )
             })}
           </div>
+          <RoundAnalysisSection
+            tournamentId={tournamentId}
+            roundLabel={label}
+            matchIds={matchIds}
+            initialText={analysisMap[label] ?? null}
+            isAdmin={isAdmin}
+          />
         </div>
       ))}
     </div>
@@ -341,11 +349,13 @@ export default async function TournamentPage({ params, searchParams }) {
   )
 
   const { data: { session } } = await supabase.auth.getSession()
-  const userId = session?.user?.id
+  const userId  = session?.user?.id
+  const isAdmin = session?.user?.email === process.env.ADMIN_EMAIL
 
-  const [{ data: tournament }, { data: matches }] = await Promise.all([
+  const [{ data: tournament }, { data: matches }, { data: roundAnalysesRows }] = await Promise.all([
     supabase.from('tournaments').select('*').eq('id', id).single(),
     supabase.from('matches').select('*').eq('tournament_id', id).order('kickoff_at', { ascending: true }),
+    supabase.from('round_analyses').select('round_label, analysis_text').eq('tournament_id', id),
   ])
 
   if (!tournament) {
@@ -435,7 +445,7 @@ export default async function TournamentPage({ params, searchParams }) {
         .map(([uid, pts]) => ({ uid, pts, profile: profileMap[uid] }))
         .filter(r => r.profile)
         .sort((a, b) => b.pts - a.pts)
-      return { label, rows, maxPts: rows[0]?.pts ?? 0, matchCount: gm.length }
+      return { label, rows, maxPts: rows[0]?.pts ?? 0, matchCount: gm.length, matchIds: gm.map(m => m.id) }
     })
 
   // ── Прогнози ──────────────────────────────────────────────────────────────
@@ -447,6 +457,10 @@ export default async function TournamentPage({ params, searchParams }) {
   const startedMatches = (matches ?? [])
     .filter(m => new Date(m.kickoff_at) <= now)
     .sort((a, b) => new Date(b.kickoff_at) - new Date(a.kickoff_at))
+
+  // ── Round analyses map ────────────────────────────────────────────────────
+  const analysisMap = {}
+  ;(roundAnalysesRows ?? []).forEach(r => { analysisMap[r.round_label] = r.analysis_text })
 
   // ── Progress bar (matches tab) ────────────────────────────────────────────
   const upcomingMatches  = (matches ?? []).filter(m => m.status !== 'finished' && new Date(m.kickoff_at) > now)
@@ -510,7 +524,14 @@ export default async function TournamentPage({ params, searchParams }) {
       {tab === 'standings' && <StandingsTab standings={standings} />}
 
       {/* ── By round ────────────────────────────────────────────────────── */}
-      {tab === 'rounds' && <RoundsTab roundTables={roundTables} />}
+      {tab === 'rounds' && (
+        <RoundsTab
+          roundTables={roundTables}
+          tournamentId={id}
+          analysisMap={analysisMap}
+          isAdmin={isAdmin}
+        />
+      )}
     </div>
   )
 }

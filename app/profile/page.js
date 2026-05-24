@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { redirect } from 'next/navigation'
 import TournamentFilter from './TournamentFilter'
+import AvatarUpload from './AvatarUpload'
 
 export const metadata = { title: 'Профіль — Football Predictor' }
 
@@ -25,7 +26,7 @@ export default async function ProfilePage({ searchParams }) {
     { data: rawPredictions },
     { data: tournaments },
   ] = await Promise.all([
-    supabase.from('profiles').select('username, first_name, last_name, total_points, total_predictions').eq('id', userId).single(),
+    supabase.from('profiles').select('username, first_name, last_name, total_points, total_predictions, avatar_url').eq('id', userId).single(),
     supabase.from('predictions').select('*').eq('user_id', userId),
     supabase.from('tournaments').select('id, name').order('name'),
   ])
@@ -63,9 +64,7 @@ export default async function ProfilePage({ searchParams }) {
     <div className="max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-xl font-bold">{initials}</span>
-        </div>
+        <AvatarUpload userId={userId} avatarUrl={profile?.avatar_url} initials={initials} />
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{displayName}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">{session.user.email}</p>

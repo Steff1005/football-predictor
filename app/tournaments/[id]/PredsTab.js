@@ -64,9 +64,19 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
               </div>
 
               {/* Score badge */}
-              <span className="bg-gray-100 dark:bg-white/10 rounded-md px-3 py-0.5 font-mono text-sm font-semibold text-gray-900 dark:text-white flex-shrink-0">
-                {match.home_score}:{match.away_score}
-              </span>
+              {match.status === 'finished' ? (
+                <span className="bg-gray-100 dark:bg-white/10 rounded-md px-3 py-0.5 font-mono text-sm font-semibold text-gray-900 dark:text-white flex-shrink-0">
+                  {match.home_score}:{match.away_score}
+                </span>
+              ) : match.status === 'live' ? (
+                <span className="bg-red-500/10 rounded-md px-3 py-0.5 text-xs font-semibold text-red-500 dark:text-red-400 flex-shrink-0 whitespace-nowrap">
+                  🔴 Live
+                </span>
+              ) : (
+                <span className="bg-yellow-500/10 rounded-md px-3 py-0.5 text-xs font-semibold text-yellow-600 dark:text-yellow-400 flex-shrink-0 whitespace-nowrap">
+                  Тривае
+                </span>
+              )}
 
               {/* Away team */}
               <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -99,7 +109,8 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
                   </div>
                 ) : preds.map(pred => {
                   const profile    = profileMap[pred.user_id]
-                  const pts = pred.points ?? 0
+                  const pts        = pred.points
+                  const isFinished = match.status === 'finished'
 
                   return (
                     <div key={pred.user_id} className="flex items-center px-4 py-2 border-t border-gray-100 dark:border-white/10 gap-3">
@@ -121,14 +132,16 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
                         {pred.predicted_home}:{pred.predicted_away}
                       </span>
 
-                      {/* Points badge */}
-                      <span className={`rounded px-2 py-0.5 text-xs font-medium flex-shrink-0 ${
-                        pts > 0
-                          ? 'bg-green-500/20 text-green-600 dark:text-green-400'
-                          : 'bg-red-500/20 text-red-500 dark:text-red-400'
-                      }`}>
-                        {pts > 0 ? `+${pts}` : '0'}
-                      </span>
+                      {/* Points badge — only when match is finished */}
+                      {isFinished && (
+                        <span className={`rounded px-2 py-0.5 text-xs font-medium flex-shrink-0 ${
+                          pts > 0
+                            ? 'bg-green-500/20 text-green-600 dark:text-green-400'
+                            : 'bg-red-500/20 text-red-500 dark:text-red-400'
+                        }`}>
+                          {pts > 0 ? `+${pts}` : '0'}
+                        </span>
+                      )}
                     </div>
                   )
                 })}

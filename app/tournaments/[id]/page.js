@@ -408,7 +408,7 @@ export default async function TournamentPage({ params, searchParams }) {
 
   const matchIds        = allMatches.map(m => m.id)
   const now             = new Date()
-  const finishedMatchIds = allMatches.filter(m => m.status === 'finished').map(m => m.id)
+  const finishedMatchIds = allMatches.filter(m => new Date(m.kickoff_at) <= now).map(m => m.id)
 
   // Current user's predictions (for matches tab progress bar)
   let userPredictions = {}
@@ -429,7 +429,7 @@ export default async function TournamentPage({ params, searchParams }) {
     calcPreds = data ?? []
   }
 
-  // Public predictions (finished matches only) → прогнози tab
+  // Public predictions (past matches = kickoff_at <= now) → прогнози tab
   let publicPreds = []
   if (finishedMatchIds.length > 0) {
     const { data } = await supabase
@@ -494,7 +494,7 @@ export default async function TournamentPage({ params, searchParams }) {
     predsByMatch[p.match_id].push(p)
   }
   const finishedMatches = allMatches
-    .filter(m => m.status === 'finished')
+    .filter(m => new Date(m.kickoff_at) <= now)
     .sort((a, b) => new Date(b.kickoff_at) - new Date(a.kickoff_at))
 
   const roundLabels = roundTables.map(rt => rt.label)
@@ -504,8 +504,8 @@ export default async function TournamentPage({ params, searchParams }) {
   ;(roundAnalysesRows ?? []).forEach(r => { analysisMap[r.round_label] = r.analysis_text })
 
   // ── Progress bar (matches tab) ────────────────────────────────────────────
-  const matchesTabMatches = allMatches.filter(m => m.status !== 'finished')
-  const upcomingMatches   = matchesTabMatches.filter(m => new Date(m.kickoff_at) > now)
+  const matchesTabMatches = allMatches.filter(m => new Date(m.kickoff_at) > now)
+  const upcomingMatches   = matchesTabMatches
   const predictedCount   = userId ? upcomingMatches.filter(m => userPredictions[m.id]).length : 0
   const unpredictedCount = userId ? upcomingMatches.length - predictedCount : 0
   const progressPct = upcomingMatches.length > 0

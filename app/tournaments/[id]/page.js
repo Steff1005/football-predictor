@@ -109,7 +109,7 @@ function EmptyState({ icon, text }) {
 // ── Matches tab ───────────────────────────────────────────────────────────────
 
 function MatchesByRound({ matches, userPredictions, userId }) {
-  if (!matches.length) return <EmptyState icon="⚽" text="Матчі ще не завантажені" />
+  if (!matches.length) return <EmptyState icon="✅" text="Усі матчі цього турніру завершені" />
 
   const now    = new Date()
   const groups = groupAndSortMatches(matches)
@@ -141,33 +141,54 @@ function MatchesByRound({ matches, userPredictions, userId }) {
 
 // ── Predictions tab ───────────────────────────────────────────────────────────
 
-function PredsTab({ startedMatches, predsByMatch, profileMap }) {
-  if (!startedMatches.length) return <EmptyState icon="🔒" text="Прогнози стануть доступні після початку матчів" />
+function PredsTab({ finishedMatches, predsByMatch, profileMap }) {
+  if (!finishedMatches.length) return <EmptyState icon="🔒" text="Прогнози стануть доступні після завершення матчів" />
 
   return (
     <div className="space-y-4">
-      {startedMatches.map(match => {
-        const preds    = (predsByMatch[match.id] ?? [])
+      {finishedMatches.map(match => {
+        const preds = (predsByMatch[match.id] ?? [])
           .filter(p => profileMap[p.user_id])
           .sort((a, b) => (b.points ?? -1) - (a.points ?? -1))
-        const kickoff  = new Date(match.kickoff_at)
-        const dateStr  = kickoff.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: '2-digit' })
-        const timeStr  = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
-        const hasScore = match.home_score != null && match.away_score != null
+        const kickoff = new Date(match.kickoff_at)
+        const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })
+        const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
 
         return (
-          <div key={match.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-            {/* Match header */}
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.home_team}</span>
-                  <span className="bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-lg font-bold font-mono text-sm text-gray-900 dark:text-white flex-shrink-0">
-                    {hasScore ? `${match.home_score}:${match.away_score}` : '–:–'}
+          <div key={match.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {/* Match header — mirrors MatchCard layout */}
+            <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+              {/* Date + status */}
+              <div className="flex justify-between items-center mb-3 text-xs text-gray-400 dark:text-gray-500">
+                <span>{dateStr}, {timeStr}</span>
+                <span className="px-2 py-0.5 rounded-full font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                  Завершено
+                </span>
+              </div>
+              {/* Teams and score */}
+              <div className="flex items-center gap-2 sm:gap-4">
+                {/* Home */}
+                <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
+                  <span className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base leading-tight text-right truncate">
+                    {match.home_team}
                   </span>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.away_team}</span>
+                  {match.home_logo && (
+                    <img src={match.home_logo} alt="" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
+                  )}
                 </div>
-                <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">{dateStr} {timeStr}</span>
+                {/* Score */}
+                <div className="bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg font-bold text-lg text-gray-900 dark:text-white whitespace-nowrap flex-shrink-0">
+                  {match.home_score} : {match.away_score}
+                </div>
+                {/* Away */}
+                <div className="flex-1 flex items-center justify-start gap-2 min-w-0">
+                  {match.away_logo && (
+                    <img src={match.away_logo} alt="" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
+                  )}
+                  <span className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base leading-tight truncate">
+                    {match.away_team}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -184,18 +205,19 @@ function PredsTab({ startedMatches, predsByMatch, profileMap }) {
                     : pts === 1
                     ? 'bg-green-500/15 text-green-600 dark:text-green-400'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                  const badge = pts === 4 ? '🎯 +4' : pts === 1 ? '✅ +1' : pts === 0 ? '❌ 0' : '–'
                   return (
                     <div key={pred.user_id} className="flex items-center justify-between px-5 py-3">
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <Avatar profile={profile} />
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">{displayName(profile)}</span>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{displayName(profile)}</span>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-shrink-0">
                         <span className="font-mono text-sm text-gray-600 dark:text-gray-300">
                           {pred.predicted_home}:{pred.predicted_away}
                         </span>
-                        <span className={`w-9 h-7 rounded-full flex items-center justify-center text-xs font-bold ${badgeCls}`}>
-                          {pts != null ? `+${pts}` : '–'}
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${badgeCls}`}>
+                          {badge}
                         </span>
                       </div>
                     </div>
@@ -367,9 +389,9 @@ export default async function TournamentPage({ params, searchParams }) {
     )
   }
 
-  const matchIds       = matches?.map(m => m.id) ?? []
-  const now            = new Date()
-  const startedMatchIds = (matches ?? []).filter(m => new Date(m.kickoff_at) <= now).map(m => m.id)
+  const matchIds        = matches?.map(m => m.id) ?? []
+  const now             = new Date()
+  const finishedMatchIds = (matches ?? []).filter(m => m.status === 'finished').map(m => m.id)
 
   // Current user's predictions (for matches tab progress bar)
   let userPredictions = {}
@@ -390,13 +412,13 @@ export default async function TournamentPage({ params, searchParams }) {
     calcPreds = data ?? []
   }
 
-  // Public predictions (started matches) → прогнози tab
+  // Public predictions (finished matches only) → прогнози tab
   let publicPreds = []
-  if (startedMatchIds.length > 0) {
+  if (finishedMatchIds.length > 0) {
     const { data } = await supabase
       .from('predictions')
       .select('user_id, match_id, predicted_home, predicted_away, points')
-      .in('match_id', startedMatchIds)
+      .in('match_id', finishedMatchIds)
     publicPreds = data ?? []
   }
 
@@ -454,8 +476,8 @@ export default async function TournamentPage({ params, searchParams }) {
     if (!predsByMatch[p.match_id]) predsByMatch[p.match_id] = []
     predsByMatch[p.match_id].push(p)
   }
-  const startedMatches = (matches ?? [])
-    .filter(m => new Date(m.kickoff_at) <= now)
+  const finishedMatches = (matches ?? [])
+    .filter(m => m.status === 'finished')
     .sort((a, b) => new Date(b.kickoff_at) - new Date(a.kickoff_at))
 
   // ── Round analyses map ────────────────────────────────────────────────────
@@ -463,7 +485,8 @@ export default async function TournamentPage({ params, searchParams }) {
   ;(roundAnalysesRows ?? []).forEach(r => { analysisMap[r.round_label] = r.analysis_text })
 
   // ── Progress bar (matches tab) ────────────────────────────────────────────
-  const upcomingMatches  = (matches ?? []).filter(m => m.status !== 'finished' && new Date(m.kickoff_at) > now)
+  const matchesTabMatches = (matches ?? []).filter(m => m.status !== 'finished')
+  const upcomingMatches   = matchesTabMatches.filter(m => new Date(m.kickoff_at) > now)
   const predictedCount   = userId ? upcomingMatches.filter(m => userPredictions[m.id]).length : 0
   const unpredictedCount = userId ? upcomingMatches.length - predictedCount : 0
   const progressPct = upcomingMatches.length > 0
@@ -511,13 +534,13 @@ export default async function TournamentPage({ params, searchParams }) {
               }
             </div>
           )}
-          <MatchesByRound matches={matches ?? []} userPredictions={userPredictions} userId={userId} />
+          <MatchesByRound matches={matchesTabMatches} userPredictions={userPredictions} userId={userId} />
         </>
       )}
 
       {/* ── Predictions ─────────────────────────────────────────────────── */}
       {tab === 'preds' && (
-        <PredsTab startedMatches={startedMatches} predsByMatch={predsByMatch} profileMap={profileMap} />
+        <PredsTab finishedMatches={finishedMatches} predsByMatch={predsByMatch} profileMap={profileMap} />
       )}
 
       {/* ── Standings ───────────────────────────────────────────────────── */}

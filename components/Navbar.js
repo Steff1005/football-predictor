@@ -5,10 +5,10 @@ import { useTheme } from 'next-themes'
 import { logout } from '@/app/auth/actions'
 
 export default function Navbar() {
-  const [user, setUser] = useState(null)
-  const [username, setUsername] = useState('')
-  const [mounted, setMounted] = useState(false)
-  const { theme, setTheme } = useTheme()
+  const [user, setUser]           = useState(null)
+  const [displayName, setDisplayName] = useState('')
+  const [mounted, setMounted]     = useState(false)
+  const { theme, setTheme }       = useTheme()
 
   const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -20,24 +20,31 @@ export default function Navbar() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
-      if (session?.user) fetchUsername(session.user.id)
+      if (session?.user) fetchDisplayName(session.user.id)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      if (session?.user) fetchUsername(session.user.id)
-      else setUsername('')
+      if (session?.user) fetchDisplayName(session.user.id)
+      else setDisplayName('')
     })
 
     return () => subscription.unsubscribe()
   }, [supabase])
 
-  async function fetchUsername(userId) {
-    const { data } = await supabase.from('profiles').select('username').eq('id', userId).single()
-    if (data?.username) setUsername(data.username)
+  async function fetchDisplayName(userId) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, username')
+      .eq('id', userId)
+      .single()
+    if (data) {
+      const full = [data.first_name, data.last_name].filter(Boolean).join(' ')
+      setDisplayName(full || data.username || '')
+    }
   }
 
-  const displayName = username || user?.email?.split('@')[0] || ''
+  const name = displayName || user?.email?.split('@')[0] || ''
 
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 sticky top-0 z-50">
@@ -71,8 +78,8 @@ export default function Navbar() {
           ) : user ? (
             <div className="flex items-center gap-1">
               <a href="/profile"
-                className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors truncate max-w-[100px]">
-                {displayName}
+                className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors truncate max-w-[120px]">
+                {name}
               </a>
               <form action={logout}>
                 <button type="submit"

@@ -63,12 +63,13 @@ export default async function TournamentPage({ params, searchParams }) {
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, username')
+        .select('id, username, first_name, last_name')
         .in('id', userIds)
 
       leaderboard = (profiles ?? [])
         .map(profile => ({
-          username: profile.username,
+          key: profile.id,
+          name: [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username || '—',
           points: userStats[profile.id]?.points ?? 0,
           predictions: userStats[profile.id]?.predictions ?? 0,
         }))
@@ -110,13 +111,13 @@ export default async function TournamentPage({ params, searchParams }) {
           {/* Mobile — cards */}
           <div className="sm:hidden space-y-2">
             {leaderboard.map((player, index) => (
-              <div key={player.username} className="bg-white dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800 flex items-center justify-between">
+              <div key={player.key} className="bg-white dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-lg w-8">
                     {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' :
                       <span className="text-gray-400 dark:text-gray-500 text-sm">{index + 1}</span>}
                   </span>
-                  <span className="font-medium text-gray-900 dark:text-white">{player.username}</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{player.name}</span>
                 </div>
                 <div className="text-right">
                   <div className="font-bold text-green-500 dark:text-green-400 text-lg">{player.points}</div>
@@ -139,12 +140,12 @@ export default async function TournamentPage({ params, searchParams }) {
               </thead>
               <tbody>
                 {leaderboard.map((player, index) => (
-                  <tr key={player.username} className="border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                  <tr key={player.key} className="border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30">
                     <td className="px-6 py-4 font-bold text-lg">
                       {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' :
                         <span className="text-gray-400 dark:text-gray-500">{index + 1}</span>}
                     </td>
-                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{player.username}</td>
+                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{player.name}</td>
                     <td className="px-6 py-4 text-right text-gray-500 dark:text-gray-400">{player.predictions}</td>
                     <td className="px-6 py-4 text-right font-bold text-green-500 dark:text-green-400 text-lg">{player.points}</td>
                   </tr>

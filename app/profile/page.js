@@ -25,7 +25,7 @@ export default async function ProfilePage({ searchParams }) {
     { data: rawPredictions },
     { data: tournaments },
   ] = await Promise.all([
-    supabase.from('profiles').select('username, total_points, total_predictions').eq('id', userId).single(),
+    supabase.from('profiles').select('username, first_name, last_name, total_points, total_predictions').eq('id', userId).single(),
     supabase.from('predictions').select('*').eq('user_id', userId),
     supabase.from('tournaments').select('id, name').order('name'),
   ])
@@ -54,8 +54,10 @@ export default async function ProfilePage({ searchParams }) {
   const exactScores = finished.filter(p => p.points === 4).length
   const correctResults = finished.filter(p => p.points === 1).length
 
-  const displayName = profile?.username || session.user.email?.split('@')[0] || 'Гравець'
-  const initials = displayName.slice(0, 2).toUpperCase()
+  const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ')
+  const displayName = fullName || profile?.username || session.user.email?.split('@')[0] || 'Гравець'
+  const initials = (profile?.first_name?.[0] ?? displayName[0] ?? '?').toUpperCase() +
+                   (profile?.last_name?.[0] ?? displayName[1] ?? '').toUpperCase()
 
   return (
     <div className="max-w-3xl mx-auto">

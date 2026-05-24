@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Import Brazilian Série A 2024 matches from api-football.com into Supabase.
+ * Import Brazilian Série A 2026 matches from ESPN API into Supabase.
+ * ESPN returns current-season data without requiring a paid plan.
  * Usage: node scripts/import-bsa.js
  */
 const path = require('path')
@@ -8,8 +9,6 @@ require('dotenv').config({ path: path.join(process.cwd(), '.env.local') })
 const { createClient } = require('@supabase/supabase-js')
 
 const TOURNAMENT_ID = '86cde0f7-0006-49dd-a1b4-2d24b0ee34cb'
-const LEAGUE_ID     = 71    // api-football.com league ID for Brazilian Série A
-const SEASON        = 2024  // free plan covers up to 2024
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -17,76 +16,87 @@ const db = createClient(
   { auth: { persistSession: false } }
 )
 
-function padRound(roundStr) {
-  // "Regular Season - 3" → "Regular Season - 03" for correct alphabetical sort
-  return roundStr.replace(/(\d+)$/, n => n.padStart(2, '0'))
+function isoWeek(date) {
+  const d = new Date(date)
+  const jan1 = new Date(d.getFullYear(), 0, 1)
+  return Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7)
 }
 
 async function main() {
-  console.log('Fetching BSA 2024 fixtures from api-football.com...')
+  console.log('Fetching BSA 2026 fixtures from ESPN...')
 
   const res = await fetch(
-    `https://v3.football.api-sports.io/fixtures?league=${LEAGUE_ID}&season=${SEASON}`,
-    { headers: { 'x-apisports-key': process.env.API_FOOTBALL_KEY } }
+    'https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260401-20261231&limit=400'
   )
   const json = await res.json()
+  const events = json.events ?? []
+  console.log(`Got ${events.length} fixtures from ESPN`)
 
-  if (json.errors && Object.keys(json.errors).length) {
-    console.error('API error:', JSON.stringify(json.errors))
+  if (!events.length) {
+    console.error('No events returned')
     process.exit(1)
   }
 
-  const fixtures = json.response ?? []
-  console.log(`Got ${fixtures.length} fixtures`)
+  // Derive round numbers from sorted calendar week positions
+  const weeks = [...new Set(events.map(e => isoWeek(e.date)))].sort((a, b) => a - b)
+  const weekToRound = {}
+  weeks.forEach((w, i) => { weekToRound[w] = i + 1 })
 
-  if (!fixtures.length) {
-    console.error('No fixtures returned')
-    process.exit(1)
-  }
+  const rows = events.map(e => {
+    const c    = e.competitions[0]
+    const home = c.competitors.find(t => t.homeAway === 'home')
+    const away = c.competitors.find(t => t.homeAway === 'away')
+    const done = c.status?.type?.completed === true
+    const round = weekToRound[isoWeek(e.date)]
 
-  const rows = fixtures
-    .filter(f => f.teams.home?.name && f.teams.away?.name)
-    .map(f => ({
+    return {
       tournament_id: TOURNAMENT_ID,
-      external_id:   f.fixture.id,
-      home_team:     f.teams.home.name,
-      away_team:     f.teams.away.name,
-      home_logo:     f.teams.home.logo || null,
-      away_logo:     f.teams.away.logo || null,
-      kickoff_at:    new Date(f.fixture.date).toISOString(),
-      status:        f.fixture.status.short === 'FT'  ? 'finished'  :
-                     f.fixture.status.short === 'NS'  ? 'scheduled' : 'scheduled',
-      home_score:    f.fixture.status.short === 'FT' ? f.score.fulltime.home : null,
-      away_score:    f.fixture.status.short === 'FT' ? f.score.fulltime.away : null,
-      round:         padRound(f.league.round),
-    }))
+      external_id:   parseInt(e.id),
+      home_team:     home.team.displayName,
+      away_team:     away.team.displayName,
+      home_logo:     home.team.logo || null,
+      away_logo:     away.team.logo || null,
+      kickoff_at:    new Date(e.date).toISOString(),
+      status:        done ? 'finished' : 'scheduled',
+      home_score:    done ? parseInt(home.score) : null,
+      away_score:    done ? parseInt(away.score) : null,
+      round:         `Regular Season - ${String(round).padStart(2, '0')}`,
+    }
+  })
 
+  // Delete existing matches for this tournament (replaces 2024 data)
+  console.log('Deleting existing matches for this tournament...')
+  const { error: delErr } = await db
+    .from('matches')
+    .delete()
+    .eq('tournament_id', TOURNAMENT_ID)
+  if (delErr) { console.error('Delete failed:', delErr.message); process.exit(1) }
+
+  // Upsert in batches of 100
   console.log(`Upserting ${rows.length} matches...`)
-
-  // Upsert in batches of 100 to avoid payload limits
   const BATCH = 100
   let upserted = 0
   for (let i = 0; i < rows.length; i += BATCH) {
     const batch = rows.slice(i, i + BATCH)
-    const { error } = await db
-      .from('matches')
-      .upsert(batch, { onConflict: 'external_id' })
-    if (error) {
-      console.error(`Batch ${i}-${i + BATCH} error:`, error.message)
-      process.exit(1)
-    }
+    const { error } = await db.from('matches').upsert(batch, { onConflict: 'external_id' })
+    if (error) { console.error(`Batch error:`, error.message); process.exit(1) }
     upserted += batch.length
     console.log(`  ${upserted}/${rows.length}`)
   }
 
-  console.log(`\nDone. Imported ${upserted} matches for Brazilian Série A 2024.`)
-
-  // Quick sanity check
+  // Sanity check
   const { count } = await db
-    .from('matches')
-    .select('*', { count: 'exact', head: true })
+    .from('matches').select('*', { count: 'exact', head: true })
     .eq('tournament_id', TOURNAMENT_ID)
-  console.log(`Matches in DB for this tournament: ${count}`)
+
+  const rounds = [...new Set(rows.map(r => r.round))].sort()
+  const finished = rows.filter(r => r.status === 'finished').length
+  const scheduled = rows.filter(r => r.status === 'scheduled').length
+
+  console.log(`\nDone. ${upserted} matches in DB.`)
+  console.log(`Rounds: ${rounds.length} (${rounds[0]} → ${rounds[rounds.length - 1]})`)
+  console.log(`Finished: ${finished} | Scheduled: ${scheduled}`)
+  console.log(`DB count for tournament: ${count}`)
 }
 
 main().catch(err => { console.error(err); process.exit(1) })

@@ -77,6 +77,23 @@ export default async function TournamentPage({ params, searchParams }) {
     }
   }
 
+  // Progress bar stats (logged-in users only)
+  const now = new Date()
+  const upcomingMatches = (matches ?? []).filter(
+    m => m.status !== 'finished' && new Date(m.kickoff_at) > now
+  )
+  const predictedCount   = userId ? upcomingMatches.filter(m => userPredictions[m.id]).length : 0
+  const unpredictedCount = userId ? upcomingMatches.length - predictedCount : 0
+  const progressPct = upcomingMatches.length > 0
+    ? Math.round((predictedCount / upcomingMatches.length) * 100)
+    : 100
+
+  function pluralMatches(n) {
+    if (n % 10 === 1 && n % 100 !== 11) return 'матч'
+    if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return 'матчі'
+    return 'матчів'
+  }
+
   return (
     <div>
       {/* Breadcrumb */}
@@ -105,7 +122,37 @@ export default async function TournamentPage({ params, searchParams }) {
       </div>
 
       {tab === 'matches' ? (
-        <MatchesByRound matches={matches ?? []} userPredictions={userPredictions} userId={userId} />
+        <>
+          {userId && upcomingMatches.length > 0 && (
+            <div className="mb-5 bg-white dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Прогнози на майбутні матчі
+                </span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  {predictedCount} / {upcomingMatches.length}
+                </span>
+              </div>
+              <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 mb-2">
+                <div
+                  className="bg-green-500 rounded-full h-2 transition-all duration-500"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              {unpredictedCount > 0 && (
+                <p className="text-xs text-amber-500 dark:text-amber-400">
+                  Не спрогнозовано: {unpredictedCount} {pluralMatches(unpredictedCount)}
+                </p>
+              )}
+              {unpredictedCount === 0 && (
+                <p className="text-xs text-green-500 dark:text-green-400">
+                  ✅ Всі майбутні матчі спрогнозовано
+                </p>
+              )}
+            </div>
+          )}
+          <MatchesByRound matches={matches ?? []} userPredictions={userPredictions} userId={userId} />
+        </>
       ) : (
         <div>
           {/* Mobile — cards */}
@@ -255,6 +302,7 @@ function MatchesByRound({ matches, userPredictions, userId }) {
     )
   }
 
+  const now = new Date()
   const groups = groupAndSortMatches(matches)
 
   return (
@@ -265,14 +313,19 @@ function MatchesByRound({ matches, userPredictions, userId }) {
             {label}
           </h2>
           <div className="space-y-3">
-            {groupMatches.map(match => (
-              <MatchCard
-                key={match.id}
-                match={match}
-                userPrediction={userPredictions[match.id]}
-                userId={userId}
-              />
-            ))}
+            {groupMatches.map(match => {
+              const isUpcoming = match.status !== 'finished' && new Date(match.kickoff_at) > now
+              const highlight = !!userId && isUpcoming && !userPredictions[match.id]
+              return (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  userPrediction={userPredictions[match.id]}
+                  userId={userId}
+                  highlight={highlight}
+                />
+              )
+            })}
           </div>
         </div>
       ))}

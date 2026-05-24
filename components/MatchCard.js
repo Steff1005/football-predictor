@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function MatchCard({ match, userPrediction, userId }) {
+export default function MatchCard({ match, userPrediction, userId, highlight }) {
   const [home, setHome] = useState(userPrediction?.predicted_home ?? '')
   const [away, setAway] = useState(userPrediction?.predicted_away ?? '')
   const [saving, setSaving] = useState(false)
@@ -32,7 +32,9 @@ export default function MatchCard({ match, userPrediction, userId }) {
 
   return (
     <div className={`bg-white dark:bg-gray-900 rounded-xl p-4 border ${
-      isFinished ? 'border-gray-200 dark:border-gray-700' : 'border-gray-200 dark:border-gray-800'
+      highlight
+        ? 'border-gray-200 dark:border-gray-800 border-l-[3px] border-l-amber-400/70 dark:border-l-amber-400/50'
+        : isFinished ? 'border-gray-200 dark:border-gray-700' : 'border-gray-200 dark:border-gray-800'
     }`}>
       {/* Top row: round + date + status */}
       <div className="flex justify-between items-center mb-3 text-xs text-gray-400 dark:text-gray-500">

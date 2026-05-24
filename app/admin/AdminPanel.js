@@ -326,7 +326,7 @@ function MergeTab({ profiles, setProfiles, setTab }) {
     )
     setSourceId('')
     setTargetId('')
-    flash(`✅ Злиття завершено. Перенесено: ${result.moved}, пропущено конфліктів: ${result.skipped ?? 0}.`)
+    flash(`✅ Злиття завершено. Перенесено ${result.moved} прогнозів.`)
     setTimeout(() => setTab('profiles'), 2000)
   }
 
@@ -339,7 +339,7 @@ function MergeTab({ profiles, setProfiles, setTab }) {
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-5">
         <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
           Переносить усі прогнози з вихідного профілю до цільового, потім видаляє вихідний.
-          При конфлікті (обидва зробили прогноз на один матч) зберігається прогноз <em>цільового</em> профілю.
+          При конфлікті (обидва зробили прогноз на один матч) залишається прогноз <em>вихідного</em> профілю.
         </p>
 
         <div className="space-y-4">
@@ -379,7 +379,7 @@ function MergeTab({ profiles, setProfiles, setTab }) {
               <div>Зберегти: <strong>{profileDisplay(target)}</strong></div>
             </div>
             <p className="text-xs text-red-600/80 dark:text-red-400/80">
-              Всі прогнози будуть перенесені. При конфлікті — прогноз цільового профілю матиме пріоритет. Дія незворотна.
+              Всі прогнози вихідного профілю будуть перенесені. При конфлікті прогноз вихідного профілю замінює прогноз цільового. Дія незворотна.
             </p>
             <div className="flex gap-2">
               <button

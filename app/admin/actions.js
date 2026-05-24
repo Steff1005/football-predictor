@@ -84,56 +84,69 @@ export async function updateProfile(userId, { first_name, last_name, username })
 export async function mergeProfiles(sourceId, targetId) {
   try {
     const db = await getAdminDb()
+    if (sourceId === targetId) return { error: 'Source and target must be different' }
 
-    // Fetch source predictions
-    const { data: sourcePreds } = await db
-      .from('predictions')
-      .select('id, match_id, points')
-      .eq('user_id', sourceId)
+    // Verify both profiles exist
+    const [{ data: src }, { data: tgt }] = await Promise.all([
+      db.from('profiles').select('id').eq('id', sourceId).maybeSingle(),
+      db.from('profiles').select('id').eq('id', targetId).maybeSingle(),
+    ])
+    if (!src) return { error: 'Source profile not found' }
+    if (!tgt) return { error: 'Target profile not found' }
 
-    // Fetch target's existing match IDs to detect conflicts
-    const { data: targetPreds } = await db
+    // Step 1: find which matches the source predicted
+    const { data: srcPreds, error: srcErr } = await db
       .from('predictions')
       .select('match_id')
-      .eq('user_id', targetId)
-    const targetMatchIds = new Set((targetPreds ?? []).map(p => p.match_id))
+      .eq('user_id', sourceId)
+    if (srcErr) return { error: 'Failed to fetch source predictions: ' + srcErr.message }
 
-    const toMove   = (sourcePreds ?? []).filter(p => !targetMatchIds.has(p.match_id))
-    const toDelete = (sourcePreds ?? []).filter(p =>  targetMatchIds.has(p.match_id))
+    const srcMatchIds = (srcPreds ?? []).map(p => p.match_id)
 
-    if (toMove.length > 0) {
-      await db
-        .from('predictions')
-        .update({ user_id: targetId })
-        .in('id', toMove.map(p => p.id))
-    }
-    if (toDelete.length > 0) {
-      await db
+    // Step 2: delete target's predictions for those same matches so the
+    //         subsequent bulk UPDATE doesn't hit the (user_id, match_id) unique constraint
+    if (srcMatchIds.length > 0) {
+      const { error: delErr } = await db
         .from('predictions')
         .delete()
-        .in('id', toDelete.map(p => p.id))
+        .eq('user_id', targetId)
+        .in('match_id', srcMatchIds)
+      if (delErr) return { error: 'Failed to clear conflicts: ' + delErr.message }
     }
 
-    // Delete source profile (and its auth user if needed — skip auth for simplicity)
-    await db.from('profiles').delete().eq('id', sourceId)
+    // Step 3: move ALL source predictions to target in one statement
+    const { data: moved, error: moveErr } = await db
+      .from('predictions')
+      .update({ user_id: targetId })
+      .eq('user_id', sourceId)
+      .select('id')
+    if (moveErr) return { error: 'Failed to move predictions: ' + moveErr.message }
 
-    // Recalculate target totals from scratch (ALL predictions for count, only scored for points)
+    // Step 4: delete source profile
+    const { error: delProfileErr } = await db
+      .from('profiles')
+      .delete()
+      .eq('id', sourceId)
+    if (delProfileErr) return { error: 'Failed to delete source profile: ' + delProfileErr.message }
+
+    // Step 5: recalculate target totals from scratch
     const { data: allPreds } = await db
       .from('predictions')
       .select('points')
       .eq('user_id', targetId)
 
-    const newPoints      = (allPreds ?? []).reduce((s, p) => s + (p.points ?? 0), 0)
-    const newPredictions = (allPreds ?? []).length
+    const totalPoints      = (allPreds ?? []).reduce((s, p) => s + (p.points ?? 0), 0)
+    const totalPredictions = (allPreds ?? []).length
 
-    const { data: updatedTarget } = await db
+    const { data: updatedTarget, error: updateErr } = await db
       .from('profiles')
-      .update({ total_points: newPoints, total_predictions: newPredictions })
+      .update({ total_points: totalPoints, total_predictions: totalPredictions })
       .eq('id', targetId)
       .select()
       .single()
+    if (updateErr) return { error: 'Failed to update target totals: ' + updateErr.message }
 
-    return { moved: toMove.length, skipped: toDelete.length, target: updatedTarget }
+    return { moved: moved?.length ?? 0, target: updatedTarget }
   } catch (e) {
     return { error: e.message }
   }

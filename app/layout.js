@@ -1,10 +1,23 @@
 import './globals.css'
 import ThemeProvider from '@/components/ThemeProvider'
 import Navbar from '@/components/Navbar'
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
 
 export const metadata = {
   title: 'Football Predictor',
   description: 'Прогнозуй матчі та змагайся з друзями',
+  appleWebApp: {
+    capable: true,
+    title: 'Predictor',
+    statusBarStyle: 'black-translucent',
+  },
+  icons: {
+    apple: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+  },
+}
+
+export const viewport = {
+  themeColor: '#111827',
 }
 
 export default function RootLayout({ children }) {
@@ -17,6 +30,7 @@ export default function RootLayout({ children }) {
             {children}
           </main>
         </ThemeProvider>
+        <ServiceWorkerRegister />
       </body>
     </html>
   )

@@ -33,6 +33,7 @@ export default function AuthPage() {
   const [lastName, setLastName]         = useState('')
   const [username, setUsername]         = useState('')
   const [usernameEdited, setUsernameEdited] = useState(false)
+  const [usernameTaken, setUsernameTaken]   = useState(false)
   const [loading, setLoading]           = useState(false)
   const [message, setMessage]           = useState('')
   const router = useRouter()
@@ -48,18 +49,35 @@ export default function AuthPage() {
     setIsLogin(v => !v)
     setMessage('')
     setUsernameEdited(false)
+    setUsernameTaken(false)
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
     setLoading(true)
     setMessage('')
+    setUsernameTaken(false)
 
     if (isLogin) {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) setMessage('Помилка: ' + error.message)
       else router.push('/')
     } else {
+      // Check username availability before creating the auth user
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .maybeSingle()
+
+      if (existing) {
+        setUsernameTaken(true)
+        setUsernameEdited(true)
+        setMessage('Цей нікнейм вже зайнятий. Змініть його.')
+        setLoading(false)
+        return
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -103,9 +121,9 @@ export default function AuthPage() {
                 type="text"
                 placeholder="Нікнейм"
                 value={username}
-                onChange={e => { setUsername(e.target.value); setUsernameEdited(true) }}
+                onChange={e => { setUsername(e.target.value); setUsernameEdited(true); setUsernameTaken(false) }}
                 required
-                className={INPUT}
+                className={`${INPUT} ${usernameTaken ? '!border-red-400 dark:!border-red-500' : ''}`}
               />
             </>
           )}
@@ -137,7 +155,9 @@ export default function AuthPage() {
         </form>
 
         {message && (
-          <p className="mt-4 text-center text-sm text-yellow-500 dark:text-yellow-400">{message}</p>
+          <p className={`mt-4 text-center text-sm ${usernameTaken ? 'text-red-500 dark:text-red-400' : 'text-yellow-500 dark:text-yellow-400'}`}>
+            {message}
+          </p>
         )}
 
         <button

@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import MatchCard from '../../../components/MatchCard'
 import RoundAnalysisSection from './RoundAnalysisSection'
+import PredsTab from './PredsTab'
 
 export const revalidate = 60
 
@@ -139,98 +140,6 @@ function MatchesByRound({ matches, userPredictions, userId }) {
   )
 }
 
-// ── Predictions tab ───────────────────────────────────────────────────────────
-
-function PredsTab({ finishedMatches, predsByMatch, profileMap }) {
-  if (!finishedMatches.length) return <EmptyState icon="🔒" text="Прогнози стануть доступні після завершення матчів" />
-
-  return (
-    <div className="space-y-4">
-      {finishedMatches.map(match => {
-        const preds = (predsByMatch[match.id] ?? [])
-          .filter(p => profileMap[p.user_id])
-          .sort((a, b) => (b.points ?? -1) - (a.points ?? -1))
-        const kickoff = new Date(match.kickoff_at)
-        const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })
-        const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
-
-        return (
-          <div key={match.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {/* Match header — mirrors MatchCard layout */}
-            <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-              {/* Date + status */}
-              <div className="flex justify-between items-center mb-3 text-xs text-gray-400 dark:text-gray-500">
-                <span>{dateStr}, {timeStr}</span>
-                <span className="px-2 py-0.5 rounded-full font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                  Завершено
-                </span>
-              </div>
-              {/* Teams and score */}
-              <div className="flex items-center gap-2 sm:gap-4">
-                {/* Home */}
-                <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
-                  <span className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base leading-tight text-right truncate">
-                    {match.home_team}
-                  </span>
-                  {match.home_logo && (
-                    <img src={match.home_logo} alt="" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
-                  )}
-                </div>
-                {/* Score */}
-                <div className="bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg font-bold text-lg text-gray-900 dark:text-white whitespace-nowrap flex-shrink-0">
-                  {match.home_score} : {match.away_score}
-                </div>
-                {/* Away */}
-                <div className="flex-1 flex items-center justify-start gap-2 min-w-0">
-                  {match.away_logo && (
-                    <img src={match.away_logo} alt="" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
-                  )}
-                  <span className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base leading-tight truncate">
-                    {match.away_team}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Predictions list */}
-            {preds.length === 0 ? (
-              <div className="px-5 py-4 text-sm text-center text-gray-400 dark:text-gray-600">Прогнозів немає</div>
-            ) : (
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {preds.map(pred => {
-                  const profile = profileMap[pred.user_id]
-                  const pts = pred.points
-                  const badgeCls = pts === 4
-                    ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400'
-                    : pts === 1
-                    ? 'bg-green-500/15 text-green-600 dark:text-green-400'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
-                  const badge = pts === 4 ? '🎯 +4' : pts === 1 ? '✅ +1' : pts === 0 ? '❌ 0' : '–'
-                  return (
-                    <div key={pred.user_id} className="flex items-center justify-between px-5 py-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Avatar profile={profile} />
-                        <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{displayName(profile)}</span>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <span className="font-mono text-sm text-gray-600 dark:text-gray-300">
-                          {pred.predicted_home}:{pred.predicted_away}
-                        </span>
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${badgeCls}`}>
-                          {badge}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
 
 // ── Standings tab ─────────────────────────────────────────────────────────────
 

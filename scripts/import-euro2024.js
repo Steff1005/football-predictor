@@ -17,6 +17,15 @@ require('dotenv').config({ path: path.join(process.cwd(), '.env.local') })
 
 const { createClient } = require('@supabase/supabase-js')
 
+// Deterministic integer ID from match key — avoids collisions with real external IDs
+// by adding a 2-billion offset (real football-data.org IDs are in the low millions).
+function matchExternalId(homeTeam, awayTeam, round) {
+  const s = `euro2024:${round}:${homeTeam}:${awayTeam}`
+  let h = 0
+  for (const c of s) { h = Math.imul(31, h) + c.charCodeAt(0) | 0 }
+  return (Math.abs(h) % 500_000_000) + 1_500_000_000  // max 1,999,999,999 < int4 max 2,147,483,647
+}
+
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const CSV_PATH = process.argv[2]
@@ -127,8 +136,8 @@ async function findOrCreateUser(username) {
     return existing.id
   }
 
-  // Create a new Supabase Auth user (service-role admin API)
-  const email = `${username.toLowerCase().replace(/[^\w]/g, '')}@predictor.local`
+  // Create a new Supabase Auth user
+  const email = `player_${crypto.randomUUID().replace(/-/g, '')}@predictor.local`
   const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
     email,
     password: crypto.randomUUID(),
@@ -139,7 +148,7 @@ async function findOrCreateUser(username) {
 
   const userId = authData.user.id
 
-  // Create the profile row (may already exist if a DB trigger fired)
+  // Upsert profile — works whether or not a DB trigger already created the row
   const { error: profileErr } = await supabase
     .from('profiles')
     .upsert({ id: userId, username, total_points: 0, total_predictions: 0 })
@@ -248,10 +257,11 @@ async function main() {
 
     process.stdout.write(`  ${homeTeam} ${homeScore}:${awayScore} ${awayTeam}`)
 
-    // Insert match
+    // Upsert match (external_id is a stable hash so re-runs are idempotent)
     const { data: matchData, error: matchErr } = await supabase
       .from('matches')
-      .insert({
+      .upsert({
+        external_id:   matchExternalId(homeTeam, awayTeam, currentRound),
         tournament_id: tournamentId,
         home_team:     homeTeam,
         away_team:     awayTeam,
@@ -262,7 +272,7 @@ async function main() {
         kickoff_at:    kickoffAt.toISOString(),
         home_logo:     null,
         away_logo:     null,
-      })
+      }, { onConflict: 'external_id' })
       .select('id')
       .single()
 

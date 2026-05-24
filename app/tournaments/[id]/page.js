@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import MatchCard from '../../../components/MatchCard'
 import RoundAnalysisSection from './RoundAnalysisSection'
 import PredsTab from './PredsTab'
+import CLUB_CRESTS from '../../../lib/club-crests'
 
 export const revalidate = 60
 
@@ -399,11 +400,11 @@ export default async function TournamentPage({ params, searchParams }) {
     )
   }
 
-  // Enrich matches with flag URLs for tournaments without logos (e.g. Euro 2024)
+  // Enrich matches with logo URLs: DB value → club crest → country flag
   const allMatches = (matches ?? []).map(m => ({
     ...m,
-    home_logo: m.home_logo ?? getFlagUrl(m.home_team),
-    away_logo: m.away_logo ?? getFlagUrl(m.away_team),
+    home_logo: m.home_logo ?? CLUB_CRESTS[m.home_team] ?? getFlagUrl(m.home_team),
+    away_logo: m.away_logo ?? CLUB_CRESTS[m.away_team] ?? getFlagUrl(m.away_team),
   }))
 
   const matchIds        = allMatches.map(m => m.id)

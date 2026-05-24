@@ -117,12 +117,11 @@ export async function mergeProfiles(sourceId, targetId) {
     // Delete source profile (and its auth user if needed — skip auth for simplicity)
     await db.from('profiles').delete().eq('id', sourceId)
 
-    // Recalculate target totals from scratch
+    // Recalculate target totals from scratch (ALL predictions for count, only scored for points)
     const { data: allPreds } = await db
       .from('predictions')
       .select('points')
       .eq('user_id', targetId)
-      .not('points', 'is', null)
 
     const newPoints      = (allPreds ?? []).reduce((s, p) => s + (p.points ?? 0), 0)
     const newPredictions = (allPreds ?? []).length

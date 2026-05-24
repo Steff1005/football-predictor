@@ -284,34 +284,38 @@ function ProfilesTab({ profiles, setProfiles }) {
 
 // ── Merge tab ───────────────────────────────────────────────────────────────
 
-function MergeTab({ profiles, setProfiles }) {
-  const [sourceId, setSourceId] = useState('')
-  const [targetId, setTargetId] = useState('')
-  const [merging,  setMerging]  = useState(false)
-  const [msg,      setMsg]      = useState('')
+function MergeTab({ profiles, setProfiles, setTab }) {
+  const [sourceId,     setSourceId]     = useState('')
+  const [targetId,     setTargetId]     = useState('')
+  const [merging,      setMerging]      = useState(false)
+  const [confirmStep,  setConfirmStep]  = useState(false)
+  const [msg,          setMsg]          = useState('')
 
   const source = profiles.find(p => p.id === sourceId)
   const target = profiles.find(p => p.id === targetId)
+
+  function flash(text) { setMsg(text); setTimeout(() => setMsg(''), 6000) }
 
   function profileLabel(p) {
     const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.username || '—'
     return `${name} (${p.total_points ?? 0} балів, ${p.total_predictions ?? 0} прогн.)`
   }
 
-  async function handleMerge() {
-    if (!sourceId || !targetId || sourceId === targetId) return
-    const ok = window.confirm(
-      `Злити "${source?.username}" → "${target?.username}"?\n\nВсі прогнози з вихідного профілю будуть перенесені до цільового. При конфлікті збережуться прогнози цільового профілю.\n\nЦя дія незворотна!`
-    )
-    if (!ok) return
+  function profileDisplay(p) {
+    if (!p) return '—'
+    const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.username || '—'
+    return name + (p.username ? ` (@${p.username})` : '')
+  }
 
+  async function executeMerge() {
     setMerging(true)
     setMsg('')
     const result = await mergeProfiles(sourceId, targetId)
     setMerging(false)
+    setConfirmStep(false)
 
     if (result.error) {
-      setMsg('Помилка: ' + result.error)
+      flash('Помилка: ' + result.error)
       return
     }
 
@@ -322,7 +326,8 @@ function MergeTab({ profiles, setProfiles }) {
     )
     setSourceId('')
     setTargetId('')
-    setMsg(`✅ Злиття завершено. Перенесено: ${result.moved}, пропущено конфліктів: ${result.skipped ?? 0}.`)
+    flash(`✅ Злиття завершено. Перенесено: ${result.moved}, пропущено конфліктів: ${result.skipped ?? 0}.`)
+    setTimeout(() => setTab('profiles'), 2000)
   }
 
   const canMerge = sourceId && targetId && sourceId !== targetId
@@ -342,7 +347,7 @@ function MergeTab({ profiles, setProfiles }) {
             <label className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5 block">
               Вихідний профіль (буде видалено)
             </label>
-            <select value={sourceId} onChange={e => setSourceId(e.target.value)} className={INPUT}>
+            <select value={sourceId} onChange={e => { setSourceId(e.target.value); setConfirmStep(false) }} className={INPUT}>
               <option value="">— Оберіть профіль —</option>
               {profiles.map(p => (
                 <option key={p.id} value={p.id} disabled={p.id === targetId}>{profileLabel(p)}</option>
@@ -356,7 +361,7 @@ function MergeTab({ profiles, setProfiles }) {
             <label className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5 block">
               Цільовий профіль (залишиться)
             </label>
-            <select value={targetId} onChange={e => setTargetId(e.target.value)} className={INPUT}>
+            <select value={targetId} onChange={e => { setTargetId(e.target.value); setConfirmStep(false) }} className={INPUT}>
               <option value="">— Оберіть профіль —</option>
               {profiles.map(p => (
                 <option key={p.id} value={p.id} disabled={p.id === sourceId}>{profileLabel(p)}</option>
@@ -365,18 +370,47 @@ function MergeTab({ profiles, setProfiles }) {
           </div>
         </div>
 
-        {canMerge && (
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-700 dark:text-amber-400 leading-relaxed">
-            ⚠️ Прогнози <strong>{source?.username ?? source?.first_name}</strong> будуть додані до профілю <strong>{target?.username ?? target?.first_name}</strong>. Вихідний профіль зникне.
+        {/* Inline confirmation dialog */}
+        {confirmStep ? (
+          <div className="rounded-xl border border-red-300 dark:border-red-500/40 bg-red-50 dark:bg-red-500/10 p-4 space-y-4">
+            <p className="text-sm font-semibold text-red-700 dark:text-red-400">⚠️ Підтвердити злиття?</p>
+            <div className="text-sm text-red-700 dark:text-red-300 space-y-1">
+              <div>Видалити: <strong>{profileDisplay(source)}</strong></div>
+              <div>Зберегти: <strong>{profileDisplay(target)}</strong></div>
+            </div>
+            <p className="text-xs text-red-600/80 dark:text-red-400/80">
+              Всі прогнози будуть перенесені. При конфлікті — прогноз цільового профілю матиме пріоритет. Дія незворотна.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={executeMerge}
+                disabled={merging}
+                className="flex-1 py-2 rounded-lg text-sm font-semibold bg-red-500 hover:bg-red-600 text-white disabled:opacity-50 transition-colors">
+                {merging ? 'Обробка…' : 'Підтвердити злиття'}
+              </button>
+              <button
+                onClick={() => setConfirmStep(false)}
+                disabled={merging}
+                className="flex-1 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors">
+                Скасувати
+              </button>
+            </div>
           </div>
+        ) : (
+          <>
+            {canMerge && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-700 dark:text-amber-400 leading-relaxed">
+                ⚠️ Прогнози <strong>{profileDisplay(source)}</strong> будуть перенесені до <strong>{profileDisplay(target)}</strong>. Вихідний профіль зникне.
+              </div>
+            )}
+            <button
+              onClick={() => canMerge && setConfirmStep(true)}
+              disabled={!canMerge}
+              className="w-full py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40 bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 disabled:cursor-not-allowed">
+              🔀 Злити профілі
+            </button>
+          </>
         )}
-
-        <button
-          onClick={handleMerge}
-          disabled={!canMerge || merging}
-          className="w-full py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40 bg-red-500/15 hover:bg-red-500/25 text-red-600 dark:text-red-400 disabled:cursor-not-allowed">
-          {merging ? 'Обробка…' : '🔀 Злити профілі'}
-        </button>
       </div>
     </div>
   )
@@ -413,7 +447,7 @@ export default function AdminPanel({ matches: initMatches, profiles: initProfile
 
       {tab === 'matches'  && <MatchesTab  matches={matches}   setMatches={setMatches} />}
       {tab === 'profiles' && <ProfilesTab profiles={profiles} setProfiles={setProfiles} />}
-      {tab === 'merge'    && <MergeTab    profiles={profiles} setProfiles={setProfiles} />}
+      {tab === 'merge'    && <MergeTab    profiles={profiles} setProfiles={setProfiles} setTab={setTab} />}
     </div>
   )
 }

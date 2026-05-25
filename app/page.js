@@ -76,8 +76,8 @@ export default async function HomePage() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             {TOURNAMENT_LOGOS[tournament.league_id]
-              ? <img src={TOURNAMENT_LOGOS[tournament.league_id]} alt="" className="w-8 h-8 object-contain flex-shrink-0" />
-              : <span className="text-xl flex-shrink-0">{leagueEmoji(tournament.league_id)}</span>
+              ? <img src={TOURNAMENT_LOGOS[tournament.league_id]} alt="" className="w-12 h-12 object-contain flex-shrink-0" />
+              : <span className="text-2xl flex-shrink-0">{leagueEmoji(tournament.league_id)}</span>
             }
             <span className={`font-semibold text-sm sm:text-base truncate transition-colors ${
               isActive
@@ -97,7 +97,7 @@ export default async function HomePage() {
         </div>
 
         {stats && (
-          <div className="mt-1.5 ml-9 text-xs text-gray-400 dark:text-gray-500">
+          <div className="mt-1.5 ml-[60px] text-xs text-gray-400 dark:text-gray-500">
             {stats.count} {pluralMatches(stats.count)}
             {dateRange && <> · {dateRange}</>}
           </div>

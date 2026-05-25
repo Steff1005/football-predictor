@@ -1,149 +1,137 @@
-export const metadata = {
-  title: 'Правила — Football Predictor',
-}
-
-const FAQ = [
-  {
-    q: 'Коли нараховуються бали?',
-    a: 'Бали нараховуються автоматично через 2–3 години після завершення матчу, коли система отримує офіційний результат.',
-  },
-  {
-    q: 'Що якщо матч скасовано або перенесено?',
-    a: 'Якщо матч скасовано — бали не нараховуються і прогноз не враховується. Якщо матч перенесено — прогноз залишається дійсним до нового часу початку.',
-  },
-  {
-    q: 'Чи можна змінити прогноз?',
-    a: 'Так, прогноз можна редагувати будь-яку кількість разів до початку матчу. Зараховується останній збережений варіант. Після свистка на початок матчу поле введення блокується.',
-  },
-  {
-    q: 'Як рахується рейтинг при однакових балах?',
-    a: 'Спочатку за загальною сумою балів. При рівній сумі — за кількістю точних рахунків (4 бали). При однаковій кількості точних рахунків — за кількістю вгаданих результатів (1 бал). Якщо всі показники однакові — перевага надається учаснику, який зробив більше прогнозів протягом турніру.',
-  },
-]
-
-const EXAMPLES = [
-  { player: 'Степан', pred: '2:1', pts: 4,  label: '🎯 +4', color: 'text-yellow-500 dark:text-yellow-400', bg: 'bg-yellow-500/10 dark:bg-yellow-500/10' },
-  { player: 'Коля',   pred: '3:0', pts: 1,  label: '✅ +1', color: 'text-green-500 dark:text-green-400',  bg: 'bg-green-500/10 dark:bg-green-500/10'  },
-  { player: 'Женя',   pred: '0:2', pts: 0,  label: '❌ 0',  color: 'text-gray-400 dark:text-gray-500',   bg: 'bg-gray-100 dark:bg-gray-800'           },
-]
-
 export default function RulesPage() {
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">📋 Правила прогнозування</h1>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">📋 Правила та умови</h1>
+      <p className="text-gray-500 dark:text-gray-400 mb-8">Як працює Football Predictor</p>
 
-      <div className="space-y-4">
+      {/* Як прогнозувати */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">⚽ Як прогнозувати</h2>
+        <div className="space-y-3 text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+          <p>1. Зареєструйся та увійди в акаунт.</p>
+          <p>2. Вибери активний турнір зі списку.</p>
+          <p>3. Для кожного матчу введи рахунок який, на твою думку, буде фінальним після основного часу.</p>
+          <p>4. Натисни <span className="text-green-500 font-medium">Зберегти прогноз</span> — прогноз збережено.</p>
+          <p>5. Ти можеш змінювати прогноз скільки завгодно разів <span className="text-yellow-500">до початку матчу</span>. Зараховується останній збережений варіант.</p>
+          <p>6. Після початку матчу прогноз заблоковано — зміни неможливі.</p>
+        </div>
+      </div>
 
-        {/* ── Scoring system ─────────────────────────────────────────────── */}
-        <section className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Система нарахування балів</h2>
-          </div>
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            <div className="flex items-center gap-4 px-6 py-4">
-              <div className="w-14 h-14 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-2xl font-bold text-green-500 dark:text-green-400">4</span>
-              </div>
-              <div>
-                <div className="font-semibold text-gray-900 dark:text-white">Точний рахунок</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Вгадав рахунок матчу точно — наприклад, 2:1</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 px-6 py-4">
-              <div className="w-14 h-14 rounded-xl bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-2xl font-bold text-yellow-500 dark:text-yellow-400">1</span>
-              </div>
-              <div>
-                <div className="font-semibold text-gray-900 dark:text-white">Правильний результат</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Вгадав переможця або нічию, але рахунок не точний</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 px-6 py-4">
-              <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-700/50 flex items-center justify-center flex-shrink-0">
-                <span className="text-2xl font-bold text-gray-400 dark:text-gray-500">0</span>
-              </div>
-              <div>
-                <div className="font-semibold text-gray-900 dark:text-white">Невірний прогноз</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Результат матчу не збігся з прогнозом</div>
-              </div>
+      {/* Нарахування балів */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">🎯 Нарахування балів</h2>
+        <div className="space-y-3">
+          <div className="flex items-center gap-4 p-4 bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 rounded-xl">
+            <span className="text-3xl font-bold text-yellow-500 w-12 text-center">4</span>
+            <div>
+              <div className="font-medium text-gray-900 dark:text-white">Точний рахунок</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">Прогноз 2:1 — результат 2:1</div>
             </div>
           </div>
-        </section>
-
-        {/* ── Visual example ──────────────────────────────────────────────── */}
-        <section className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Приклад прогнозування</h2>
-          </div>
-
-          {/* Match result */}
-          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
-            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Реальний результат матчу</p>
-            <div className="flex items-center justify-center gap-4">
-              <span className="font-semibold text-gray-900 dark:text-white text-lg">Іспанія</span>
-              <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-xl font-bold text-2xl text-gray-900 dark:text-white font-mono">
-                2 : 1
-              </div>
-              <span className="font-semibold text-gray-900 dark:text-white text-lg">Франція</span>
+          <div className="flex items-center gap-4 p-4 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 rounded-xl">
+            <span className="text-3xl font-bold text-green-500 w-12 text-center">1</span>
+            <div>
+              <div className="font-medium text-gray-900 dark:text-white">Вгадав результат</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">Прогноз 3:1 — результат 2:0 (перемога господарів)</div>
             </div>
           </div>
-
-          {/* Player predictions */}
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {EXAMPLES.map(({ player, pred, label, color, bg }) => (
-              <div key={player} className="flex items-center justify-between px-6 py-3.5">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400">{player[0]}</span>
-                  </div>
-                  <span className="font-medium text-gray-900 dark:text-white text-sm">{player}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-gray-400 dark:text-gray-500">прогноз: <span className="font-mono font-medium text-gray-700 dark:text-gray-300">{pred}</span></span>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${bg} ${color}`}>{label}</span>
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl">
+            <span className="text-3xl font-bold text-gray-400 w-12 text-center">0</span>
+            <div>
+              <div className="font-medium text-gray-900 dark:text-white">Не вгадав</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">Прогноз 2:1 — результат 0:1 (різний переможець)</div>
+            </div>
           </div>
-        </section>
+        </div>
+        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 rounded-xl text-sm text-gray-600 dark:text-gray-300">
+          <span className="text-blue-500 font-medium">Важливо:</span> враховується результат лише основного часу (90 хвилин). Додатковий час та пенальті не впливають на нарахування балів.
+        </div>
+      </div>
 
-        {/* ── FAQ ──────────────────────────────────────────────────────────── */}
-        <section className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Часті запитання</h2>
+      {/* Приклад */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">📊 Приклад прогнозування</h2>
+        <div className="text-sm text-gray-500 dark:text-gray-400 mb-3">Реальний рахунок: Іспанія 2:1 Франція</div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <span className="text-gray-900 dark:text-white font-medium">Степан</span>
+            <span className="text-gray-600 dark:text-gray-300">Прогноз: 2:1</span>
+            <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded-full text-xs font-bold">🎯 +4 бали</span>
           </div>
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {FAQ.map(({ q, a }) => (
-              <details key={q} className="group">
-                <summary className="flex items-center justify-between gap-4 px-6 py-4 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                  <span className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">{q}</span>
-                  <svg
-                    className="w-4 h-4 flex-shrink-0 text-gray-400 dark:text-gray-500 transition-transform duration-200 [details[open]_&]:rotate-180"
-                    xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                  >
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </summary>
-                <div className="px-6 pb-5 pt-1 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                  {a}
-                </div>
-              </details>
-            ))}
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <span className="text-gray-900 dark:text-white font-medium">Коля</span>
+            <span className="text-gray-600 dark:text-gray-300">Прогноз: 3:0</span>
+            <span className="px-2 py-1 bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 rounded-full text-xs font-bold">✅ +1 бал</span>
           </div>
-        </section>
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <span className="text-gray-900 dark:text-white font-medium">Павлік</span>
+            <span className="text-gray-600 dark:text-gray-300">Прогноз: 1:2</span>
+            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full text-xs font-bold">❌ 0 балів</span>
+          </div>
+        </div>
+      </div>
 
-        {/* ── Privacy ──────────────────────────────────────────────────────── */}
-        <section className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 px-6 py-5">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">🔒 Конфіденційність прогнозів</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
-            Прогнози кожного учасника <span className="font-medium text-gray-700 dark:text-gray-300">приховані від інших гравців до початку матчу</span>. Це гарантує чесну гру — ніхто не може скопіювати чужий прогноз.
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-            Після свистка на початок матчу прогнози стають видимими в загальній статистиці, а після завершення матчу — у таблиці рейтингу.
-          </p>
-        </section>
+      {/* Приватність */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">🔒 Приватність прогнозів</h2>
+        <div className="space-y-3 text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+          <p>Твій прогноз <span className="text-yellow-500 font-medium">видно тільки тобі</span> до початку матчу. Це виключає можливість копіювати прогнози інших гравців.</p>
+          <p>Після стартового свистка всі прогнози стають <span className="text-green-500 font-medium">публічними</span> — всі учасники можуть бачити хто що поставив у вкладці <span className="font-medium">Прогнози</span> на сторінці турніру.</p>
+        </div>
+      </div>
 
+      {/* FAQ */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">❓ Часті запитання</h2>
+        <div className="space-y-4">
+          {[
+            {
+              q: 'Коли нараховуються бали?',
+              a: 'Автоматично протягом 2-3 годин після завершення матчу. Система перевіряє результати щогодини.'
+            },
+            {
+              q: 'Що якщо матч скасовано або перенесено?',
+              a: 'Якщо матч скасовано — бали за нього не нараховуються. Якщо перенесено — прогноз залишається, бали нарахуються після нової дати.'
+            },
+            {
+              q: 'Чи можна змінити прогноз?',
+              a: 'Так, до початку матчу — скільки завгодно разів. Зараховується останній збережений варіант. Після початку матчу зміни неможливі.'
+            },
+            {
+              q: 'Як рахується рейтинг при однакових балах?',
+              a: 'Спочатку за загальною сумою балів. При рівній сумі — за кількістю точних рахунків (4 бали). При однаковій кількості точних рахунків — за кількістю вгаданих результатів (1 бал). Якщо всі показники однакові — перевага надається учаснику, який зробив більше прогнозів протягом турніру.'
+            },
+            {
+              q: 'Чи враховується додатковий час і пенальті?',
+              a: 'Ні. Враховується лише результат основного часу (90 хвилин). Наприклад, якщо матч закінчився 1:1 в основний час і команда перемогла по пенальті — рахунок для прогнозу 1:1.'
+            },
+            {
+              q: 'Скільки турнірів можна прогнозувати одночасно?',
+              a: 'Необмежено. Ти можеш брати участь у всіх активних турнірах одночасно.'
+            },
+          ].map((item, i) => (
+            <details key={i} className="group">
+              <summary className="flex justify-between items-center cursor-pointer text-gray-900 dark:text-white font-medium py-2 border-b border-gray-100 dark:border-gray-800">
+                {item.q}
+                <span className="text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <p className="text-gray-600 dark:text-gray-300 text-sm mt-3 leading-relaxed">{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+
+      {/* Загальні правила */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">📌 Загальні правила</h2>
+        <div className="space-y-2 text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+          <p>• Один акаунт на одного учасника.</p>
+          <p>• Прогноз можна зробити на будь-який матч до його початку.</p>
+          <p>• Нікнейм має бути унікальним — якщо зайнятий, додай цифру або змінить написання.</p>
+          <p>• Фото профілю має бути відповідним (не більше 5 МБ).</p>
+          <p>• Організатори залишають за собою право вносити корективи у разі технічних помилок або некоректних результатів API.</p>
+          <p>• Результати оновлюються автоматично щогодини після завершення матчів.</p>
+        </div>
       </div>
     </div>
   )

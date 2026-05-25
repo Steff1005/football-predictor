@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import MatchCard from '../../../components/MatchCard'
 import { groupAndSortMatches } from '../../../lib/round-sort'
 
@@ -8,6 +8,9 @@ export default function MatchesTab({ matches, userPredictions, userId, defaultRo
   const rounds = groups.map(g => g.label)
 
   const [activeRound, setActiveRound] = useState(defaultRound ?? rounds[0] ?? null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => setMounted(true), [])
 
   if (!rounds.length) {
     return (
@@ -24,7 +27,7 @@ export default function MatchesTab({ matches, userPredictions, userId, defaultRo
   return (
     <div>
       <div className="flex gap-2 flex-wrap mb-4">
-        {rounds.map(round => (
+        {mounted ? rounds.map(round => (
           <button
             key={round}
             onClick={() => setActiveRound(round)}
@@ -36,6 +39,10 @@ export default function MatchesTab({ matches, userPredictions, userId, defaultRo
           >
             {round}
           </button>
+        )) : rounds.map(round => (
+          <div key={round} className="px-3 py-1 rounded-full text-sm font-medium bg-gray-400/20 animate-pulse text-transparent select-none">
+            {round}
+          </div>
         ))}
       </div>
 

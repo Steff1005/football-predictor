@@ -44,9 +44,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
           .filter(p => profileMap[p.user_id])
           .sort((a, b) => (b.points ?? -1) - (a.points ?? -1))
 
-        const isOpen     = !!openMatches[match.id]
-        const hitCount   = preds.filter(p => (p.points ?? 0) > 0).length
-        const totalCount = preds.length
+        const isOpen  = !!openMatches[match.id]
 
         const kickoff = new Date(match.kickoff_at)
         const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
@@ -90,16 +88,9 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
                 <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{match.away_team}</span>
               </div>
 
-              {/* Hit counter */}
-              {totalCount > 0 && (
-                <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap flex-shrink-0 hidden sm:block ml-auto">
-                  {hitCount}/{totalCount} влучних
-                </span>
-              )}
-
-              {/* Chevron */}
+              {/* Chevron — end of row */}
               <svg
-                className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ml-1 ${isOpen ? 'rotate-90' : ''}`}
+                className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ml-auto ${isOpen ? 'rotate-90' : ''}`}
                 fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

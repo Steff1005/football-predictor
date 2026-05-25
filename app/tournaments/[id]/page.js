@@ -354,7 +354,12 @@ export default async function TournamentPage({ params, searchParams }) {
   const standings = Object.entries(userStats)
     .map(([uid, stats]) => ({ uid, ...stats, profile: profileMap[uid] }))
     .filter(s => s.profile)
-    .sort((a, b) => b.total - a.total || b.exact - a.exact)
+    .sort((a, b) =>
+      b.total - a.total ||
+      b.exact - a.exact ||
+      b.results - a.results ||
+      b.predictions - a.predictions
+    )
 
   // ── По-турах ──────────────────────────────────────────────────────────────
   const roundedGroups  = groupAndSortMatches(allMatches)

@@ -10,6 +10,15 @@ function leagueEmoji(leagueId) {
   return LEAGUE_EMOJI[leagueId] ?? '🏆'
 }
 
+// Hardcoded descriptions per tournament name; fallback to dynamic for new ones
+const TOURNAMENT_DESCRIPTIONS = {
+  'Чемпіонат світу 2026':   '104 матчі · 11.06 – 19.07.26',
+  'Ліга чемпіонів 2025-26': '189 матчів · 11.06.25 – 30.04.26',
+  'Ліга чемпіонів 2024-25': '189 матчів · 17.09.24 – 31.05.25',
+  'Ліга чемпіонів 2023-24': '125 матчів · 19.09.23 – 01.06.24',
+  'Чемпіонат Європи 2024':  '51 матч · 14.06.24 – 14.07.24',
+}
+
 function pluralMatches(n) {
   if (n % 10 === 1 && n % 100 !== 11) return 'матч'
   if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return 'матчі'
@@ -36,10 +45,7 @@ export default async function HomePage() {
   const { data: tournaments } = await supabase
     .from('tournaments')
     .select('*')
-    .order('is_active', { ascending: false })
-    .order('name', { ascending: true })
 
-  // Fetch match stats for all tournaments in one query
   const statsMap = {}
   if (tournaments?.length) {
     const { data: matchData } = await supabase
@@ -59,49 +65,64 @@ export default async function HomePage() {
     }
   }
 
-  const active   = tournaments?.filter(t => t.is_active)  ?? []
-  const finished = tournaments?.filter(t => !t.is_active) ?? []
+  // Active: ascending by end date (soonest-ending first)
+  // Finished: descending by end date (most recently finished first)
+  const active = (tournaments?.filter(t => t.is_active) ?? [])
+    .sort((a, b) => (statsMap[a.id]?.max ?? '').localeCompare(statsMap[b.id]?.max ?? ''))
+
+  const finished = (tournaments?.filter(t => !t.is_active) ?? [])
+    .sort((a, b) => (statsMap[b.id]?.max ?? '').localeCompare(statsMap[a.id]?.max ?? ''))
 
   function TournamentCard({ tournament, isActive }) {
     const stats = statsMap[tournament.id]
-    const dateRange = stats ? formatDateRange(stats.min, stats.max) : null
+    const description = TOURNAMENT_DESCRIPTIONS[tournament.name] ?? (stats
+      ? [
+          `${stats.count} ${pluralMatches(stats.count)}`,
+          formatDateRange(stats.min, stats.max),
+        ].filter(Boolean).join(' · ')
+      : null)
 
     return (
       <a href={`/tournaments/${tournament.id}`}
-        className={`block bg-white dark:bg-gray-900 rounded-xl p-5 border transition-colors group ${
+        className={`block bg-white dark:bg-gray-900 rounded-xl p-4 border transition-colors group ${
           isActive
             ? 'border-gray-200 dark:border-gray-800 hover:border-green-500/50'
             : 'border-gray-200 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-600'
         }`}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-3">
+          {/* Logo */}
+          <div className="flex-shrink-0 w-20 h-20 flex items-center justify-center">
             {TOURNAMENT_LOGOS[tournament.league_id]
-              ? <img src={TOURNAMENT_LOGOS[tournament.league_id]} alt="" className="w-16 h-16 object-contain flex-shrink-0" />
-              : <span className="text-2xl flex-shrink-0">{leagueEmoji(tournament.league_id)}</span>
+              ? <img src={TOURNAMENT_LOGOS[tournament.league_id]} alt="" className="w-20 h-20 object-contain" />
+              : <span className="text-4xl">{leagueEmoji(tournament.league_id)}</span>
             }
-            <span className={`font-semibold text-sm sm:text-base truncate transition-colors ${
-              isActive
-                ? 'text-gray-900 dark:text-white group-hover:text-green-500 dark:group-hover:text-green-400'
-                : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white'
-            }`}>
-              {tournament.name}
-            </span>
           </div>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
-            isActive
-              ? 'bg-green-500/20 text-green-500 dark:text-green-400'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
-          }`}>
-            {isActive ? 'Активний' : 'Завершений'}
-          </span>
-        </div>
 
-        {stats && (
-          <div className="mt-1.5 ml-[60px] text-xs text-gray-400 dark:text-gray-500">
-            {stats.count} {pluralMatches(stats.count)}
-            {dateRange && <> · {dateRange}</>}
+          {/* Name + badge + description */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <span className={`font-semibold text-sm sm:text-base leading-snug transition-colors ${
+                isActive
+                  ? 'text-gray-900 dark:text-white group-hover:text-green-500 dark:group-hover:text-green-400'
+                  : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white'
+              }`}>
+                {tournament.name}
+              </span>
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium flex-shrink-0 whitespace-nowrap ${
+                isActive
+                  ? 'bg-green-500/20 text-green-500 dark:text-green-400'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+              }`}>
+                {isActive ? 'Активний' : 'Завершений'}
+              </span>
+            </div>
+            {description && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight">
+                {description}
+              </p>
+            )}
           </div>
-        )}
+        </div>
       </a>
     )
   }

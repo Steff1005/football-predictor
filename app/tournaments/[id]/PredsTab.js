@@ -163,7 +163,19 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                   <div className="px-4 py-3 border-t border-gray-100 dark:border-white/10 text-sm text-center text-gray-400 dark:text-gray-600">
                     Прогнозів немає
                   </div>
-                ) : preds.map(pred => {
+                ) : <>
+                  {/* Mobile-only: actual result row — same column alignment as prediction scores */}
+                  {isFinished && (
+                    <div className="sm:hidden flex items-center px-4 py-2 border-t border-gray-100 dark:border-white/10 gap-3 bg-gray-50 dark:bg-gray-800/50">
+                      <div className="w-7 flex-shrink-0" />
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 flex-1">Рахунок матчу</span>
+                      <span className="bg-gray-200 dark:bg-white/20 rounded-md px-2.5 py-0.5 font-mono text-sm font-bold text-gray-900 dark:text-white flex-shrink-0 min-w-[2.75rem] text-center">
+                        {match.home_score}:{match.away_score}
+                      </span>
+                      <div className="w-16 flex-shrink-0" />
+                    </div>
+                  )}
+                  {preds.map(pred => {
                   const profile = profileMap[pred.user_id]
 
                   return (
@@ -188,7 +200,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                       </div>
                     </div>
                   )
-                })}
+                })}</>}
               </div>
             )}
           </div>

@@ -370,6 +370,21 @@ const TABS = [
   { id: 'rounds',    label: 'По турах' },
 ]
 
+// Fetch all rows past the 1000-row PostgREST server cap using range pagination
+async function fetchAllRows(buildQuery) {
+  const PAGE = 1000
+  let all = []
+  let from = 0
+  while (true) {
+    const { data, error } = await buildQuery(from, from + PAGE - 1)
+    if (error || !data?.length) break
+    all = all.concat(data)
+    if (data.length < PAGE) break
+    from += PAGE
+  }
+  return all
+}
+
 export default async function TournamentPage({ params, searchParams }) {
   const { id }          = await params
   const { tab = 'matches' } = await searchParams
@@ -422,24 +437,26 @@ export default async function TournamentPage({ params, searchParams }) {
   // Calculated predictions → standings + по-турах
   let calcPreds = []
   if (matchIds.length > 0) {
-    const { data } = await supabase
-      .from('predictions')
-      .select('user_id, match_id, predicted_home, predicted_away, points')
-      .in('match_id', matchIds)
-      .not('points', 'is', null)
-      .limit(10000)
-    calcPreds = data ?? []
+    calcPreds = await fetchAllRows((from, to) =>
+      supabase
+        .from('predictions')
+        .select('user_id, match_id, predicted_home, predicted_away, points')
+        .in('match_id', matchIds)
+        .not('points', 'is', null)
+        .range(from, to)
+    )
   }
 
   // Public predictions (past matches = kickoff_at <= now) → прогнози tab
   let publicPreds = []
   if (finishedMatchIds.length > 0) {
-    const { data } = await supabase
-      .from('predictions')
-      .select('user_id, match_id, predicted_home, predicted_away, points')
-      .in('match_id', finishedMatchIds)
-      .limit(10000)
-    publicPreds = data ?? []
+    publicPreds = await fetchAllRows((from, to) =>
+      supabase
+        .from('predictions')
+        .select('user_id, match_id, predicted_home, predicted_away, points')
+        .in('match_id', finishedMatchIds)
+        .range(from, to)
+    )
   }
 
   // Profiles for everyone who has predictions

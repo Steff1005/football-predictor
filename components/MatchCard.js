@@ -7,7 +7,8 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
   const [away, setAway] = useState(userPrediction?.predicted_away ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const awayRef = useRef(null)
+  const awayRef       = useRef(null)  // desktop away input
+  const mobileAwayRef = useRef(null)  // mobile away input
 
   const isFinished = match.status === 'finished'
   const isPast = new Date(match.kickoff_at) < new Date()
@@ -31,32 +32,8 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
   const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })
   const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
 
-  const scoreOrInputs = isFinished ? (
-    <div className="bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg font-bold text-lg text-gray-900 dark:text-white whitespace-nowrap">
-      {match.home_score} : {match.away_score}
-    </div>
-  ) : (
-    <div className="flex items-center gap-1">
-      <input
-        type="number" min="0" max="20"
-        value={home}
-        onChange={e => { setHome(e.target.value); if (e.target.value.length === 1) awayRef.current?.focus() }}
-        disabled={isPast}
-        className="no-spin w-10 h-10 sm:w-11 sm:h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-base sm:text-lg disabled:opacity-40"
-        placeholder="-"
-      />
-      <span className="text-gray-400 dark:text-gray-500 font-bold">:</span>
-      <input
-        ref={awayRef}
-        type="number" min="0" max="20"
-        value={away}
-        onChange={e => setAway(e.target.value)}
-        disabled={isPast}
-        className="no-spin w-10 h-10 sm:w-11 sm:h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-base sm:text-lg disabled:opacity-40"
-        placeholder="-"
-      />
-    </div>
-  )
+  // Shared input class for mobile inputs
+  const mobileInputCls = 'no-spin w-10 h-9 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-base disabled:opacity-40 flex-shrink-0'
 
   return (
     <div className={`bg-white dark:bg-gray-900 rounded-xl p-3 sm:p-4 border ${
@@ -64,6 +41,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
         ? 'border-gray-200 dark:border-gray-700 border-l-[3px] border-l-amber-400/70 dark:border-l-amber-400/50'
         : 'border-gray-200 dark:border-gray-700'
     }`}>
+
       {/* Top row: date + status */}
       <div className="flex justify-between items-center mb-3 text-xs text-gray-400 dark:text-gray-500">
         <span>{dateStr}, {timeStr}</span>
@@ -76,32 +54,107 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
         </span>
       </div>
 
-      {/* Teams + score
-          Mobile:  home row / score row / away row (vertical, full names)
-          Desktop: home | score | away (horizontal, truncate if needed) */}
-      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 mb-3">
+      {/* ── Mobile teams layout (< sm) ──────────────────────────────── */}
+      <div className="sm:hidden mb-3">
+        {isFinished ? (
+          // Finished: team names with centered score between them
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              {match.home_logo && <img src={match.home_logo} alt="" className="w-6 h-6 object-contain flex-shrink-0" />}
+              <span className="font-semibold text-sm text-gray-900 dark:text-white">{match.home_team}</span>
+            </div>
+            <div className="flex justify-center">
+              <div className="bg-gray-100 dark:bg-gray-800 px-4 py-1.5 rounded-lg font-bold text-xl text-gray-900 dark:text-white">
+                {match.home_score} : {match.away_score}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {match.away_logo && <img src={match.away_logo} alt="" className="w-6 h-6 object-contain flex-shrink-0" />}
+              <span className="font-semibold text-sm text-gray-900 dark:text-white">{match.away_team}</span>
+            </div>
+          </div>
+        ) : (
+          // Upcoming/live: each team row has its own input on the right
+          <div>
+            {/* Home team + home input */}
+            <div className="flex items-center gap-2">
+              {match.home_logo && <img src={match.home_logo} alt="" className="w-6 h-6 object-contain flex-shrink-0" />}
+              <span className="font-semibold text-sm text-gray-900 dark:text-white flex-1 min-w-0">{match.home_team}</span>
+              <input
+                type="number" min="0" max="20" value={home}
+                onChange={e => { setHome(e.target.value); if (e.target.value.length === 1) mobileAwayRef.current?.focus() }}
+                disabled={isPast}
+                className={mobileInputCls}
+                placeholder="-"
+              />
+            </div>
+            {/* Colon aligned under the input column */}
+            <div className="flex justify-end my-0.5">
+              <span className="w-10 text-center text-gray-400 dark:text-gray-500 font-bold text-sm leading-none">:</span>
+            </div>
+            {/* Away team + away input */}
+            <div className="flex items-center gap-2">
+              {match.away_logo && <img src={match.away_logo} alt="" className="w-6 h-6 object-contain flex-shrink-0" />}
+              <span className="font-semibold text-sm text-gray-900 dark:text-white flex-1 min-w-0">{match.away_team}</span>
+              <input
+                ref={mobileAwayRef}
+                type="number" min="0" max="20" value={away}
+                onChange={e => setAway(e.target.value)}
+                disabled={isPast}
+                className={mobileInputCls}
+                placeholder="-"
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
-        {/* Home team */}
-        <div className="w-full sm:flex-1 flex items-center gap-2 sm:flex-row-reverse sm:min-w-0">
-          {match.home_logo && (
-            <img src={match.home_logo} alt="" className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
-          )}
-          <span className="font-semibold text-gray-900 dark:text-white text-sm leading-tight sm:text-right sm:flex-1 sm:min-w-0 sm:truncate">
+      {/* ── Desktop teams layout (≥ sm) ─────────────────────────────── */}
+      <div className="hidden sm:flex items-center gap-4 mb-3">
+        {/* Home */}
+        <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
+          <span className="font-semibold text-gray-900 dark:text-white text-sm leading-tight text-right truncate">
             {match.home_team}
           </span>
-        </div>
-
-        {/* Score / inputs — centered */}
-        <div className="flex items-center justify-center gap-1 flex-shrink-0">
-          {scoreOrInputs}
-        </div>
-
-        {/* Away team */}
-        <div className="w-full sm:flex-1 flex items-center gap-2 sm:min-w-0">
-          {match.away_logo && (
-            <img src={match.away_logo} alt="" className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
+          {match.home_logo && (
+            <img src={match.home_logo} alt="" className="w-8 h-8 object-contain flex-shrink-0" />
           )}
-          <span className="font-semibold text-gray-900 dark:text-white text-sm leading-tight sm:flex-1 sm:min-w-0 sm:truncate">
+        </div>
+
+        {/* Score or inputs */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {isFinished ? (
+            <div className="bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg font-bold text-lg text-gray-900 dark:text-white whitespace-nowrap">
+              {match.home_score} : {match.away_score}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <input
+                type="number" min="0" max="20" value={home}
+                onChange={e => { setHome(e.target.value); if (e.target.value.length === 1) awayRef.current?.focus() }}
+                disabled={isPast}
+                className="no-spin w-11 h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-lg disabled:opacity-40"
+                placeholder="-"
+              />
+              <span className="text-gray-400 dark:text-gray-500 font-bold">:</span>
+              <input
+                ref={awayRef}
+                type="number" min="0" max="20" value={away}
+                onChange={e => setAway(e.target.value)}
+                disabled={isPast}
+                className="no-spin w-11 h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-lg disabled:opacity-40"
+                placeholder="-"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Away */}
+        <div className="flex-1 flex items-center gap-2 min-w-0">
+          {match.away_logo && (
+            <img src={match.away_logo} alt="" className="w-8 h-8 object-contain flex-shrink-0" />
+          )}
+          <span className="font-semibold text-gray-900 dark:text-white text-sm leading-tight truncate">
             {match.away_team}
           </span>
         </div>

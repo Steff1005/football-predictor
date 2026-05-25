@@ -138,7 +138,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                       </span>
 
                       {isFinished && (
-                        <div className="flex-shrink-0">
+                        <div className="w-16 flex-shrink-0 flex justify-end">
                           <PredictionBadge pts={pred.points} />
                         </div>
                       )}

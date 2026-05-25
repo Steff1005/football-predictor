@@ -3,6 +3,10 @@
 /* Class-based dark mode for next-themes */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Prevent FOUC: set background before hydration */
+html { background-color: #030712; }
+html.light { background-color: #ffffff; }
+
 body {
   font-family: Arial, Helvetica, sans-serif;
 }

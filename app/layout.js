@@ -23,6 +23,13 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="uk" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}else{document.documentElement.classList.remove('dark')}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white min-h-screen">
         <ThemeProvider>
           <Navbar />

@@ -3,6 +3,8 @@ import { createServerClient } from '@supabase/ssr'
 import { redirect } from 'next/navigation'
 import TournamentFilter from './TournamentFilter'
 import AvatarUpload from './AvatarUpload'
+import PredictionBadge from '../../components/PredictionBadge'
+import { getRoundLabel } from '../../lib/round-sort'
 
 export const metadata = { title: 'Профіль — Football Predictor' }
 
@@ -36,7 +38,7 @@ export default async function ProfilePage({ searchParams }) {
   if (matchIds.length > 0) {
     const { data: matches } = await supabase
       .from('matches')
-      .select('id, home_team, away_team, home_logo, away_logo, home_score, away_score, status, kickoff_at, tournament_id')
+      .select('id, home_team, away_team, home_logo, away_logo, home_score, away_score, status, kickoff_at, tournament_id, round')
       .in('id', matchIds)
     matches?.forEach(m => { matchMap[m.id] = m })
   }
@@ -109,55 +111,49 @@ export default async function ProfilePage({ searchParams }) {
           {filtered.map(p => {
             const m = p.match
             const kickoff = new Date(m.kickoff_at)
-            const dateStr = kickoff.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' })
+            const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })
+            const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+            const roundLabel = getRoundLabel(m.round)
             const isFinished = m.status === 'finished'
 
             return (
               <div key={p.id} className="bg-white dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800">
-                <div className="flex items-center justify-between gap-3">
-                  {/* Teams */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
-                      {m.home_logo && <img src={m.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
-                      <span className="truncate">{m.home_team}</span>
-                      <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">vs</span>
-                      <span className="truncate">{m.away_team}</span>
-                      {m.away_logo && <img src={m.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
-                    </div>
-                    <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{dateStr}</div>
+                {/* Top: date/time + round */}
+                <div className="flex justify-between items-center text-xs text-gray-400 dark:text-gray-500 mb-2">
+                  <span>{dateStr}, {timeStr}</span>
+                  {roundLabel && <span className="text-right">{roundLabel}</span>}
+                </div>
+
+                {/* Teams */}
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate text-right">{m.home_team}</span>
+                    {m.home_logo && <img src={m.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
                   </div>
+                  <span className="text-gray-400 dark:text-gray-500 text-xs flex-shrink-0">vs</span>
+                  <div className="flex items-center gap-1.5 flex-1 justify-start min-w-0">
+                    {m.away_logo && <img src={m.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
+                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{m.away_team}</span>
+                  </div>
+                </div>
 
-                  {/* Scores */}
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="text-center">
-                      <div className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Прогноз</div>
-                      <div className="font-mono font-bold text-gray-900 dark:text-white text-sm">
-                        {p.predicted_home}:{p.predicted_away}
-                      </div>
+                {/* 3-column: Прогноз | Рахунок | Статус */}
+                <div className="grid grid-cols-3 text-center pt-2 border-t border-gray-100 dark:border-gray-800">
+                  <div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">Прогноз</div>
+                    <div className="font-mono font-bold text-sm text-gray-900 dark:text-white">
+                      {p.predicted_home}:{p.predicted_away}
                     </div>
-
-                    {isFinished && (
-                      <div className="text-center">
-                        <div className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Рахунок</div>
-                        <div className="font-mono font-bold text-gray-900 dark:text-white text-sm">
-                          {m.home_score}:{m.away_score}
-                        </div>
-                      </div>
-                    )}
-
-                    {isFinished ? (
-                      <div className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                        p.points === 4 ? 'bg-yellow-500/20 text-yellow-500 dark:text-yellow-400' :
-                        p.points === 1 ? 'bg-green-500/20 text-green-500 dark:text-green-400' :
-                        'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                      }`}>
-                        {p.points === 4 ? '🎯 +4' : p.points === 1 ? '✅ +1' : '❌ 0'}
-                      </div>
-                    ) : (
-                      <div className="px-2.5 py-1 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500">
-                        Очікує
-                      </div>
-                    )}
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">Рахунок</div>
+                    <div className="font-mono font-bold text-sm text-gray-900 dark:text-white">
+                      {isFinished ? `${m.home_score}:${m.away_score}` : '—'}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">Статус</div>
+                    <PredictionBadge pts={p.points} pending={!isFinished} />
                   </div>
                 </div>
               </div>

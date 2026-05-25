@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import PredictionBadge from '../../../components/PredictionBadge'
+import { groupAndSortMatches } from '../../../lib/round-sort'
 
 function displayName(profile) {
   return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
@@ -13,16 +15,12 @@ function UserIcon() {
   )
 }
 
-function PointsBadge({ pts }) {
-  if (pts === 4) return <span className="text-sm flex-shrink-0 w-14 text-right">🎯 +4</span>
-  if (pts === 1) return <span className="text-sm flex-shrink-0 w-14 text-right">✅ +1</span>
-  return <span className="text-sm flex-shrink-0 w-14 text-right text-gray-400 dark:text-gray-500">❌ 0</span>
-}
+export default function PredsTab({ finishedMatches, predsByMatch, profileMap, defaultRound }) {
+  const groups = groupAndSortMatches(finishedMatches)
+  const rounds = groups.map(g => g.label)
 
-export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) {
-  const [openMatches, setOpenMatches] = useState(
-    () => finishedMatches.length > 0 ? { [finishedMatches[0].id]: true } : {}
-  )
+  const [activeRound, setActiveRound] = useState(defaultRound ?? rounds[rounds.length - 1] ?? null)
+  const [openMatches, setOpenMatches] = useState({})
 
   function toggleMatch(matchId) {
     setOpenMatches(prev => ({ ...prev, [matchId]: !prev[matchId] }))
@@ -37,15 +35,34 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
     )
   }
 
+  const activeGroup = groups.find(g => g.label === activeRound) ?? groups[groups.length - 1]
+  const activeMatches = activeGroup?.matches ?? []
+
   return (
     <div>
-      {finishedMatches.map(match => {
+      {/* Round navigation */}
+      <div className="flex gap-2 flex-wrap mb-4">
+        {rounds.map(round => (
+          <button
+            key={round}
+            onClick={() => setActiveRound(round)}
+            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+              activeRound === round
+                ? 'bg-green-500 text-white'
+                : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/20'
+            }`}
+          >
+            {round}
+          </button>
+        ))}
+      </div>
+
+      {activeMatches.map(match => {
         const preds = (predsByMatch[match.id] ?? [])
           .filter(p => profileMap[p.user_id])
           .sort((a, b) => (b.points ?? -1) - (a.points ?? -1))
 
         const isOpen  = !!openMatches[match.id]
-
         const kickoff = new Date(match.kickoff_at)
         const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
 
@@ -56,16 +73,13 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
               onClick={() => toggleMatch(match.id)}
               className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 gap-2 select-none"
             >
-              {/* Date */}
               <span className="text-xs text-gray-400 dark:text-gray-500 w-20 flex-shrink-0">{dateStr}</span>
 
-              {/* Home team — right-aligned, fixed half */}
               <div className="flex items-center gap-1.5 w-[38%] justify-end min-w-0">
                 <span className="text-sm font-medium text-gray-900 dark:text-white truncate text-right">{match.home_team}</span>
                 {match.home_logo && <img src={match.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
               </div>
 
-              {/* Score badge — fixed width */}
               <div className="w-[72px] flex justify-center flex-shrink-0">
                 {match.status === 'finished' ? (
                   <span className="bg-gray-100 dark:bg-white/10 rounded-md px-3 py-0.5 font-mono text-sm font-semibold text-gray-900 dark:text-white">
@@ -82,13 +96,11 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
                 )}
               </div>
 
-              {/* Away team — left-aligned, fixed half */}
               <div className="flex items-center gap-1.5 w-[38%] justify-start min-w-0">
                 {match.away_logo && <img src={match.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
                 <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{match.away_team}</span>
               </div>
 
-              {/* Chevron — end of row */}
               <svg
                 className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ml-auto ${isOpen ? 'rotate-90' : ''}`}
                 fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
@@ -106,12 +118,10 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
                   </div>
                 ) : preds.map(pred => {
                   const profile    = profileMap[pred.user_id]
-                  const pts        = pred.points
                   const isFinished = match.status === 'finished'
 
                   return (
                     <div key={pred.user_id} className="flex items-center px-4 py-2 border-t border-gray-100 dark:border-white/10 gap-3">
-                      {/* Avatar */}
                       <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                         {profile?.avatar_url
                           ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -119,18 +129,19 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
                         }
                       </div>
 
-                      {/* Name */}
                       <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
                         {displayName(profile)}
                       </span>
 
-                      {/* Predicted score — fixed width */}
                       <span className="font-mono text-sm text-gray-500 dark:text-gray-400 w-12 text-center flex-shrink-0">
                         {pred.predicted_home}:{pred.predicted_away}
                       </span>
 
-                      {/* Points badge */}
-                      {isFinished && <PointsBadge pts={pts} />}
+                      {isFinished && (
+                        <div className="flex-shrink-0">
+                          <PredictionBadge pts={pred.points} />
+                        </div>
+                      )}
                     </div>
                   )
                 })}

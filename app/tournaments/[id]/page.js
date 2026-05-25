@@ -1,10 +1,11 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
-import MatchCard from '../../../components/MatchCard'
 import RoundAnalysisSection from './RoundAnalysisSection'
+import MatchesTab from './MatchesTab'
 import PredsTab from './PredsTab'
 import CLUB_CRESTS from '../../../lib/club-crests'
 import TOURNAMENT_LOGOS from '../../../lib/tournament-logos'
+import { groupAndSortMatches } from '../../../lib/round-sort'
 
 export const revalidate = 60
 
@@ -20,21 +21,6 @@ function displayName(profile) {
   return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
 }
 
-// ── Round grouping ────────────────────────────────────────────────────────────
-
-const GROUP_STAGE_ROUNDS = new Set([
-  'GROUP_A', 'GROUP_B', 'GROUP_C', 'GROUP_D',
-  'GROUP_E', 'GROUP_F', 'GROUP_G', 'GROUP_H',
-  'GROUP_I', 'GROUP_J', 'GROUP_K', 'GROUP_L',
-])
-
-const KNOCKOUT_ORDER  = ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'THIRD_PLACE', 'FINAL']
-const KNOCKOUT_LABELS = {
-  LAST_32: '1/32 фіналу', LAST_16: '1/8 фіналу',
-  QUARTER_FINALS: '1/4 фіналу', SEMI_FINALS: '1/2 фіналу',
-  THIRD_PLACE: 'Матч за 3 місце', FINAL: 'Фінал',
-}
-
 // Country flags (flagcdn.com) — keyed by Ukrainian team name
 const COUNTRY_FLAG_CODES = {
   'Іспанія': 'es', 'Англія': 'gb-eng', 'Франція': 'fr', 'Португалія': 'pt',
@@ -48,90 +34,6 @@ const COUNTRY_FLAG_CODES = {
 function getFlagUrl(name) {
   const code = COUNTRY_FLAG_CODES[name]
   return code ? `https://flagcdn.com/32x24/${code}.png` : null
-}
-
-// Matches numbered rounds like "Regular Season - 01" or "GROUP_STAGE_3"
-const NUMBERED_ROUND_RE = /^(Regular Season|GROUP_STAGE)/i
-
-function numberedRoundLabel(round) {
-  const m = round.match(/\d+$/)
-  return m ? `Тур ${parseInt(m[0], 10)}` : round
-}
-
-function groupAndSortMatches(matches) {
-  const groupStage = matches.filter(m => GROUP_STAGE_ROUNDS.has(m.round))
-  const knockout   = matches.filter(m => KNOCKOUT_ORDER.includes(m.round))
-  const numbered   = matches.filter(m =>
-    !GROUP_STAGE_ROUNDS.has(m.round) && !KNOCKOUT_ORDER.includes(m.round) &&
-    NUMBERED_ROUND_RE.test(m.round ?? '')
-  )
-  const other = matches.filter(m =>
-    !GROUP_STAGE_ROUNDS.has(m.round) && !KNOCKOUT_ORDER.includes(m.round) &&
-    !NUMBERED_ROUND_RE.test(m.round ?? '')
-  )
-
-  const result = []
-
-  // Traditional group stage (GROUP_A … GROUP_L) → Тур 1/2/3
-  if (groupStage.length > 0) {
-    const byGroup = {}
-    for (const m of groupStage) {
-      if (!byGroup[m.round]) byGroup[m.round] = []
-      byGroup[m.round].push(m)
-    }
-    for (const g of Object.values(byGroup)) g.sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))
-
-    const byMatchday = { 1: [], 2: [], 3: [] }
-    for (const gm of Object.values(byGroup)) {
-      gm.forEach((m, i) => { byMatchday[Math.floor(i / 2) + 1].push(m) })
-    }
-    for (const day of [1, 2, 3]) {
-      const dm = byMatchday[day]
-      if (!dm?.length) continue
-      dm.sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))
-      result.push({ label: `Тур ${day}`, matches: dm })
-    }
-  }
-
-  // Numbered rounds (Regular Season - N, GROUP_STAGE_N) — sorted numerically, before knockouts
-  const numberedByLabel = {}
-  for (const m of numbered) {
-    const label = numberedRoundLabel(m.round ?? '')
-    if (!numberedByLabel[label]) numberedByLabel[label] = []
-    numberedByLabel[label].push(m)
-  }
-  const numberedKeys = Object.keys(numberedByLabel).sort((a, b) => {
-    const na = parseInt(a.match(/\d+$/)?.[0] ?? '0', 10)
-    const nb = parseInt(b.match(/\d+$/)?.[0] ?? '0', 10)
-    return na - nb
-  })
-  for (const k of numberedKeys) {
-    result.push({ label: k, matches: numberedByLabel[k].sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at)) })
-  }
-
-  // Knockout rounds in defined order
-  const knockoutByRound = {}
-  for (const m of knockout) {
-    if (!knockoutByRound[m.round]) knockoutByRound[m.round] = []
-    knockoutByRound[m.round].push(m)
-  }
-  for (const round of KNOCKOUT_ORDER) {
-    if (!knockoutByRound[round]) continue
-    result.push({ label: KNOCKOUT_LABELS[round], matches: knockoutByRound[round].sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at)) })
-  }
-
-  // Anything else — alphabetical
-  const otherByRound = {}
-  for (const m of other) {
-    const k = m.round ?? ''
-    if (!otherByRound[k]) otherByRound[k] = []
-    otherByRound[k].push(m)
-  }
-  for (const k of Object.keys(otherByRound).sort()) {
-    result.push({ label: k, matches: otherByRound[k].sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at)) })
-  }
-
-  return result
 }
 
 // ── Shared components ─────────────────────────────────────────────────────────
@@ -157,40 +59,6 @@ function EmptyState({ icon, text }) {
     </div>
   )
 }
-
-// ── Matches tab ───────────────────────────────────────────────────────────────
-
-function MatchesByRound({ matches, userPredictions, userId }) {
-  if (!matches.length) return <EmptyState icon="✅" text="Усі матчі цього турніру завершені" />
-
-  const now    = new Date()
-  const groups = groupAndSortMatches(matches)
-
-  return (
-    <div className="space-y-8">
-      {groups.map(({ label, matches: gm }) => (
-        <div key={label}>
-          <h2 className="text-sm font-semibold text-gray-400 dark:text-gray-400 uppercase tracking-wider mb-3">{label}</h2>
-          <div className="space-y-3">
-            {gm.map(match => {
-              const isUpcoming = match.status !== 'finished' && new Date(match.kickoff_at) > now
-              return (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  userPrediction={userPredictions[match.id]}
-                  userId={userId}
-                  highlight={!!userId && isUpcoming && !userPredictions[match.id]}
-                />
-              )
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 
 // ── Standings tab ─────────────────────────────────────────────────────────────
 
@@ -536,6 +404,19 @@ export default async function TournamentPage({ params, searchParams }) {
     ? Math.round((predictedCount / upcomingMatches.length) * 100)
     : 100
 
+  // ── Default active rounds (computed server-side to avoid hydration mismatch) ─
+  const matchTabGroups = groupAndSortMatches(matchesTabMatches)
+  const nearestUpcoming = [...matchesTabMatches].sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at))[0]
+  const defaultMatchesRound = nearestUpcoming
+    ? (matchTabGroups.find(g => g.matches.some(m => m.id === nearestUpcoming.id))?.label ?? matchTabGroups[0]?.label ?? null)
+    : (matchTabGroups[0]?.label ?? null)
+
+  const predGroups = groupAndSortMatches(finishedMatches)
+  const mostRecentFinished = finishedMatches[0] // sorted desc
+  const defaultPredsRound = mostRecentFinished
+    ? (predGroups.find(g => g.matches.some(m => m.id === mostRecentFinished.id))?.label ?? predGroups[predGroups.length - 1]?.label ?? null)
+    : (predGroups[predGroups.length - 1]?.label ?? null)
+
   return (
     <div>
       {/* Breadcrumb */}
@@ -582,13 +463,13 @@ export default async function TournamentPage({ params, searchParams }) {
               }
             </div>
           )}
-          <MatchesByRound matches={matchesTabMatches} userPredictions={userPredictions} userId={userId} />
+          <MatchesTab matches={matchesTabMatches} userPredictions={userPredictions} userId={userId} defaultRound={defaultMatchesRound} />
         </>
       )}
 
       {/* ── Predictions ─────────────────────────────────────────────────── */}
       {tab === 'preds' && (
-        <PredsTab finishedMatches={finishedMatches} predsByMatch={predsByMatch} profileMap={profileMap} />
+        <PredsTab finishedMatches={finishedMatches} predsByMatch={predsByMatch} profileMap={profileMap} defaultRound={defaultPredsRound} />
       )}
 
       {/* ── Standings ───────────────────────────────────────────────────── */}

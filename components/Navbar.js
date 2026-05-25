@@ -19,7 +19,8 @@ export default function Navbar() {
   const [user, setUser]               = useState(null)
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl]     = useState(null)
-  const [mounted, setMounted]         = useState(false)
+  const [mounted, setMounted]         = useState(false)  // theme only
+  const [authReady, setAuthReady]     = useState(false)  // auth state resolved
   const [menuOpen, setMenuOpen]       = useState(false)
   const { theme, setTheme }           = useTheme()
 
@@ -32,10 +33,12 @@ export default function Navbar() {
     setMounted(true)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
+      setAuthReady(true)
       if (session?.user) fetchProfile(session.user.id)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      setAuthReady(true)
       if (session?.user) fetchProfile(session.user.id)
       else { setDisplayName(''); setAvatarUrl(null) }
     })
@@ -88,7 +91,7 @@ export default function Navbar() {
               </button>
             )}
 
-            {!mounted ? (
+            {!authReady ? (
               <div className="w-16 h-8" />
             ) : user ? (
               <div className="flex items-center gap-1">
@@ -116,16 +119,18 @@ export default function Navbar() {
 
           {/* ── Mobile right side ───────────────────────────────────────── */}
           <div className="flex sm:hidden items-center gap-2">
-            {mounted && user ? (
+            {!authReady ? (
+              <div className="w-7 h-7" />
+            ) : user ? (
               <a href="/profile" className="p-1">
                 <NavAvatar url={avatarUrl} />
               </a>
-            ) : mounted && !user ? (
+            ) : (
               <a href="/auth"
                 className="bg-green-500 hover:bg-green-400 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
                 Увійти
               </a>
-            ) : <div className="w-7 h-7" />}
+            )}
 
             <button
               onClick={() => setMenuOpen(true)}

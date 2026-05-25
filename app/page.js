@@ -76,7 +76,7 @@ export default async function HomePage() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             {TOURNAMENT_LOGOS[tournament.league_id]
-              ? <img src={TOURNAMENT_LOGOS[tournament.league_id]} alt="" className="w-12 h-12 object-contain flex-shrink-0" />
+              ? <img src={TOURNAMENT_LOGOS[tournament.league_id]} alt="" className="w-16 h-16 object-contain flex-shrink-0" />
               : <span className="text-2xl flex-shrink-0">{leagueEmoji(tournament.league_id)}</span>
             }
             <span className={`font-semibold text-sm sm:text-base truncate transition-colors ${

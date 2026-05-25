@@ -34,8 +34,8 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
   return (
     <div className={`bg-white dark:bg-gray-900 rounded-xl p-3 sm:p-4 border ${
       highlight
-        ? 'border-gray-200 dark:border-gray-800 border-l-[3px] border-l-amber-400/70 dark:border-l-amber-400/50'
-        : isFinished ? 'border-gray-200 dark:border-gray-700' : 'border-gray-200 dark:border-gray-800'
+        ? 'border-gray-200 dark:border-gray-700 border-l-[3px] border-l-amber-400/70 dark:border-l-amber-400/50'
+        : 'border-gray-200 dark:border-gray-700'
     }`}>
       {/* Top row: date + status */}
       <div className="flex justify-between items-center mb-3 text-xs text-gray-400 dark:text-gray-500">

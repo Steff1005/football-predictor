@@ -67,7 +67,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
         const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
 
         return (
-          <div key={match.id} className="rounded-xl border border-gray-200 dark:border-white/10 overflow-hidden mb-2">
+          <div key={match.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden mb-2">
             {/* ── Collapsed header ── */}
             <div
               onClick={() => toggleMatch(match.id)}
@@ -133,7 +133,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                         {displayName(profile)}
                       </span>
 
-                      <span className="font-mono text-sm text-gray-500 dark:text-gray-400 w-12 text-center flex-shrink-0">
+                      <span className="bg-gray-100 dark:bg-white/10 rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
                         {pred.predicted_home}:{pred.predicted_away}
                       </span>
 

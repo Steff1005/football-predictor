@@ -427,6 +427,7 @@ export default async function TournamentPage({ params, searchParams }) {
       .select('user_id, match_id, predicted_home, predicted_away, points')
       .in('match_id', matchIds)
       .not('points', 'is', null)
+      .limit(10000)
     calcPreds = data ?? []
   }
 
@@ -437,6 +438,7 @@ export default async function TournamentPage({ params, searchParams }) {
       .from('predictions')
       .select('user_id, match_id, predicted_home, predicted_away, points')
       .in('match_id', finishedMatchIds)
+      .limit(10000)
     publicPreds = data ?? []
   }
 

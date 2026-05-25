@@ -31,6 +31,33 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
   const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })
   const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
 
+  const scoreOrInputs = isFinished ? (
+    <div className="bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg font-bold text-lg text-gray-900 dark:text-white whitespace-nowrap">
+      {match.home_score} : {match.away_score}
+    </div>
+  ) : (
+    <div className="flex items-center gap-1">
+      <input
+        type="number" min="0" max="20"
+        value={home}
+        onChange={e => { setHome(e.target.value); if (e.target.value.length === 1) awayRef.current?.focus() }}
+        disabled={isPast}
+        className="no-spin w-10 h-10 sm:w-11 sm:h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-base sm:text-lg disabled:opacity-40"
+        placeholder="-"
+      />
+      <span className="text-gray-400 dark:text-gray-500 font-bold">:</span>
+      <input
+        ref={awayRef}
+        type="number" min="0" max="20"
+        value={away}
+        onChange={e => setAway(e.target.value)}
+        disabled={isPast}
+        className="no-spin w-10 h-10 sm:w-11 sm:h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-base sm:text-lg disabled:opacity-40"
+        placeholder="-"
+      />
+    </div>
+  )
+
   return (
     <div className={`bg-white dark:bg-gray-900 rounded-xl p-3 sm:p-4 border ${
       highlight
@@ -49,64 +76,39 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
         </span>
       </div>
 
-      {/* Teams and score */}
-      <div className="flex items-center gap-2 sm:gap-4">
-        {/* Home */}
-        <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
-          <span className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm leading-tight text-right truncate">
+      {/* Teams + score
+          Mobile:  home row / score row / away row (vertical, full names)
+          Desktop: home | score | away (horizontal, truncate if needed) */}
+      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 mb-3">
+
+        {/* Home team */}
+        <div className="w-full sm:flex-1 flex items-center gap-2 sm:flex-row-reverse sm:min-w-0">
+          {match.home_logo && (
+            <img src={match.home_logo} alt="" className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
+          )}
+          <span className="font-semibold text-gray-900 dark:text-white text-sm leading-tight sm:text-right sm:flex-1 sm:min-w-0 sm:truncate">
             {match.home_team}
           </span>
-          {match.home_logo && (
-            <img src={match.home_logo} alt="" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
-          )}
         </div>
 
-        {/* Center: score or prediction inputs */}
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {isFinished ? (
-            <div className="bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg font-bold text-lg text-gray-900 dark:text-white whitespace-nowrap">
-              {match.home_score} : {match.away_score}
-            </div>
-          ) : (
-            <div className="flex items-center gap-1">
-              <input
-                type="number" min="0" max="20"
-                value={home}
-                onChange={e => {
-                  setHome(e.target.value)
-                  if (e.target.value.length === 1) awayRef.current?.focus()
-                }}
-                disabled={isPast}
-                className="no-spin w-9 h-9 sm:w-11 sm:h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-base sm:text-lg disabled:opacity-40"
-                placeholder="-"
-              />
-              <span className="text-gray-400 dark:text-gray-500 font-bold">:</span>
-              <input
-                ref={awayRef}
-                type="number" min="0" max="20"
-                value={away}
-                onChange={e => setAway(e.target.value)}
-                disabled={isPast}
-                className="no-spin w-9 h-9 sm:w-11 sm:h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-base sm:text-lg disabled:opacity-40"
-                placeholder="-"
-              />
-            </div>
-          )}
+        {/* Score / inputs — centered */}
+        <div className="flex items-center justify-center gap-1 flex-shrink-0">
+          {scoreOrInputs}
         </div>
 
-        {/* Away */}
-        <div className="flex-1 flex items-center justify-start gap-2 min-w-0">
+        {/* Away team */}
+        <div className="w-full sm:flex-1 flex items-center gap-2 sm:min-w-0">
           {match.away_logo && (
-            <img src={match.away_logo} alt="" className="w-7 h-7 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
+            <img src={match.away_logo} alt="" className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0" />
           )}
-          <span className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm leading-tight truncate">
+          <span className="font-semibold text-gray-900 dark:text-white text-sm leading-tight sm:flex-1 sm:min-w-0 sm:truncate">
             {match.away_team}
           </span>
         </div>
       </div>
 
-      {/* Bottom row: prediction + button */}
-      <div className="mt-3 flex items-center justify-between gap-2">
+      {/* Bottom row: saved prediction + button */}
+      <div className="flex items-center justify-between gap-2">
         <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
           {userPrediction && !isFinished && (
             <span>Прогноз: {userPrediction.predicted_home}:{userPrediction.predicted_away}</span>

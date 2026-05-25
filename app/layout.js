@@ -22,7 +22,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="uk" suppressHydrationWarning>
+    <html lang="uk" suppressHydrationWarning style={{ backgroundColor: '#030712' }}>
       <head>
         <script
           dangerouslySetInnerHTML={{

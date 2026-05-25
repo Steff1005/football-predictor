@@ -19,9 +19,10 @@ export default function Navbar() {
   const [user, setUser]               = useState(null)
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl]     = useState(null)
-  const [mounted, setMounted]         = useState(false)  // theme only
-  const [authReady, setAuthReady]     = useState(false)  // auth state resolved
-  const [menuOpen, setMenuOpen]       = useState(false)
+  const [mounted, setMounted]             = useState(false)  // theme only
+  const [authReady, setAuthReady]         = useState(false)  // session resolved
+  const [profileLoading, setProfileLoading] = useState(false) // profile fetch in-flight
+  const [menuOpen, setMenuOpen]           = useState(false)
   const { theme, setTheme }           = useTheme()
 
   const supabase = useMemo(() => createBrowserClient(
@@ -32,15 +33,16 @@ export default function Navbar() {
   useEffect(() => {
     setMounted(true)
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setAuthReady(true)
-      if (session?.user) fetchProfile(session.user.id)
+      const u = session?.user ?? null
+      setUser(u)
+      if (u) { setProfileLoading(true); fetchProfile(u.id) }
+      else setAuthReady(true)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setAuthReady(true)
-      if (session?.user) fetchProfile(session.user.id)
-      else { setDisplayName(''); setAvatarUrl(null) }
+      const u = session?.user ?? null
+      setUser(u)
+      if (u) { setProfileLoading(true); fetchProfile(u.id) }
+      else { setDisplayName(''); setAvatarUrl(null); setAuthReady(true) }
     })
     return () => subscription.unsubscribe()
   }, [supabase])
@@ -60,9 +62,12 @@ export default function Navbar() {
       setDisplayName(full || data.username || '')
       setAvatarUrl(data.avatar_url || null)
     }
+    setProfileLoading(false)
+    setAuthReady(true)
   }
 
   const name = displayName || user?.email?.split('@')[0] || ''
+  const isNavReady = authReady && !profileLoading
 
   return (
     <>
@@ -91,8 +96,8 @@ export default function Navbar() {
               </button>
             )}
 
-            {!authReady ? (
-              <div className="w-16 h-8" />
+            {!isNavReady ? (
+              <div className="w-24 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
             ) : user ? (
               <div className="flex items-center gap-1">
                 <a href="/profile"
@@ -119,8 +124,8 @@ export default function Navbar() {
 
           {/* ── Mobile right side ───────────────────────────────────────── */}
           <div className="flex sm:hidden items-center gap-2">
-            {!authReady ? (
-              <div className="w-7 h-7" />
+            {!isNavReady ? (
+              <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
             ) : user ? (
               <a href="/profile" className="p-1">
                 <NavAvatar url={avatarUrl} />

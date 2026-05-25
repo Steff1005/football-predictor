@@ -13,12 +13,16 @@ function UserIcon() {
   )
 }
 
+function PointsBadge({ pts }) {
+  if (pts === 4) return <span className="text-sm flex-shrink-0 w-14 text-right">🎯 +4</span>
+  if (pts === 1) return <span className="text-sm flex-shrink-0 w-14 text-right">✅ +1</span>
+  return <span className="text-sm flex-shrink-0 w-14 text-right text-gray-400 dark:text-gray-500">❌ 0</span>
+}
+
 export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) {
-  // First match open by default
   const [openMatches, setOpenMatches] = useState(
     () => finishedMatches.length > 0 ? { [finishedMatches[0].id]: true } : {}
   )
-
 
   function toggleMatch(matchId) {
     setOpenMatches(prev => ({ ...prev, [matchId]: !prev[matchId] }))
@@ -28,7 +32,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
     return (
       <div className="text-center py-20 text-gray-400 dark:text-gray-600">
         <p className="text-5xl mb-4">🔒</p>
-        <p>Прогнози стануть доступні після завершення матчів</p>
+        <p>Результати стануть доступні після завершення матчів</p>
       </div>
     )
   }
@@ -40,8 +44,8 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
           .filter(p => profileMap[p.user_id])
           .sort((a, b) => (b.points ?? -1) - (a.points ?? -1))
 
-        const isOpen    = !!openMatches[match.id]
-        const hitCount  = preds.filter(p => (p.points ?? 0) > 0).length
+        const isOpen     = !!openMatches[match.id]
+        const hitCount   = preds.filter(p => (p.points ?? 0) > 0).length
         const totalCount = preds.length
 
         const kickoff = new Date(match.kickoff_at)
@@ -52,48 +56,50 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
             {/* ── Collapsed header ── */}
             <div
               onClick={() => toggleMatch(match.id)}
-              className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 gap-3 select-none"
+              className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 gap-2 select-none"
             >
               {/* Date */}
               <span className="text-xs text-gray-400 dark:text-gray-500 w-20 flex-shrink-0">{dateStr}</span>
 
-              {/* Home team */}
-              <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
+              {/* Home team — right-aligned, fixed half */}
+              <div className="flex items-center gap-1.5 w-[38%] justify-end min-w-0">
                 <span className="text-sm font-medium text-gray-900 dark:text-white truncate text-right">{match.home_team}</span>
                 {match.home_logo && <img src={match.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
               </div>
 
-              {/* Score badge */}
-              {match.status === 'finished' ? (
-                <span className="bg-gray-100 dark:bg-white/10 rounded-md px-3 py-0.5 font-mono text-sm font-semibold text-gray-900 dark:text-white flex-shrink-0">
-                  {match.home_score}:{match.away_score}
-                </span>
-              ) : match.status === 'live' ? (
-                <span className="bg-red-500/10 rounded-md px-3 py-0.5 text-xs font-semibold text-red-500 dark:text-red-400 flex-shrink-0 whitespace-nowrap">
-                  🔴 Live
-                </span>
-              ) : (
-                <span className="bg-yellow-500/10 rounded-md px-3 py-0.5 text-xs font-semibold text-yellow-600 dark:text-yellow-400 flex-shrink-0 whitespace-nowrap">
-                  Тривае
-                </span>
-              )}
+              {/* Score badge — fixed width */}
+              <div className="w-[72px] flex justify-center flex-shrink-0">
+                {match.status === 'finished' ? (
+                  <span className="bg-gray-100 dark:bg-white/10 rounded-md px-3 py-0.5 font-mono text-sm font-semibold text-gray-900 dark:text-white">
+                    {match.home_score}:{match.away_score}
+                  </span>
+                ) : match.status === 'live' ? (
+                  <span className="bg-red-500/10 rounded-md px-2 py-0.5 text-xs font-semibold text-red-500 dark:text-red-400 whitespace-nowrap">
+                    🔴 Live
+                  </span>
+                ) : (
+                  <span className="bg-yellow-500/10 rounded-md px-2 py-0.5 text-xs font-semibold text-yellow-600 dark:text-yellow-400 whitespace-nowrap">
+                    Триває
+                  </span>
+                )}
+              </div>
 
-              {/* Away team */}
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              {/* Away team — left-aligned, fixed half */}
+              <div className="flex items-center gap-1.5 w-[38%] justify-start min-w-0">
                 {match.away_logo && <img src={match.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
                 <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{match.away_team}</span>
               </div>
 
               {/* Hit counter */}
               {totalCount > 0 && (
-                <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap flex-shrink-0 hidden sm:block">
+                <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap flex-shrink-0 hidden sm:block ml-auto">
                   {hitCount}/{totalCount} влучних
                 </span>
               )}
 
               {/* Chevron */}
               <svg
-                className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
+                className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ml-1 ${isOpen ? 'rotate-90' : ''}`}
                 fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -127,21 +133,13 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap }) 
                         {displayName(profile)}
                       </span>
 
-                      {/* Predicted score */}
-                      <span className="font-mono text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
+                      {/* Predicted score — fixed width */}
+                      <span className="font-mono text-sm text-gray-500 dark:text-gray-400 w-12 text-center flex-shrink-0">
                         {pred.predicted_home}:{pred.predicted_away}
                       </span>
 
-                      {/* Points badge — only when match is finished */}
-                      {isFinished && (
-                        <span className={`rounded px-2 py-0.5 text-xs font-medium flex-shrink-0 ${
-                          pts > 0
-                            ? 'bg-green-500/20 text-green-600 dark:text-green-400'
-                            : 'bg-red-500/20 text-red-500 dark:text-red-400'
-                        }`}>
-                          {pts > 0 ? `+${pts}` : '0'}
-                        </span>
-                      )}
+                      {/* Points badge */}
+                      {isFinished && <PointsBadge pts={pts} />}
                     </div>
                   )
                 })}

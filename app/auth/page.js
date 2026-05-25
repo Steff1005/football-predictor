@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -10,7 +11,6 @@ const TRANSLIT = {
   и:'y',і:'i',ї:'i',й:'i',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',
   р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',
   щ:'shch',ь:'',ю:'iu',я:'ia',
-  // Russian extras
   ё:'yo',э:'e',ъ:'',ы:'y',
 }
 
@@ -26,19 +26,26 @@ function toUsername(first, last) {
 }
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin]           = useState(true)
-  const [email, setEmail]               = useState('')
-  const [password, setPassword]         = useState('')
-  const [firstName, setFirstName]       = useState('')
-  const [lastName, setLastName]         = useState('')
-  const [username, setUsername]         = useState('')
+  const [isLogin, setIsLogin]               = useState(true)
+  const [email, setEmail]                   = useState('')
+  const [password, setPassword]             = useState('')
+  const [showPassword, setShowPassword]     = useState(false)
+  const [firstName, setFirstName]           = useState('')
+  const [lastName, setLastName]             = useState('')
+  const [username, setUsername]             = useState('')
   const [usernameEdited, setUsernameEdited] = useState(false)
   const [usernameTaken, setUsernameTaken]   = useState(false)
-  const [loading, setLoading]           = useState(false)
-  const [message, setMessage]           = useState('')
+  const [loading, setLoading]               = useState(false)
+  const [message, setMessage]               = useState('')
+
+  // Forgot password
+  const [showForgot, setShowForgot]   = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotMsg, setForgotMsg]     = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+
   const router = useRouter()
 
-  // Auto-generate username from first + last name unless user has edited it
   useEffect(() => {
     if (!isLogin && !usernameEdited) {
       setUsername(toUsername(firstName, lastName))
@@ -50,6 +57,8 @@ export default function AuthPage() {
     setMessage('')
     setUsernameEdited(false)
     setUsernameTaken(false)
+    setShowForgot(false)
+    setForgotMsg('')
   }
 
   async function handleSubmit(e) {
@@ -63,12 +72,8 @@ export default function AuthPage() {
       if (error) setMessage('Помилка: ' + error.message)
       else router.push('/')
     } else {
-      // Check username availability before creating the auth user
       const { data: existing } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('username', username)
-        .maybeSingle()
+        .from('profiles').select('id').eq('username', username).maybeSingle()
 
       if (existing) {
         setUsernameTaken(true)
@@ -89,6 +94,19 @@ export default function AuthPage() {
     setLoading(false)
   }
 
+  async function handleForgot(e) {
+    e.preventDefault()
+    if (!forgotEmail) return
+    setForgotLoading(true)
+    setForgotMsg('')
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+      redirectTo: window.location.origin + '/reset-password',
+    })
+    setForgotLoading(false)
+    if (error) setForgotMsg('Помилка: ' + error.message)
+    else setForgotMsg('✅ Посилання надіслано на ' + forgotEmail)
+  }
+
   return (
     <div className="max-w-md mx-auto mt-20">
       <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 border border-gray-200 dark:border-gray-800">
@@ -101,53 +119,49 @@ export default function AuthPage() {
             <>
               <div className="flex gap-3">
                 <input
-                  type="text"
-                  placeholder="Імʼя"
-                  value={firstName}
-                  onChange={e => setFirstName(e.target.value)}
-                  required
-                  className={INPUT}
+                  type="text" placeholder="Імʼя" value={firstName}
+                  onChange={e => setFirstName(e.target.value)} required className={INPUT}
                 />
                 <input
-                  type="text"
-                  placeholder="Прізвище"
-                  value={lastName}
-                  onChange={e => setLastName(e.target.value)}
-                  required
-                  className={INPUT}
+                  type="text" placeholder="Прізвище" value={lastName}
+                  onChange={e => setLastName(e.target.value)} required className={INPUT}
                 />
               </div>
               <input
-                type="text"
-                placeholder="Нікнейм"
-                value={username}
+                type="text" placeholder="Нікнейм" value={username}
                 onChange={e => { setUsername(e.target.value); setUsernameEdited(true); setUsernameTaken(false) }}
-                required
-                className={`${INPUT} ${usernameTaken ? '!border-red-400 dark:!border-red-500' : ''}`}
+                required className={`${INPUT} ${usernameTaken ? '!border-red-400 dark:!border-red-500' : ''}`}
               />
             </>
           )}
 
           <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            className={INPUT}
-          />
-          <input
-            type="password"
-            placeholder="Пароль"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            className={INPUT}
+            type="email" placeholder="Email" value={email}
+            onChange={e => setEmail(e.target.value)} required className={INPUT}
           />
 
+          {/* Password with show/hide toggle */}
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Пароль"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              className={INPUT + ' pr-11'}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+
           <button
-            type="submit"
-            disabled={loading}
+            type="submit" disabled={loading}
             className="w-full bg-green-500 hover:bg-green-400 text-white py-3 rounded-lg font-bold disabled:opacity-50"
           >
             {loading ? 'Завантаження...' : (isLogin ? 'Увійти' : 'Зареєструватися')}
@@ -158,6 +172,38 @@ export default function AuthPage() {
           <p className={`mt-4 text-center text-sm ${usernameTaken ? 'text-red-500 dark:text-red-400' : 'text-yellow-500 dark:text-yellow-400'}`}>
             {message}
           </p>
+        )}
+
+        {/* Forgot password (login mode only) */}
+        {isLogin && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => { setShowForgot(v => !v); setForgotMsg('') }}
+              className="text-sm text-blue-500 dark:text-blue-400 hover:underline"
+            >
+              Забули пароль?
+            </button>
+
+            {showForgot && (
+              <form onSubmit={handleForgot} className="mt-3 space-y-2">
+                <input
+                  type="email" placeholder="Ваш email" value={forgotEmail}
+                  onChange={e => setForgotEmail(e.target.value)} required
+                  className={INPUT}
+                />
+                <button
+                  type="submit" disabled={forgotLoading}
+                  className="w-full bg-blue-500 hover:bg-blue-400 text-white py-2.5 rounded-lg font-medium text-sm disabled:opacity-50"
+                >
+                  {forgotLoading ? 'Надсилаємо...' : 'Надіслати посилання'}
+                </button>
+                {forgotMsg && (
+                  <p className="text-sm text-center text-yellow-500 dark:text-yellow-400">{forgotMsg}</p>
+                )}
+              </form>
+            )}
+          </div>
         )}
 
         <button

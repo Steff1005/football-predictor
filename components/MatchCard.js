@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 export default function MatchCard({ match, userPrediction, userId, highlight }) {
@@ -7,6 +7,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
   const [away, setAway] = useState(userPrediction?.predicted_away ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const awayRef = useRef(null)
 
   const isFinished = match.status === 'finished'
   const isPast = new Date(match.kickoff_at) < new Date()
@@ -71,19 +72,23 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
               <input
                 type="number" min="0" max="20"
                 value={home}
-                onChange={e => setHome(e.target.value)}
+                onChange={e => {
+                  setHome(e.target.value)
+                  if (e.target.value.length === 1) awayRef.current?.focus()
+                }}
                 disabled={isPast}
-                className="w-9 h-9 sm:w-11 sm:h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-base sm:text-lg disabled:opacity-40"
-                placeholder="0"
+                className="no-spin w-9 h-9 sm:w-11 sm:h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-base sm:text-lg disabled:opacity-40"
+                placeholder="-"
               />
               <span className="text-gray-400 dark:text-gray-500 font-bold">:</span>
               <input
+                ref={awayRef}
                 type="number" min="0" max="20"
                 value={away}
                 onChange={e => setAway(e.target.value)}
                 disabled={isPast}
-                className="w-9 h-9 sm:w-11 sm:h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-base sm:text-lg disabled:opacity-40"
-                placeholder="0"
+                className="no-spin w-9 h-9 sm:w-11 sm:h-11 text-center bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg font-bold text-gray-900 dark:text-white text-base sm:text-lg disabled:opacity-40"
+                placeholder="-"
               />
             </div>
           )}

@@ -215,11 +215,12 @@ function StandingsTab({ standings, roundLabels, roundPointsMap }) {
               <span className="font-medium text-gray-900 dark:text-white flex-1 min-w-0 truncate">{displayName(s.profile)}</span>
               <span className="font-bold text-green-500 dark:text-green-400 text-xl">{s.total}</span>
             </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 dark:text-gray-500 pl-10">
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 dark:text-gray-500 pl-10">
               <span>Прогн: <b className="text-gray-600 dark:text-gray-300">{s.predictions}</b></span>
-              <span>×1: <b className="text-gray-600 dark:text-gray-300">{s.results}</b></span>
+              <span>Рез: <b className="text-gray-600 dark:text-gray-300">{s.results}</b></span>
+              <span className="text-blue-400">×1: <b>{s.results}</b></span>
               <span>Точних: <b className="text-gray-600 dark:text-gray-300">{s.exact}</b></span>
-              <span>×4 балів: <b className="text-blue-500 dark:text-blue-400">{s.exact * 4}</b></span>
+              <span className="text-blue-400">×4: <b>{s.exact * 4}</b></span>
             </div>
           </div>
         ))}
@@ -231,33 +232,35 @@ function StandingsTab({ standings, roundLabels, roundPointsMap }) {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-800">
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide w-10">Місце</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Учасник</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Прогнози</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Бали ×1</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Точні (к-сть)</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Бали ×4</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Разом</th>
+                <th className="text-center px-3 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide w-10">Місце</th>
+                <th className="text-left px-3 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Гравець</th>
+                <th className="text-right px-3 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Прогнози</th>
+                <th className="text-right px-3 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Прав. результати</th>
+                <th className="text-right px-3 py-3 text-xs font-semibold text-blue-400 dark:text-blue-500 uppercase tracking-wide">Бали за результати</th>
+                <th className="text-right px-3 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Точні рахунки</th>
+                <th className="text-right px-3 py-3 text-xs font-semibold text-blue-400 dark:text-blue-500 uppercase tracking-wide">Бали за точні</th>
+                <th className="text-right px-3 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Сума балів</th>
               </tr>
             </thead>
             <tbody>
               {standings.map((s, i) => (
                 <tr key={s.uid} className="border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                  <td className="px-4 py-3 text-center text-lg">
+                  <td className="px-3 py-3 text-center text-lg">
                     {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉'
                       : <span className="text-sm text-gray-400 dark:text-gray-500">{i + 1}</span>}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3">
                     <div className="flex items-center gap-2.5">
                       <Avatar profile={s.profile} />
                       <span className="font-medium text-gray-900 dark:text-white">{displayName(s.profile)}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{s.predictions}</td>
-                  <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{s.results}</td>
-                  <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{s.exact}</td>
-                  <td className="px-4 py-3 text-right font-medium text-blue-600 dark:text-blue-400">{s.exact * 4}</td>
-                  <td className="px-4 py-3 text-right font-bold text-green-500 dark:text-green-400 text-lg">{s.total}</td>
+                  <td className="px-3 py-3 text-right text-gray-500 dark:text-gray-400">{s.predictions}</td>
+                  <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">{s.results}</td>
+                  <td className="px-3 py-3 text-right font-medium text-blue-600 dark:text-blue-400">{s.results}</td>
+                  <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">{s.exact}</td>
+                  <td className="px-3 py-3 text-right font-medium text-blue-600 dark:text-blue-400">{s.exact * 4}</td>
+                  <td className="px-3 py-3 text-right font-bold text-green-500 dark:text-green-400 text-lg">{s.total}</td>
                 </tr>
               ))}
             </tbody>
@@ -277,9 +280,9 @@ function StandingsTab({ standings, roundLabels, roundPointsMap }) {
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap sticky left-0 bg-white dark:bg-gray-900">Учасник</th>
                   {roundLabels.map(label => (
-                    <th key={label} className="text-center px-3 py-2.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap">{label}</th>
+                    <th key={label} className="text-center px-1 py-2.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap min-w-[60px] w-[60px]">{label}</th>
                   ))}
-                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap">Загалом</th>
+                  <th className="text-center px-1 py-2.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap min-w-[60px] w-[60px]">Загалом</th>
                 </tr>
               </thead>
               <tbody>
@@ -295,7 +298,7 @@ function StandingsTab({ standings, roundLabels, roundPointsMap }) {
                       const pts = roundPointsMap?.[label]?.[s.uid] ?? 0
                       const isMax = colMaxes[ci] > 0 && pts === colMaxes[ci]
                       return (
-                        <td key={label} className={`text-center px-3 py-2.5 tabular-nums ${
+                        <td key={label} className={`text-center px-1 py-2.5 tabular-nums min-w-[60px] w-[60px] ${
                           isMax
                             ? 'bg-green-500/10 text-green-600 dark:text-green-400 font-bold'
                             : 'text-gray-700 dark:text-gray-300'
@@ -304,7 +307,7 @@ function StandingsTab({ standings, roundLabels, roundPointsMap }) {
                         </td>
                       )
                     })}
-                    <td className="text-center px-3 py-2.5 font-bold text-green-500 dark:text-green-400 tabular-nums">{s.total}</td>
+                    <td className="text-center px-1 py-2.5 font-bold text-green-500 dark:text-green-400 tabular-nums min-w-[60px] w-[60px]">{s.total}</td>
                   </tr>
                 ))}
               </tbody>
@@ -366,8 +369,8 @@ function RoundsTab({ roundTables, tournamentId, analysisMap, isAdmin }) {
 
 const TABS = [
   { id: 'matches',   label: 'Матчі' },
-  { id: 'preds',     label: 'Прогнози' },
-  { id: 'standings', label: 'Рейтинг' },
+  { id: 'preds',     label: 'Результати' },
+  { id: 'standings', label: 'Турнірна таблиця' },
   { id: 'rounds',    label: 'По турах' },
 ]
 

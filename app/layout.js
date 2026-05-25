@@ -4,11 +4,11 @@ import Navbar from '@/components/Navbar'
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
 
 export const metadata = {
-  title: 'Football Predictor',
+  title: 'Kickoff',
   description: 'Прогнозуй матчі та змагайся з друзями',
   appleWebApp: {
     capable: true,
-    title: 'Predictor',
+    title: 'Kickoff',
     statusBarStyle: 'black-translucent',
   },
   icons: {

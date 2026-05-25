@@ -2,7 +2,7 @@ export default function RulesPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">📋 Правила та умови</h1>
-      <p className="text-gray-500 dark:text-gray-400 mb-8">Як працює Football Predictor</p>
+      <p className="text-gray-500 dark:text-gray-400 mb-8">Як працює Kickoff</p>
 
       {/* Як прогнозувати */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-800 mb-6">

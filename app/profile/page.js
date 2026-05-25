@@ -6,7 +6,7 @@ import AvatarUpload from './AvatarUpload'
 import PredictionBadge from '../../components/PredictionBadge'
 import { getRoundLabel } from '../../lib/round-sort'
 
-export const metadata = { title: 'Профіль — Football Predictor' }
+export const metadata = { title: 'Профіль — Kickoff' }
 
 export default async function ProfilePage({ searchParams }) {
   const { tournament: tournamentFilter = 'all' } = await searchParams

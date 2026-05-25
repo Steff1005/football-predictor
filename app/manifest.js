@@ -1,7 +1,7 @@
 export default function manifest() {
   return {
-    name: 'Football Predictor',
-    short_name: 'Predictor',
+    name: 'Kickoff',
+    short_name: 'Kickoff',
     description: 'Прогнозуй матчі та змагайся з друзями',
     start_url: '/',
     display: 'standalone',

@@ -6,6 +6,7 @@ import AvatarUpload from './AvatarUpload'
 import PredictionBadge from '../../components/PredictionBadge'
 import { getRoundLabel } from '../../lib/round-sort'
 import { translateTeam } from '../../lib/team-translations'
+import CLUB_CRESTS from '../../lib/club-crests'
 
 export const metadata = { title: 'Профіль — Kickoff' }
 
@@ -50,15 +51,24 @@ export default async function ProfilePage({ searchParams }) {
   const matchIds = rawPredictions?.map(p => p.match_id) ?? []
   let matchMap = {}
   if (matchIds.length > 0) {
-    const { data: matches } = await supabase
-      .from('matches')
-      .select('id, home_team, away_team, home_logo, away_logo, home_score, away_score, status, kickoff_at, tournament_id, round')
-      .in('id', matchIds)
-    matches?.forEach(m => {
+    const CHUNK = 200
+    const allMatches = []
+    for (let i = 0; i < matchIds.length; i += CHUNK) {
+      const { data } = await supabase
+        .from('matches')
+        .select('id, home_team, away_team, home_logo, away_logo, home_score, away_score, status, kickoff_at, tournament_id, round')
+        .in('id', matchIds.slice(i, i + CHUNK))
+      if (data) allMatches.push(...data)
+    }
+    allMatches.forEach(m => {
+      const ht = translateTeam(m.home_team)
+      const at = translateTeam(m.away_team)
       matchMap[m.id] = {
         ...m,
-        home_team: translateTeam(m.home_team),
-        away_team: translateTeam(m.away_team),
+        home_team: ht,
+        away_team: at,
+        home_logo: m.home_logo ?? CLUB_CRESTS[ht] ?? null,
+        away_logo: m.away_logo ?? CLUB_CRESTS[at] ?? null,
       }
     })
   }
@@ -115,13 +125,19 @@ export default async function ProfilePage({ searchParams }) {
     tourneyMatches?.forEach(m => { midToTid[m.id] = m.tournament_id })
 
     if (allTMIds.length > 0) {
-      const rankPreds = await fetchAll((from, to) =>
-        supabase.from('predictions')
-          .select('user_id, match_id, points')
-          .in('match_id', allTMIds)
-          .not('points', 'is', null)
-          .range(from, to)
-      )
+      const CHUNK = 200
+      let rankPreds = []
+      for (let i = 0; i < allTMIds.length; i += CHUNK) {
+        const chunk = allTMIds.slice(i, i + CHUNK)
+        const chunkPreds = await fetchAll((from, to) =>
+          supabase.from('predictions')
+            .select('user_id, match_id, points')
+            .in('match_id', chunk)
+            .not('points', 'is', null)
+            .range(from, to)
+        )
+        rankPreds = rankPreds.concat(chunkPreds)
+      }
 
       const tidUsers = {}
       for (const p of rankPreds) {

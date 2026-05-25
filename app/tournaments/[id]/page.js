@@ -6,6 +6,7 @@ import PredsTab from './PredsTab'
 import CLUB_CRESTS from '../../../lib/club-crests'
 import TOURNAMENT_LOGOS from '../../../lib/tournament-logos'
 import { groupAndSortMatches } from '../../../lib/round-sort'
+import { translateTeam } from '../../../lib/team-translations'
 
 export const revalidate = 60
 
@@ -236,10 +237,10 @@ function RoundsTab({ roundTables, tournamentId, analysisMap, isAdmin }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'matches',   label: 'Матчі' },
-  { id: 'preds',     label: 'Результати' },
-  { id: 'standings', label: 'Турнірна таблиця' },
-  { id: 'rounds',    label: 'По турах' },
+  { id: 'matches',   label: 'Матчі',           short: 'Матчі' },
+  { id: 'preds',     label: 'Результати',       short: 'Результати' },
+  { id: 'standings', label: 'Турнірна таблиця', short: 'Таблиця' },
+  { id: 'rounds',    label: 'По турах',         short: 'Тури' },
 ]
 
 // Fetch all rows past the 1000-row PostgREST server cap using range pagination
@@ -287,11 +288,13 @@ export default async function TournamentPage({ params, searchParams }) {
     )
   }
 
-  // Enrich matches with logo URLs: DB value → club crest → country flag
+  // Enrich matches: logos (using original name) then translate team names
   const allMatches = (matches ?? []).map(m => ({
     ...m,
     home_logo: m.home_logo ?? CLUB_CRESTS[m.home_team] ?? getFlagUrl(m.home_team),
     away_logo: m.away_logo ?? CLUB_CRESTS[m.away_team] ?? getFlagUrl(m.away_team),
+    home_team: translateTeam(m.home_team),
+    away_team: translateTeam(m.away_team),
   }))
 
   const matchIds        = allMatches.map(m => m.id)
@@ -439,13 +442,14 @@ export default async function TournamentPage({ params, searchParams }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-900 p-1 rounded-xl border border-gray-200 dark:border-gray-800 w-fit flex-wrap">
+      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-900 p-1 rounded-xl border border-gray-200 dark:border-gray-800 overflow-x-auto scrollbar-none">
         {TABS.map(t => (
           <a key={t.id} href={`/tournaments/${id}?tab=${t.id}`}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
               tab === t.id ? 'bg-green-500 text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}>
-            {t.label}
+            <span className="sm:hidden">{t.short}</span>
+            <span className="hidden sm:inline">{t.label}</span>
           </a>
         ))}
       </div>

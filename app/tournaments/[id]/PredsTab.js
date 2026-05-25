@@ -133,15 +133,13 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                         {displayName(profile)}
                       </span>
 
-                      <span className="bg-gray-100 dark:bg-white/10 rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0">
+                      <span className="bg-gray-100 dark:bg-white/10 rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 min-w-[2.75rem] text-center">
                         {pred.predicted_home}:{pred.predicted_away}
                       </span>
 
-                      {isFinished && (
-                        <div className="w-16 flex-shrink-0 flex justify-end">
-                          <PredictionBadge pts={pred.points} />
-                        </div>
-                      )}
+                      <div className="w-16 flex-shrink-0 flex justify-end">
+                        {isFinished && <PredictionBadge pts={pred.points} />}
+                      </div>
                     </div>
                   )
                 })}

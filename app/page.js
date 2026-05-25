@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
+import TOURNAMENT_LOGOS from '../lib/tournament-logos'
 
 export const revalidate = 60
 
@@ -74,7 +75,10 @@ export default async function HomePage() {
         }`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="text-xl flex-shrink-0">{leagueEmoji(tournament.league_id)}</span>
+            {TOURNAMENT_LOGOS[tournament.league_id]
+              ? <img src={TOURNAMENT_LOGOS[tournament.league_id]} alt="" className="w-8 h-8 object-contain flex-shrink-0" />
+              : <span className="text-xl flex-shrink-0">{leagueEmoji(tournament.league_id)}</span>
+            }
             <span className={`font-semibold text-sm sm:text-base truncate transition-colors ${
               isActive
                 ? 'text-gray-900 dark:text-white group-hover:text-green-500 dark:group-hover:text-green-400'

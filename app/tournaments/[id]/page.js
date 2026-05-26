@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import RoundAnalysisSection from './RoundAnalysisSection'
@@ -20,6 +21,58 @@ function pluralMatches(n) {
 
 function displayName(profile) {
   return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
+}
+
+// ── Probability matrix ────────────────────────────────────────────────────────
+
+// Each player independently earns 0, 1 or 4 pts per remaining match (equal prob).
+// Tiebreaker: total → results (correct outcomes) → exact → predictions.
+function computeProbabilities(standings, remainingMatchCount) {
+  if (!standings.length || remainingMatchCount === 0) return null
+
+  const N = standings.length
+  const SAMPLES = 50000
+  const rankFreq = {}
+  standings.forEach(s => { rankFreq[s.uid] = {} })
+
+  for (let i = 0; i < SAMPLES; i++) {
+    const adjusted = standings.map(s => {
+      let addTotal = 0, addExact = 0, addResults = 0
+      for (let m = 0; m < remainingMatchCount; m++) {
+        const r = Math.floor(Math.random() * 3)
+        if (r === 2) { addTotal += 4; addExact++ }
+        else if (r === 1) { addTotal += 1; addResults++ }
+      }
+      return {
+        ...s,
+        total: s.total + addTotal,
+        exact: s.exact + addExact,
+        results: s.results + addResults,
+      }
+    })
+
+    adjusted.sort((a, b) =>
+      b.total    - a.total    ||
+      b.results  - a.results  ||
+      b.exact    - a.exact    ||
+      b.predictions - a.predictions
+    )
+
+    adjusted.forEach((s, i) => {
+      rankFreq[s.uid][i + 1] = (rankFreq[s.uid][i + 1] ?? 0) + 1
+    })
+  }
+
+  return standings.map(s => ({
+    uid: s.uid,
+    profile: s.profile,
+    probs: Object.fromEntries(
+      Array.from({ length: N }, (_, i) => [
+        i + 1,
+        Math.round(((rankFreq[s.uid][i + 1] ?? 0) / SAMPLES) * 100)
+      ])
+    )
+  }))
 }
 
 // Country flags (flagcdn.com) — keyed by Ukrainian team name
@@ -61,9 +114,109 @@ function EmptyState({ icon, text }) {
   )
 }
 
+// ── Probability section ───────────────────────────────────────────────────────
+
+function probCellCls(pct) {
+  if (pct === 0) return 'text-gray-300 dark:text-gray-700'
+  if (pct < 10)  return 'text-gray-500 dark:text-gray-400'
+  if (pct < 25)  return 'bg-green-500/15 text-green-700 dark:text-green-400'
+  if (pct < 50)  return 'bg-green-500/30 text-green-700 dark:text-green-300 font-semibold'
+  if (pct < 75)  return 'bg-green-500/55 text-white font-bold'
+  return                 'bg-green-500 text-white font-bold'
+}
+
+function placeLabel(p) {
+  return p === 1 ? '🥇' : p === 2 ? '🥈' : p === 3 ? '🥉' : `${p}`
+}
+
+function ProbabilitySection({ probMatrix, remainingCount }) {
+  if (!probMatrix?.length) return null
+
+  const n = probMatrix.length
+  const activePlaces = Array.from({ length: n }, (_, i) => i + 1)
+    .filter(place => probMatrix.some(row => (row.probs[place] ?? 0) > 0))
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+        <h2 className="font-semibold text-gray-900 dark:text-white text-sm">Прогноз підсумкових місць</h2>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+          {remainingCount === 1 ? 'Залишився 1 матч' : `Залишилось ${remainingCount} матчів`}
+          {' · '}на основі поточних балів та макс. можливого приросту
+        </p>
+      </div>
+
+      {/* Mobile: card per participant */}
+      <div className="sm:hidden divide-y divide-gray-100 dark:divide-gray-800">
+        {probMatrix.map(row => (
+          <div key={row.uid} className="px-4 py-3">
+            <Link href={`/players/${row.uid}`} className="flex items-center gap-2.5 mb-2 hover:opacity-75 transition-opacity">
+              <Avatar profile={row.profile} />
+              <span className="font-medium text-gray-900 dark:text-white text-sm flex-1 min-w-0 truncate">
+                {displayName(row.profile)}
+              </span>
+            </Link>
+            <div className="flex flex-wrap gap-1.5">
+              {activePlaces.map(place => {
+                const pct = row.probs[place] ?? 0
+                if (pct === 0) return null
+                return (
+                  <span key={place} className={`px-2.5 py-1 rounded-lg text-xs tabular-nums ${probCellCls(pct)}`}>
+                    {placeLabel(place)}: {pct}%
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden sm:block overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 dark:border-gray-800">
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide sticky left-0 bg-white dark:bg-gray-900 min-w-[160px]">
+                Учасник
+              </th>
+              {activePlaces.map(place => (
+                <th key={place} className="text-center px-2 py-2.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap min-w-[64px]">
+                  {placeLabel(place)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {probMatrix.map(row => (
+              <tr key={row.uid} className="border-b border-gray-100 dark:border-gray-800/50 last:border-0">
+                <td className="px-4 py-2.5 sticky left-0 bg-white dark:bg-gray-900 z-10">
+                  <Link href={`/players/${row.uid}`} className="flex items-center gap-2 hover:opacity-75 transition-opacity">
+                    <Avatar profile={row.profile} />
+                    <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                      {displayName(row.profile)}
+                    </span>
+                  </Link>
+                </td>
+                {activePlaces.map(place => {
+                  const pct = row.probs[place] ?? 0
+                  return (
+                    <td key={place} className={`text-center px-2 py-2.5 tabular-nums min-w-[64px] ${probCellCls(pct)}`}>
+                      {pct > 0 ? `${pct}%` : '—'}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 // ── Standings tab ─────────────────────────────────────────────────────────────
 
-function StandingsTab({ standings, roundLabels, roundPointsMap }) {
+function StandingsTab({ standings, roundLabels, roundPointsMap, probMatrix, upcomingCount }) {
   if (!standings.length) return <EmptyState icon="📊" text="Поки немає прогнозів" />
 
   const colMaxes = (roundLabels ?? []).map(label =>
@@ -80,9 +233,11 @@ function StandingsTab({ standings, roundLabels, roundPointsMap }) {
               <span className="w-7 text-center text-lg">
                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : <span className="text-sm text-gray-400 dark:text-gray-500">{i + 1}</span>}
               </span>
-              <Avatar profile={s.profile} />
-              <span className="font-medium text-gray-900 dark:text-white flex-1 min-w-0 truncate">{displayName(s.profile)}</span>
-              <span className="font-bold text-green-500 dark:text-green-400 text-xl">{s.total}</span>
+              <Link href={`/players/${s.uid}`} className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-75 transition-opacity">
+                <Avatar profile={s.profile} />
+                <span className="font-medium text-gray-900 dark:text-white flex-1 min-w-0 truncate">{displayName(s.profile)}</span>
+              </Link>
+              <span className="font-bold text-green-500 dark:text-green-400 text-xl flex-shrink-0">{s.total}</span>
             </div>
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 dark:text-gray-500 pl-10">
               <span>Прогн: <b className="text-gray-600 dark:text-gray-300">{s.predictions}</b></span>
@@ -119,10 +274,10 @@ function StandingsTab({ standings, roundLabels, roundPointsMap }) {
                       : <span className="text-sm text-gray-400 dark:text-gray-500">{i + 1}</span>}
                   </td>
                   <td className="px-3 py-3">
-                    <div className="flex items-center gap-2.5">
+                    <Link href={`/players/${s.uid}`} className="flex items-center gap-2.5 hover:opacity-75 transition-opacity">
                       <Avatar profile={s.profile} />
                       <span className="font-medium text-gray-900 dark:text-white">{displayName(s.profile)}</span>
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-3 py-3 text-right text-gray-500 dark:text-gray-400">{s.predictions}</td>
                   <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">{s.results}</td>
@@ -158,10 +313,10 @@ function StandingsTab({ standings, roundLabels, roundPointsMap }) {
                 {standings.map(s => (
                   <tr key={s.uid} className="border-b border-gray-100 dark:border-gray-800/50 last:border-0">
                     <td className="px-4 py-2.5 sticky left-0 bg-white dark:bg-gray-900">
-                      <div className="flex items-center gap-2">
+                      <Link href={`/players/${s.uid}`} className="flex items-center gap-2 hover:opacity-75 transition-opacity">
                         <Avatar profile={s.profile} />
                         <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">{displayName(s.profile)}</span>
-                      </div>
+                      </Link>
                     </td>
                     {roundLabels.map((label, ci) => {
                       const pts = roundPointsMap?.[label]?.[s.uid] ?? 0
@@ -184,6 +339,9 @@ function StandingsTab({ standings, roundLabels, roundPointsMap }) {
           </div>
         </div>
       )}
+
+      {/* Probability forecast table */}
+      {probMatrix && <ProbabilitySection probMatrix={probMatrix} remainingCount={upcomingCount} />}
     </div>
   )
 }
@@ -208,10 +366,12 @@ function RoundsTab({ roundTables, tournamentId, analysisMap, isAdmin }) {
                 <div key={r.uid} className={`flex items-center justify-between px-5 py-3 ${isTop ? 'bg-yellow-50 dark:bg-yellow-500/[0.07]' : ''}`}>
                   <div className="flex items-center gap-2.5">
                     <span className="w-5 text-xs text-center text-gray-400 dark:text-gray-500 flex-shrink-0">{i + 1}</span>
-                    <Avatar profile={r.profile} />
-                    <span className={`text-sm font-medium ${isTop ? 'text-yellow-700 dark:text-yellow-300' : 'text-gray-900 dark:text-white'}`}>
-                      {displayName(r.profile)}
-                    </span>
+                    <Link href={`/players/${r.uid}`} className="flex items-center gap-2 hover:opacity-75 transition-opacity">
+                      <Avatar profile={r.profile} />
+                      <span className={`text-sm font-medium ${isTop ? 'text-yellow-700 dark:text-yellow-300' : 'text-gray-900 dark:text-white'}`}>
+                        {displayName(r.profile)}
+                      </span>
+                    </Link>
                     {isTop && <span className="text-sm leading-none">🥇</span>}
                   </div>
                   <span className={`font-bold tabular-nums ${isTop ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-700 dark:text-gray-300'}`}>
@@ -334,8 +494,24 @@ export default async function TournamentPage({ params, searchParams }) {
     )
   }
 
-  // Profiles for everyone who has predictions
-  const allUserIds = [...new Set([...calcPreds.map(p => p.user_id), ...publicPreds.map(p => p.user_id)])]
+  // Predictions for upcoming matches — needed to surface participants who haven't
+  // played past matches yet (e.g. joined late and only predicted the final).
+  const upcomingMatchIds = allMatches.filter(m => new Date(m.kickoff_at) > now).map(m => m.id)
+  let upcomingPreds = []
+  if (upcomingMatchIds.length > 0) {
+    const { data } = await supabase
+      .from('predictions')
+      .select('user_id, match_id, predicted_home, predicted_away')
+      .in('match_id', upcomingMatchIds)
+    upcomingPreds = data ?? []
+  }
+
+  // Profiles for everyone who has predictions (past or upcoming)
+  const allUserIds = [...new Set([
+    ...calcPreds.map(p => p.user_id),
+    ...publicPreds.map(p => p.user_id),
+    ...upcomingPreds.map(p => p.user_id),
+  ])]
   let profileMap = {}
   if (allUserIds.length > 0) {
     const { data: profiles } = await supabase
@@ -353,6 +529,10 @@ export default async function TournamentPage({ params, searchParams }) {
     userStats[p.user_id].total += p.points ?? 0
     if (p.points === 1) userStats[p.user_id].results++
     if (p.points === 4) userStats[p.user_id].exact++
+  }
+  // Ensure participants who only predicted upcoming matches appear with 0 pts
+  for (const uid of upcomingPreds.map(p => p.user_id)) {
+    if (!userStats[uid]) userStats[uid] = { results: 0, exact: 0, total: 0, predictions: 0 }
   }
   const standings = Object.entries(userStats)
     .map(([uid, stats]) => ({ uid, ...stats, profile: profileMap[uid] }))
@@ -406,6 +586,11 @@ export default async function TournamentPage({ params, searchParams }) {
   // ── Progress bar (matches tab) ────────────────────────────────────────────
   const matchesTabMatches = allMatches.filter(m => new Date(m.kickoff_at) > now)
   const upcomingMatches   = matchesTabMatches
+
+  // ── Probability matrix ────────────────────────────────────────────────────
+  const probMatrix = matchesTabMatches.length > 0 && standings.length > 0
+    ? computeProbabilities(standings, matchesTabMatches.length)
+    : null
   const predictedCount   = userId ? upcomingMatches.filter(m => userPredictions[m.id]).length : 0
   const unpredictedCount = userId ? upcomingMatches.length - predictedCount : 0
   const progressPct = upcomingMatches.length > 0
@@ -459,15 +644,14 @@ export default async function TournamentPage({ params, searchParams }) {
         <>
           {userId && upcomingMatches.length > 0 && (
             <div className="mb-5 bg-white dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800">
-              <div className="flex items-center justify-between mb-2">
+              <div className="mb-2">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Прогнози на майбутні матчі</span>
-                <span className="text-xs text-gray-400 dark:text-gray-500">{predictedCount} / {upcomingMatches.length}</span>
               </div>
               <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 mb-2">
                 <div className="bg-green-500 rounded-full h-2 transition-all duration-500" style={{ width: `${progressPct}%` }} />
               </div>
               {unpredictedCount > 0
-                ? <p className="text-xs text-amber-500 dark:text-amber-400">Не спрогнозовано: {unpredictedCount} {pluralMatches(unpredictedCount)}</p>
+                ? <p className="text-xs text-amber-500 dark:text-amber-400">Спрогнозовано: {predictedCount} з {upcomingMatches.length} матчів</p>
                 : <p className="text-xs text-green-500 dark:text-green-400">✅ Всі майбутні матчі спрогнозовано</p>
               }
             </div>
@@ -482,7 +666,7 @@ export default async function TournamentPage({ params, searchParams }) {
       )}
 
       {/* ── Standings ───────────────────────────────────────────────────── */}
-      {tab === 'standings' && <StandingsTab standings={standings} roundLabels={roundLabels} roundPointsMap={byRound} />}
+      {tab === 'standings' && <StandingsTab standings={standings} roundLabels={roundLabels} roundPointsMap={byRound} probMatrix={probMatrix} upcomingCount={matchesTabMatches.length} />}
 
       {/* ── By round ────────────────────────────────────────────────────── */}
       {tab === 'rounds' && (

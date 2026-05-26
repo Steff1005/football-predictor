@@ -232,7 +232,7 @@ export default async function ProfilePage({ searchParams }) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                    <th className="text-left px-4 py-2.5">Турнір</th>
+                    <th className="text-left px-4 py-2.5 sticky left-0 z-10 bg-white dark:bg-gray-900 min-w-[140px] border-r border-gray-200 dark:border-gray-800">Турнір</th>
                     <th className="text-center px-3 py-2.5">Місце</th>
                     <th className="text-right px-3 py-2.5">Балів</th>
                     <th className="text-right px-3 py-2.5">Прогн.</th>
@@ -246,7 +246,7 @@ export default async function ProfilePage({ searchParams }) {
                       className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 ${
                         i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/30'
                       }`}>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5 sticky left-0 z-10 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
                         <a href={`/tournaments/${r.id}`}
                           className="font-medium text-gray-900 dark:text-white hover:text-green-500 dark:hover:text-green-400 transition-colors">
                           {r.name}
@@ -284,8 +284,8 @@ export default async function ProfilePage({ searchParams }) {
           {filtered.map(p => {
             const m = p.match
             const kickoff  = new Date(m.kickoff_at)
-            const dateStr  = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })
-            const timeStr  = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+            const dateStr  = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', timeZone: 'Europe/Kyiv' })
+            const timeStr  = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' })
             const roundLabel = getRoundLabel(m.round)
             const isFinished = m.status === 'finished'
 

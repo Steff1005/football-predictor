@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 const INPUT = 'w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400'
 
@@ -44,7 +44,28 @@ export default function AuthPage() {
   const [forgotMsg, setForgotMsg]     = useState('')
   const [forgotLoading, setForgotLoading] = useState(false)
 
-  const router = useRouter()
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+
+  // Show error passed from /auth/callback (e.g. otp_expired)
+  useEffect(() => {
+    const err = searchParams.get('error')
+    if (err) {
+      const msgs = {
+        otp_expired: 'Посилання для підтвердження застаріло. Зареєструйтесь ще раз або запросіть новий лист.',
+        access_denied: 'Доступ заборонено. Спробуйте ще раз.',
+        confirmation_failed: 'Не вдалося підтвердити email. Спробуйте ще раз.',
+      }
+      setMessage(msgs[err] ?? 'Помилка підтвердження: ' + err)
+    }
+  }, [searchParams])
+
+  // Redirect if already logged in
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.push('/')
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!isLogin && !usernameEdited) {
@@ -69,8 +90,13 @@ export default function AuthPage() {
 
     if (isLogin) {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setMessage('Помилка: ' + error.message)
-      else router.push('/')
+      if (error) {
+        setMessage('Помилка: ' + error.message)
+        setLoading(false)
+      } else {
+        window.location.href = '/'
+      }
+      return
     } else {
       const { data: existing } = await supabase
         .from('profiles').select('id').eq('username', username).maybeSingle()
@@ -141,23 +167,30 @@ export default function AuthPage() {
           />
 
           {/* Password with show/hide toggle */}
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Пароль"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              className={INPUT + ' pr-11'}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(v => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              tabIndex={-1}
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
+          <div>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Пароль"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                className={INPUT + ' pr-11'}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {!isLogin && (
+              <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500 px-1">
+                Мінімум 6 символів
+              </p>
+            )}
           </div>
 
           <button

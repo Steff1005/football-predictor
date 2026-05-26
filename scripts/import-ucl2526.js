@@ -47,13 +47,13 @@ const C = {
 }
 
 const PLAYERS = [
-  { name: 'Коля',    homeCol: 9,  awayCol: 10 },
-  { name: 'Павлік',  homeCol: 12, awayCol: 13 },
-  { name: 'Женя',    homeCol: 15, awayCol: 16 },
-  { name: 'Степан',  homeCol: 18, awayCol: 19 },
-  { name: 'Саша П.', homeCol: 21, awayCol: 22 },
-  { name: 'Тарас',   homeCol: 24, awayCol: 25 },
-  { name: 'Саша В.', homeCol: 27, awayCol: 28 },
+  { name: 'Коля',         homeCol: 9,  awayCol: 10 },
+  { name: 'Павлік',       homeCol: 12, awayCol: 13 },
+  { name: 'Женя',         homeCol: 15, awayCol: 16 },
+  { name: 'Степан',       homeCol: 18, awayCol: 19 },
+  { name: 'Саша П.',      homeCol: 21, awayCol: 22, username: 'Саша П.' },
+  { name: 'Тарас',        homeCol: 24, awayCol: 25, username: 'taras_karpets' },
+  { name: 'Саша В.',      homeCol: 27, awayCol: 28 },
 ]
 
 // ─── Club crests ──────────────────────────────────────────────────────────────
@@ -216,7 +216,7 @@ async function main() {
   console.log('Users...')
   const userIds = {}
   for (const player of PLAYERS) {
-    userIds[player.name] = await findOrCreateUser(player.name)
+    userIds[player.name] = await findOrCreateUser(player.username ?? player.name)
   }
 
   const userStats = {}

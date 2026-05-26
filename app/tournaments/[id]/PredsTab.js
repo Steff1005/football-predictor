@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import Link from 'next/link'
 import PredictionBadge from '../../../components/PredictionBadge'
 import { groupAndSortMatches } from '../../../lib/round-sort'
 
@@ -62,9 +63,6 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
 
   const [activeRound, setActiveRound] = useState(defaultRound ?? rounds[0] ?? null)
   const [openMatches, setOpenMatches] = useState({})
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => setMounted(true), [])
 
   function toggleMatch(matchId) {
     setOpenMatches(prev => ({ ...prev, [matchId]: !prev[matchId] }))
@@ -86,7 +84,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
     <div>
       {/* Round navigation */}
       <div className="flex gap-2 flex-wrap mb-4">
-        {mounted ? rounds.map(round => (
+        {rounds.map(round => (
           <button
             key={round}
             onClick={() => setActiveRound(round)}
@@ -98,10 +96,6 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
           >
             {round}
           </button>
-        )) : rounds.map(round => (
-          <div key={round} className="px-3 py-1 rounded-full text-sm font-medium bg-gray-400/20 animate-pulse text-transparent select-none">
-            {round}
-          </div>
         ))}
       </div>
 
@@ -142,19 +136,20 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                   This matches: w-7 avatar | flex-1 name | w-11 pred | w-[52px] badge
                 */}
                 <div className="flex items-center gap-3">
-                  {/* Spacer matching avatar width */}
-                  <div className="w-7 flex-shrink-0" />
+                  {/* Logos — w-7 column, aligned with player avatars */}
+                  <div className="w-7 flex-shrink-0 flex flex-col items-center justify-center gap-1.5">
+                    {match.home_logo
+                      ? <img src={match.home_logo} alt="" className="w-5 h-5 object-contain" />
+                      : <div className="w-5 h-5" />}
+                    {match.away_logo
+                      ? <img src={match.away_logo} alt="" className="w-5 h-5 object-contain" />
+                      : <div className="w-5 h-5" />}
+                  </div>
 
-                  {/* Team names */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {match.home_logo && <img src={match.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
-                      <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight truncate">{match.home_team}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {match.away_logo && <img src={match.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
-                      <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight truncate">{match.away_team}</span>
-                    </div>
+                  {/* Team names — flex-1 column, aligned with player names */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight truncate">{match.home_team}</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight truncate">{match.away_team}</span>
                   </div>
 
                   {/* Match score — styled chip to stand out from player predictions */}
@@ -206,13 +201,12 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
 
                       {/* Mobile row: same 4-column flex as header above */}
                       <div className="sm:hidden flex items-center px-4 py-2 gap-3">
-                        {/* Avatar (w-7) */}
-                        <PlayerAvatar profile={profile} />
-
-                        {/* Name (flex-1) */}
-                        <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
-                          {displayName(profile)}
-                        </span>
+                        <Link href={`/players/${pred.user_id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-75 transition-opacity">
+                          <PlayerAvatar profile={profile} />
+                          <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
+                            {displayName(profile)}
+                          </span>
+                        </Link>
 
                         {/* Predicted score — vertical digits, w-11, same as score col in header */}
                         <div className="w-11 flex-shrink-0 flex flex-col items-center">
@@ -226,13 +220,14 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                         </div>
                       </div>
 
-                      {/* Desktop row (unchanged) */}
+                      {/* Desktop row */}
                       <div className="hidden sm:flex items-center px-4 py-2 gap-3">
-                        <PlayerAvatar profile={profile} />
-
-                        <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
-                          {displayName(profile)}
-                        </span>
+                        <Link href={`/players/${pred.user_id}`} className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-75 transition-opacity">
+                          <PlayerAvatar profile={profile} />
+                          <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
+                            {displayName(profile)}
+                          </span>
+                        </Link>
 
                         <span className="bg-gray-100 dark:bg-white/10 rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 min-w-[2.75rem] text-center">
                           {pred.predicted_home}:{pred.predicted_away}

@@ -27,7 +27,7 @@ export async function middleware(request) {
   // ВАЖЛИВО: не додавати код між createServerClient і getUser()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const publicPaths = ['/auth', '/login', '/register', '/reset-password']
+  const publicPaths = ['/auth', '/login', '/register', '/reset-password', '/auth/callback']
   const isPublic = publicPaths.some(p => request.nextUrl.pathname.startsWith(p))
 
   if (!user && !isPublic) {

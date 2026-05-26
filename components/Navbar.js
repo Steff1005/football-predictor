@@ -3,31 +3,41 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useTheme } from 'next-themes'
 import { logout } from '@/app/auth/actions'
+import Logo from '@/components/Logo'
 
 function NavAvatar({ url, name }) {
   const initials = (name || '?').split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
   if (url) return (
     <img
-      src={url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+      src={url} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0"
       onError={e => { e.currentTarget.style.display = 'none' }}
     />
   )
   return (
-    <div className="w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
       <span className="text-xs font-bold text-green-600 dark:text-green-400">{initials}</span>
     </div>
   )
 }
 
-// initialUser: passed from the server layout — prevents any auth-loading layout shift.
-export default function Navbar({ initialUser = null }) {
+// initialUser/initialProfile/initialTheme: passed from the server layout — prevents any auth-loading layout shift.
+export default function Navbar({ initialUser = null, initialProfile = null, initialTheme = 'dark' }) {
+  const getInitialName = () => {
+    if (!initialProfile) return ''
+    return [initialProfile.first_name, initialProfile.last_name].filter(Boolean).join(' ')
+      || initialProfile.username || ''
+  }
+
   const [user, setUser]               = useState(initialUser)
-  const [displayName, setDisplayName] = useState('')
-  const [avatarUrl, setAvatarUrl]     = useState(null)
+  const [displayName, setDisplayName] = useState(getInitialName)
+  const [avatarUrl, setAvatarUrl]     = useState(initialProfile?.avatar_url ?? null)
   const [mounted, setMounted]         = useState(false)
   const [menuOpen, setMenuOpen]       = useState(false)
   const { theme, setTheme }           = useTheme()
+  // Before hydration, use the server-provided theme so the button is always rendered (no layout shift)
+  const effectiveTheme = mounted ? theme : initialTheme
   const initialUserRef                = useRef(initialUser)
+  const initialProfileRef             = useRef(initialProfile)
 
   const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -37,8 +47,8 @@ export default function Navbar({ initialUser = null }) {
   useEffect(() => {
     setMounted(true)
 
-    // Fetch profile for the SSR-provided user immediately (no loading spinner)
-    if (initialUserRef.current) fetchProfile(initialUserRef.current.id)
+    // Only fetch profile if SSR didn't already provide it
+    if (initialUserRef.current && !initialProfileRef.current) fetchProfile(initialUserRef.current.id)
 
     // Initialize Supabase client session; only update state when SSR had no user
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -82,9 +92,7 @@ export default function Navbar({ initialUser = null }) {
     <>
       <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <a href="/" className="text-lg font-bold text-green-400 flex-shrink-0">
-            ⚽ Kickoff
-          </a>
+          <Logo />
 
           {/* ── Desktop nav ─────────────────────────────────────────────── */}
           <div className="hidden sm:flex items-center gap-1 sm:gap-3">
@@ -95,22 +103,20 @@ export default function Navbar({ initialUser = null }) {
               Правила
             </a>
 
-            {mounted && (
-              <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-base"
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? '☀️' : '🌙'}
-              </button>
-            )}
+            <button
+              onClick={() => setTheme(effectiveTheme === 'dark' ? 'light' : 'dark')}
+              className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-base"
+              aria-label="Toggle theme"
+            >
+              {effectiveTheme === 'dark' ? '☀️' : '🌙'}
+            </button>
 
             {user ? (
               <div className="flex items-center gap-1">
                 <a href="/profile"
                   className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                   <NavAvatar url={avatarUrl} name={name} />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate max-w-[100px]">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">
                     {name}
                   </span>
                 </a>
@@ -184,15 +190,13 @@ export default function Navbar({ initialUser = null }) {
                 <span className="text-lg">📋</span>
                 <span className="font-medium">Правила</span>
               </a>
-              {mounted && (
-                <button
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <span className="text-lg">{theme === 'dark' ? '☀️' : '🌙'}</span>
-                  <span className="font-medium">{theme === 'dark' ? 'Світла тема' : 'Темна тема'}</span>
-                </button>
-              )}
+              <button
+                onClick={() => setTheme(effectiveTheme === 'dark' ? 'light' : 'dark')}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <span className="text-lg">{effectiveTheme === 'dark' ? '☀️' : '🌙'}</span>
+                <span className="font-medium">{effectiveTheme === 'dark' ? 'Світла тема' : 'Темна тема'}</span>
+              </button>
             </div>
 
             {user && (

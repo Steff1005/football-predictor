@@ -187,21 +187,19 @@ export default async function ProfilePage({ searchParams }) {
 
   return (
     <div className="max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      {/* Header + accordion settings */}
+      <div className="flex items-start gap-4 mb-6">
         <AvatarUpload userId={userId} avatarUrl={profile?.avatar_url} initials={initials} />
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{displayName}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">{session.user.email}</p>
+          <ProfileSettings
+            initialFirst={profile?.first_name ?? ''}
+            initialLast={profile?.last_name ?? ''}
+            initialUsername={profile?.username ?? ''}
+          />
         </div>
       </div>
-
-      {/* Settings: edit profile + change password */}
-      <ProfileSettings
-        initialFirst={profile?.first_name ?? ''}
-        initialLast={profile?.last_name ?? ''}
-        initialUsername={profile?.username ?? ''}
-      />
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">

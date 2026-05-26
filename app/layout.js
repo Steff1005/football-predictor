@@ -1,4 +1,6 @@
 import './globals.css'
+import { cookies } from 'next/headers'
+import { createServerClient } from '@supabase/ssr'
 import ThemeProvider from '@/components/ThemeProvider'
 import Navbar from '@/components/Navbar'
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
@@ -20,21 +22,41 @@ export const viewport = {
   themeColor: '#111827',
 }
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const cookieStore = await cookies()
+
+  // ── Theme ──────────────────────────────────────────────────────────────────
+  // Read from cookie so the server renders the correct class immediately.
+  // On first visit (no cookie) defaults to 'dark'.
+  // ThemeCookieSync keeps cookie in sync whenever the user toggles the theme.
+  const themeCookie = cookieStore.get('theme')?.value
+  const htmlClass = themeCookie === 'light' ? 'light' : 'dark'
+
+  // ── Auth ───────────────────────────────────────────────────────────────────
+  // Pass the session to Navbar so it renders the correct state on SSR —
+  // no client-side auth loading = no layout shift on every page load.
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    { cookies: { getAll() { return cookieStore.getAll() } } }
+  )
+  const { data: { session } } = await supabase.auth.getSession()
+
   return (
-    <html lang="uk" suppressHydrationWarning>
+    <html lang="uk" className={htmlClass} suppressHydrationWarning>
       <head>
-        {/* Applied before any CSS bundle — !important beats Tailwind utility specificity */}
+        {/* Guarantees body bg on first paint — !important beats Tailwind class specificity */}
         <style dangerouslySetInnerHTML={{ __html: 'body{background-color:#030712!important}html.light body{background-color:#f9fafb!important}' }} />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d=document.documentElement;var t=localStorage.getItem('theme');if(t==='light'){d.classList.remove('dark');d.classList.add('light');d.style.backgroundColor='#f9fafb'}else{d.classList.add('dark');d.style.backgroundColor='#030712'}}catch(e){document.documentElement.classList.add('dark')}})();`,
-          }}
-        />
+        {/*
+          Runs synchronously before first paint:
+          1. Reads localStorage (source of truth) and corrects html class if cookie was stale.
+          2. Writes cookie so next SSR request renders the right class from the start.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme'),d=document.documentElement,c=t==='light'?'light':'dark';d.className=c;d.style.backgroundColor=c==='light'?'#f9fafb':'#030712';document.cookie='theme='+c+';path=/;max-age=31536000;SameSite=Lax'}catch(e){}})();` }} />
       </head>
       <body className="dark:bg-gray-950 text-gray-900 dark:text-white min-h-screen">
         <ThemeProvider>
-          <Navbar />
+          <Navbar initialUser={session?.user ?? null} />
           <main className="max-w-6xl mx-auto px-4 py-6">
             {children}
           </main>

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useTheme } from 'next-themes'
 import { logout } from '@/app/auth/actions'
@@ -19,15 +19,15 @@ function NavAvatar({ url, name }) {
   )
 }
 
-export default function Navbar() {
-  const [user, setUser]               = useState(null)
+// initialUser: passed from the server layout — prevents any auth-loading layout shift.
+export default function Navbar({ initialUser = null }) {
+  const [user, setUser]               = useState(initialUser)
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl]     = useState(null)
-  const [mounted, setMounted]             = useState(false)  // theme only
-  const [authReady, setAuthReady]         = useState(false)  // session resolved
-  const [profileLoading, setProfileLoading] = useState(false) // profile fetch in-flight
-  const [menuOpen, setMenuOpen]           = useState(false)
+  const [mounted, setMounted]         = useState(false)
+  const [menuOpen, setMenuOpen]       = useState(false)
   const { theme, setTheme }           = useTheme()
+  const initialUserRef                = useRef(initialUser)
 
   const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -36,17 +36,25 @@ export default function Navbar() {
 
   useEffect(() => {
     setMounted(true)
+
+    // Fetch profile for the SSR-provided user immediately (no loading spinner)
+    if (initialUserRef.current) fetchProfile(initialUserRef.current.id)
+
+    // Initialize Supabase client session; only update state when SSR had no user
     supabase.auth.getSession().then(({ data: { session } }) => {
-      const u = session?.user ?? null
-      setUser(u)
-      if (u) { setProfileLoading(true); fetchProfile(u.id) }
-      else setAuthReady(true)
+      if (!initialUserRef.current) {
+        const u = session?.user ?? null
+        setUser(u)
+        if (u) fetchProfile(u.id)
+      }
     })
+
+    // Keep auth state in sync for login/logout events within the same tab
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user ?? null
       setUser(u)
-      if (u) { setProfileLoading(true); fetchProfile(u.id) }
-      else { setDisplayName(''); setAvatarUrl(null); setAuthReady(true) }
+      if (u) fetchProfile(u.id)
+      else { setDisplayName(''); setAvatarUrl(null) }
     })
     return () => subscription.unsubscribe()
   }, [supabase])
@@ -66,12 +74,9 @@ export default function Navbar() {
       setDisplayName(full || data.username || '')
       setAvatarUrl(data.avatar_url || null)
     }
-    setProfileLoading(false)
-    setAuthReady(true)
   }
 
   const name = displayName || user?.email?.split('@')[0] || ''
-  const isNavReady = authReady && !profileLoading
 
   return (
     <>
@@ -100,9 +105,7 @@ export default function Navbar() {
               </button>
             )}
 
-            {!isNavReady ? (
-              <div className="w-24 h-8 rounded-lg" />
-            ) : user ? (
+            {user ? (
               <div className="flex items-center gap-1">
                 <a href="/profile"
                   className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
@@ -128,9 +131,7 @@ export default function Navbar() {
 
           {/* ── Mobile right side ───────────────────────────────────────── */}
           <div className="flex sm:hidden items-center gap-2">
-            {!isNavReady ? (
-              <div className="w-7 h-7 rounded-full" />
-            ) : user ? (
+            {user ? (
               <a href="/profile" className="p-1">
                 <NavAvatar url={avatarUrl} name={name} />
               </a>
@@ -157,12 +158,9 @@ export default function Navbar() {
       {/* ── Mobile drawer ────────────────────────────────────────────────── */}
       {menuOpen && (
         <div className="fixed inset-0 z-[60] sm:hidden">
-          {/* Backdrop */}
           <div className="absolute inset-0 bg-black/50" onClick={() => setMenuOpen(false)} />
 
-          {/* Panel */}
           <div className="absolute right-0 top-0 h-full w-64 bg-white dark:bg-gray-900 shadow-2xl flex flex-col">
-            {/* Header */}
             <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-800">
               <span className="font-bold text-gray-900 dark:text-white">Меню</span>
               <button
@@ -175,7 +173,6 @@ export default function Navbar() {
               </button>
             </div>
 
-            {/* Nav links */}
             <div className="flex-1 px-2 py-3 space-y-1">
               <a href="/" onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
@@ -198,8 +195,7 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Logout */}
-            {mounted && user && (
+            {user && (
               <div className="px-2 py-3 border-t border-gray-200 dark:border-gray-800">
                 <form action={logout}>
                   <button type="submit"

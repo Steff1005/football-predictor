@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
+import { rebuildProbabilityCache } from '../../../../lib/probability'
 
 const adminDb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -39,10 +40,10 @@ export async function GET(request, { params }) {
 
   if (!authorized) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Fetch match
+  // Fetch match (include tournament_id for cache rebuild)
   const { data: match } = await adminDb
     .from('matches')
-    .select('home_score, away_score, status')
+    .select('home_score, away_score, status, tournament_id')
     .eq('id', matchId)
     .single()
 
@@ -82,6 +83,15 @@ export async function GET(request, { params }) {
       .from('profiles')
       .update({ total_points: totalPoints, total_predictions: totalPredictions })
       .eq('id', userId)
+  }
+
+  // Rebuild probability cache for this tournament (fire-and-forget on error)
+  if (match.tournament_id) {
+    try {
+      await rebuildProbabilityCache(adminDb, match.tournament_id)
+    } catch (e) {
+      console.error('probability cache rebuild failed:', e.message)
+    }
   }
 
   return Response.json({ success: true, updated: predictions.length })

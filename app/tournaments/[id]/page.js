@@ -8,6 +8,7 @@ import CLUB_CRESTS from '../../../lib/club-crests'
 import TOURNAMENT_LOGOS from '../../../lib/tournament-logos'
 import { groupAndSortMatches } from '../../../lib/round-sort'
 import { translateTeam } from '../../../lib/team-translations'
+import { simulateProbabilities } from '../../../lib/probability'
 
 export const revalidate = 60
 
@@ -24,56 +25,6 @@ function displayName(profile) {
 }
 
 // ── Probability matrix ────────────────────────────────────────────────────────
-
-// Each player independently earns 0, 1 or 4 pts per remaining match (equal prob).
-// Tiebreaker: total → results (correct outcomes) → exact → predictions.
-function computeProbabilities(standings, remainingMatchCount) {
-  if (!standings.length || remainingMatchCount === 0) return null
-
-  const N = standings.length
-  const SAMPLES = 50000
-  const rankFreq = {}
-  standings.forEach(s => { rankFreq[s.uid] = {} })
-
-  for (let i = 0; i < SAMPLES; i++) {
-    const adjusted = standings.map(s => {
-      let addTotal = 0, addExact = 0, addResults = 0
-      for (let m = 0; m < remainingMatchCount; m++) {
-        const r = Math.floor(Math.random() * 3)
-        if (r === 2) { addTotal += 4; addExact++ }
-        else if (r === 1) { addTotal += 1; addResults++ }
-      }
-      return {
-        ...s,
-        total: s.total + addTotal,
-        exact: s.exact + addExact,
-        results: s.results + addResults,
-      }
-    })
-
-    adjusted.sort((a, b) =>
-      b.total    - a.total    ||
-      b.results  - a.results  ||
-      b.exact    - a.exact    ||
-      b.predictions - a.predictions
-    )
-
-    adjusted.forEach((s, i) => {
-      rankFreq[s.uid][i + 1] = (rankFreq[s.uid][i + 1] ?? 0) + 1
-    })
-  }
-
-  return standings.map(s => ({
-    uid: s.uid,
-    profile: s.profile,
-    probs: Object.fromEntries(
-      Array.from({ length: N }, (_, i) => [
-        i + 1,
-        Math.round(((rankFreq[s.uid][i + 1] ?? 0) / SAMPLES) * 100)
-      ])
-    )
-  }))
-}
 
 // Country flags (flagcdn.com) — keyed by Ukrainian team name
 const COUNTRY_FLAG_CODES = {
@@ -587,10 +538,27 @@ export default async function TournamentPage({ params, searchParams }) {
   const matchesTabMatches = allMatches.filter(m => new Date(m.kickoff_at) > now)
   const upcomingMatches   = matchesTabMatches
 
-  // ── Probability matrix ────────────────────────────────────────────────────
-  const probMatrix = matchesTabMatches.length > 0 && standings.length > 0
-    ? computeProbabilities(standings, matchesTabMatches.length)
-    : null
+  // ── Probability matrix — read from cache, fallback to live simulation ─────
+  let probMatrix = null
+  if (matchesTabMatches.length > 0 && standings.length > 0) {
+    const { data: cached } = await supabase
+      .from('probability_cache')
+      .select('data')
+      .eq('tournament_id', id)
+      .single()
+
+    if (cached?.data?.length) {
+      // Merge cached probs with fresh profiles (avoids stale names/avatars)
+      probMatrix = cached.data
+        .map(row => ({ uid: row.uid, profile: profileMap[row.uid] ?? null, probs: row.probs }))
+        .filter(row => row.profile)
+    } else {
+      // Fallback: compute live (first load or cache not yet populated)
+      probMatrix = simulateProbabilities(standings, matchesTabMatches.length)
+        ?.map(row => ({ ...row, profile: profileMap[row.uid] ?? null }))
+        .filter(row => row.profile) ?? null
+    }
+  }
   const predictedCount   = userId ? upcomingMatches.filter(m => userPredictions[m.id]).length : 0
   const unpredictedCount = userId ? upcomingMatches.length - predictedCount : 0
   const progressPct = upcomingMatches.length > 0

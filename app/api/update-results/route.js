@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { rebuildProbabilityCache } from '../../../lib/probability'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -20,7 +21,6 @@ export async function GET(request) {
 
   try {
     const now = new Date()
-    // All non-finished matches that kicked off at least 2h ago (enough time for any match to end)
     const cutoff = new Date(now - 120 * 60 * 1000).toISOString()
 
     const { data: pendingMatches } = await supabase
@@ -34,6 +34,7 @@ export async function GET(request) {
     }
 
     let updatedCount = 0
+    const affectedTournamentIds = new Set()
 
     for (const match of pendingMatches) {
       const response = await fetch(
@@ -75,7 +76,17 @@ export async function GET(request) {
         })
       }
 
+      affectedTournamentIds.add(match.tournament_id)
       updatedCount++
+    }
+
+    // Rebuild probability cache once per tournament (after all matches processed)
+    for (const tournamentId of affectedTournamentIds) {
+      try {
+        await rebuildProbabilityCache(supabase, tournamentId)
+      } catch (e) {
+        console.error(`probability cache rebuild failed for ${tournamentId}:`, e.message)
+      }
     }
 
     return Response.json({ success: true, updatedMatches: updatedCount })

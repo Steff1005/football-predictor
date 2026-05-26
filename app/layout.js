@@ -2,6 +2,7 @@ import './globals.css'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import ThemeProvider from '@/components/ThemeProvider'
 import Navbar from '@/components/Navbar'
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
@@ -75,6 +76,7 @@ export default async function RootLayout({ children }) {
         </ThemeProvider>
         <ServiceWorkerRegister />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )

@@ -9,7 +9,7 @@ function displayName(profile) {
 
 function UserIcon() {
   return (
-    <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
       <path d="M12 12c2.67 0 4.8-2.13 4.8-4.8S14.67 2.4 12 2.4 7.2 4.53 7.2 7.2 9.33 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
     </svg>
   )
@@ -102,9 +102,9 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
           .filter(p => profileMap[p.user_id])
           .sort((a, b) => (b.points ?? -1) - (a.points ?? -1))
 
-        const isOpen  = !!openMatches[match.id]
-        const kickoff = new Date(match.kickoff_at)
-        const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
+        const isOpen    = !!openMatches[match.id]
+        const kickoff   = new Date(match.kickoff_at)
+        const dateStr   = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
         const isFinished = match.status === 'finished'
 
         return (
@@ -115,33 +115,47 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
               onClick={() => toggleMatch(match.id)}
               className="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 select-none"
             >
-              {/* === Mobile layout: date row + teams row === */}
+              {/* === Mobile layout === */}
               <div className="sm:hidden">
-                {/* Date + chevron */}
+                {/* Row 1: date + status badge + chevron */}
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs text-gray-400 dark:text-gray-500">{dateStr}</span>
-                  <Chevron open={isOpen} />
-                </div>
-                {/* Home: logo + full name + score */}
-                <div className="flex items-center gap-2 mb-1">
-                  {match.home_logo && <img src={match.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
-                  <span className="text-sm font-medium text-gray-900 dark:text-white flex-1 leading-tight">
-                    {match.home_team}
-                  </span>
-                  <div className="flex justify-center flex-shrink-0">
-                    <ScoreChip match={match} />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
+                      Завершено
+                    </span>
+                    <Chevron open={isOpen} />
                   </div>
                 </div>
-                {/* Away: logo + full name */}
+
+                {/* Row 2+3: [teams flex-1] [score col w-11] [badge-col header w-[52px]] */}
                 <div className="flex items-center gap-2">
-                  {match.away_logo && <img src={match.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
-                  <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight">
-                    {match.away_team}
-                  </span>
+                  {/* Team names */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      {match.home_logo && <img src={match.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
+                      <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight truncate">{match.home_team}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {match.away_logo && <img src={match.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
+                      <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight truncate">{match.away_team}</span>
+                    </div>
+                  </div>
+
+                  {/* Score digits — vertical, aligned with prediction column below */}
+                  <div className="w-11 flex flex-col items-center flex-shrink-0">
+                    <span className="font-mono text-sm font-semibold text-gray-900 dark:text-white leading-snug">{match.home_score}</span>
+                    <span className="font-mono text-sm font-semibold text-gray-900 dark:text-white leading-snug">{match.away_score}</span>
+                  </div>
+
+                  {/* "Рах." — column header for the badge column */}
+                  <div className="w-[52px] flex justify-end flex-shrink-0">
+                    <span className="text-xs text-gray-400 dark:text-gray-500">Рах.</span>
+                  </div>
                 </div>
               </div>
 
-              {/* === Desktop layout: single row === */}
+              {/* === Desktop layout (unchanged) === */}
               <div className="hidden sm:flex items-center gap-2">
                 <span className="text-xs text-gray-400 dark:text-gray-500 w-20 flex-shrink-0">{dateStr}</span>
 
@@ -170,44 +184,40 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                   <div className="px-4 py-3 border-t border-gray-100 dark:border-white/10 text-sm text-center text-gray-400 dark:text-gray-600">
                     Прогнозів немає
                   </div>
-                ) : <>
-                  {/* Mobile-only: actual result row — same column alignment as prediction scores */}
-                  {isFinished && (
-                    <div className="sm:hidden flex items-center px-4 py-2 border-t border-gray-100 dark:border-white/10 gap-3 bg-gray-50 dark:bg-gray-800/50">
-                      <div className="w-7 flex-shrink-0" />
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 flex-1">Рахунок матчу</span>
-                      <span className="bg-gray-200 dark:bg-white/20 rounded-md px-2.5 py-0.5 font-mono text-sm font-bold text-gray-900 dark:text-white flex-shrink-0 min-w-[2.75rem] text-center">
-                        {match.home_score}:{match.away_score}
-                      </span>
-                      <div className="w-16 flex-shrink-0" />
-                    </div>
-                  )}
-                  {preds.map(pred => {
+                ) : preds.map(pred => {
                   const profile = profileMap[pred.user_id]
-
                   return (
                     <div key={pred.user_id} className="flex items-center px-4 py-2 border-t border-gray-100 dark:border-white/10 gap-3">
-                      <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                      {/* Avatar */}
+                      <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-gray-500/20 flex items-center justify-center">
                         {profile?.avatar_url
                           ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
                           : <UserIcon />
                         }
                       </div>
 
+                      {/* Name */}
                       <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
                         {displayName(profile)}
                       </span>
 
-                      <span className="bg-gray-100 dark:bg-white/10 rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 min-w-[2.75rem] text-center">
+                      {/* Mobile: vertical prediction digits (w-11, aligned with score col in header) */}
+                      <div className="sm:hidden w-11 flex flex-col items-center flex-shrink-0">
+                        <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 leading-snug">{pred.predicted_home}</span>
+                        <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 leading-snug">{pred.predicted_away}</span>
+                      </div>
+                      {/* Desktop: single X:Y chip */}
+                      <span className="hidden sm:inline-flex items-center justify-center bg-gray-100 dark:bg-white/10 rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 min-w-[2.75rem]">
                         {pred.predicted_home}:{pred.predicted_away}
                       </span>
 
-                      <div className="w-16 flex-shrink-0 flex justify-end">
+                      {/* Badge (w-[52px] mobile, w-16 desktop — matches header badge-col width) */}
+                      <div className="w-[52px] sm:w-16 flex-shrink-0 flex justify-end">
                         {isFinished && <PredictionBadge pts={pred.points} />}
                       </div>
                     </div>
                   )
-                })}</>}
+                })}
               </div>
             )}
           </div>

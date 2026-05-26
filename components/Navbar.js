@@ -7,8 +7,8 @@ import { logout } from '@/app/auth/actions'
 function NavAvatar({ url }) {
   if (url) return <img src={url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
   return (
-    <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-      <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+    <div className="w-7 h-7 rounded-full bg-gray-500/20 flex items-center justify-center flex-shrink-0">
+      <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
         <path d="M12 12c2.67 0 4.8-2.13 4.8-4.8S14.67 2.4 12 2.4 7.2 4.53 7.2 7.2 9.33 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
       </svg>
     </div>
@@ -97,7 +97,7 @@ export default function Navbar() {
             )}
 
             {!isNavReady ? (
-              <div className="w-24 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+              <div className="w-24 h-8 bg-gray-500/20 rounded-lg animate-pulse" />
             ) : user ? (
               <div className="flex items-center gap-1">
                 <a href="/profile"
@@ -125,7 +125,7 @@ export default function Navbar() {
           {/* ── Mobile right side ───────────────────────────────────────── */}
           <div className="flex sm:hidden items-center gap-2">
             {!isNavReady ? (
-              <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+              <div className="w-7 h-7 rounded-full bg-gray-500/20 animate-pulse" />
             ) : user ? (
               <a href="/profile" className="p-1">
                 <NavAvatar url={avatarUrl} />

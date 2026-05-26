@@ -22,11 +22,11 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="uk" suppressHydrationWarning style={{ backgroundColor: '#030712' }}>
+    <html lang="uk" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(localStorage.getItem('theme')!=='light'){document.documentElement.classList.add('dark')}else{document.documentElement.classList.remove('dark')}}catch(e){document.documentElement.classList.add('dark')}})();`,
+            __html: `(function(){try{var d=document.documentElement;if(localStorage.getItem('theme')!=='light'){d.classList.add('dark');d.style.backgroundColor='#030712'}else{d.classList.remove('dark');d.style.backgroundColor='#f9fafb'}}catch(e){var d=document.documentElement;d.classList.add('dark');d.style.backgroundColor='#030712'}})();`,
           }}
         />
       </head>

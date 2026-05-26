@@ -117,7 +117,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
             >
               {/* === Mobile layout === */}
               <div className="sm:hidden">
-                {/* Row 1: date + status badge + chevron */}
+                {/* Row 1: date + status + chevron */}
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs text-gray-400 dark:text-gray-500">{dateStr}</span>
                   <div className="flex items-center gap-2">
@@ -128,8 +128,15 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                   </div>
                 </div>
 
-                {/* Row 2+3: [teams flex-1] [score col w-11] [badge-col header w-[52px]] */}
-                <div className="flex items-center gap-2">
+                {/*
+                  Row 2+3: same 4-column flex as player rows below.
+                  w-7 spacer | flex-1 teams | w-11 score | w-[52px] label
+                  This matches: w-7 avatar | flex-1 name | w-11 pred | w-[52px] badge
+                */}
+                <div className="flex items-center gap-3">
+                  {/* Spacer matching avatar width */}
+                  <div className="w-7 flex-shrink-0" />
+
                   {/* Team names */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -142,14 +149,14 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                     </div>
                   </div>
 
-                  {/* Score digits — vertical, aligned with prediction column below */}
-                  <div className="w-11 flex flex-col items-center flex-shrink-0">
-                    <span className="font-mono text-sm font-semibold text-gray-900 dark:text-white leading-snug">{match.home_score}</span>
-                    <span className="font-mono text-sm font-semibold text-gray-900 dark:text-white leading-snug">{match.away_score}</span>
+                  {/* Match score — styled chip to stand out from player predictions */}
+                  <div className="w-11 flex-shrink-0 flex flex-col items-center bg-gray-100 dark:bg-white/10 rounded-md py-0.5">
+                    <span className="font-mono text-sm font-bold text-gray-900 dark:text-white leading-snug">{match.home_score}</span>
+                    <span className="font-mono text-sm font-bold text-gray-900 dark:text-white leading-snug">{match.away_score}</span>
                   </div>
 
-                  {/* "Рах." — column header for the badge column */}
-                  <div className="w-[52px] flex justify-end flex-shrink-0">
+                  {/* "Рах." — column header for badge column */}
+                  <div className="w-[52px] flex-shrink-0 flex justify-end">
                     <span className="text-xs text-gray-400 dark:text-gray-500">Рах.</span>
                   </div>
                 </div>
@@ -187,33 +194,55 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                 ) : preds.map(pred => {
                   const profile = profileMap[pred.user_id]
                   return (
-                    <div key={pred.user_id} className="flex items-center px-4 py-2 border-t border-gray-100 dark:border-white/10 gap-3">
-                      {/* Avatar */}
-                      <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-gray-500/20 flex items-center justify-center">
-                        {profile?.avatar_url
-                          ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                          : <UserIcon />
-                        }
+                    <div key={pred.user_id} className="border-t border-gray-100 dark:border-white/10">
+
+                      {/* Mobile row: same 4-column flex as header above */}
+                      <div className="sm:hidden flex items-center px-4 py-2 gap-3">
+                        {/* Avatar (w-7) */}
+                        <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-gray-500/20 flex items-center justify-center">
+                          {profile?.avatar_url
+                            ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                            : <UserIcon />
+                          }
+                        </div>
+
+                        {/* Name (flex-1) */}
+                        <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
+                          {displayName(profile)}
+                        </span>
+
+                        {/* Predicted score — vertical digits, w-11, same as score col in header */}
+                        <div className="w-11 flex-shrink-0 flex flex-col items-center">
+                          <span className="font-mono text-sm font-semibold text-gray-500 dark:text-gray-400 leading-snug">{pred.predicted_home}</span>
+                          <span className="font-mono text-sm font-semibold text-gray-500 dark:text-gray-400 leading-snug">{pred.predicted_away}</span>
+                        </div>
+
+                        {/* Badge (w-[52px]) */}
+                        <div className="w-[52px] flex-shrink-0 flex justify-end">
+                          {isFinished && <PredictionBadge pts={pred.points} />}
+                        </div>
                       </div>
 
-                      {/* Name */}
-                      <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
-                        {displayName(profile)}
-                      </span>
+                      {/* Desktop row (unchanged) */}
+                      <div className="hidden sm:flex items-center px-4 py-2 gap-3">
+                        <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-gray-500/20 flex items-center justify-center">
+                          {profile?.avatar_url
+                            ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                            : <UserIcon />
+                          }
+                        </div>
 
-                      {/* Mobile: vertical prediction digits (w-11, aligned with score col in header) */}
-                      <div className="sm:hidden w-11 flex flex-col items-center flex-shrink-0">
-                        <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 leading-snug">{pred.predicted_home}</span>
-                        <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 leading-snug">{pred.predicted_away}</span>
-                      </div>
-                      {/* Desktop: single X:Y chip */}
-                      <span className="hidden sm:inline-flex items-center justify-center bg-gray-100 dark:bg-white/10 rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 min-w-[2.75rem]">
-                        {pred.predicted_home}:{pred.predicted_away}
-                      </span>
+                        <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
+                          {displayName(profile)}
+                        </span>
 
-                      {/* Badge (w-[52px] mobile, w-16 desktop — matches header badge-col width) */}
-                      <div className="w-[52px] sm:w-16 flex-shrink-0 flex justify-end">
-                        {isFinished && <PredictionBadge pts={pred.points} />}
+                        <span className="bg-gray-100 dark:bg-white/10 rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 min-w-[2.75rem] text-center">
+                          {pred.predicted_home}:{pred.predicted_away}
+                        </span>
+
+                        <div className="w-16 flex-shrink-0 flex justify-end">
+                          {isFinished && <PredictionBadge pts={pred.points} />}
+                        </div>
                       </div>
                     </div>
                   )

@@ -97,7 +97,7 @@ export default function Navbar() {
             )}
 
             {!isNavReady ? (
-              <div className="w-24 h-8 bg-gray-500/20 rounded-lg animate-pulse" />
+              <div className="w-24 h-8 rounded-lg" />
             ) : user ? (
               <div className="flex items-center gap-1">
                 <a href="/profile"
@@ -125,7 +125,7 @@ export default function Navbar() {
           {/* ── Mobile right side ───────────────────────────────────────── */}
           <div className="flex sm:hidden items-center gap-2">
             {!isNavReady ? (
-              <div className="w-7 h-7 rounded-full bg-gray-500/20 animate-pulse" />
+              <div className="w-7 h-7 rounded-full" />
             ) : user ? (
               <a href="/profile" className="p-1">
                 <NavAvatar url={avatarUrl} />

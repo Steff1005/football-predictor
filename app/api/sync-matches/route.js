@@ -22,7 +22,7 @@ export async function GET(request) {
     for (const tournament of tournaments) {
       const response = await fetch(
         `https://api.football-data.org/v4/competitions/${tournament.league_id}/matches?season=${tournament.season}`,
-        { headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_KEY } }
+        { headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_KEY || process.env.API_FOOTBALL_KEY } }
       )
 
       const data = await response.json()
@@ -50,7 +50,7 @@ export async function GET(request) {
 
       const { error } = await supabase
         .from('matches')
-        .upsert(matchesData, { onConflict: 'external_id', ignoreDuplicates: true })
+        .upsert(matchesData, { onConflict: 'external_id' })
 
       if (!error) totalSynced += matchesData.length
     }

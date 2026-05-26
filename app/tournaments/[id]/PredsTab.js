@@ -49,10 +49,13 @@ function ScoreChip({ match }) {
 }
 
 export default function PredsTab({ finishedMatches, predsByMatch, profileMap, defaultRound }) {
+  // Reverse so most recently finished rounds (and matches within them) appear first
   const groups = groupAndSortMatches(finishedMatches)
+    .reverse()
+    .map(g => ({ ...g, matches: [...g.matches].reverse() }))
   const rounds = groups.map(g => g.label)
 
-  const [activeRound, setActiveRound] = useState(defaultRound ?? rounds[rounds.length - 1] ?? null)
+  const [activeRound, setActiveRound] = useState(defaultRound ?? rounds[0] ?? null)
   const [openMatches, setOpenMatches] = useState({})
   const [mounted, setMounted] = useState(false)
 

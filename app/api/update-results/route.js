@@ -20,14 +20,13 @@ export async function GET(request) {
 
   try {
     const now = new Date()
-    const windowStart = new Date(now - 360 * 60 * 1000).toISOString()
-    const windowEnd = new Date(now - 150 * 60 * 1000).toISOString()
+    // All non-finished matches that kicked off at least 2h ago (enough time for any match to end)
+    const cutoff = new Date(now - 120 * 60 * 1000).toISOString()
 
     const { data: pendingMatches } = await supabase
       .from('matches')
       .select('*')
-      .gte('kickoff_at', windowStart)
-      .lte('kickoff_at', windowEnd)
+      .lte('kickoff_at', cutoff)
       .neq('status', 'finished')
 
     if (!pendingMatches?.length) {
@@ -39,7 +38,7 @@ export async function GET(request) {
     for (const match of pendingMatches) {
       const response = await fetch(
         `https://api.football-data.org/v4/matches/${match.external_id}`,
-        { headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_KEY } }
+        { headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_KEY || process.env.API_FOOTBALL_KEY } }
       )
 
       const data = await response.json()

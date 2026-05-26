@@ -4,13 +4,17 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useTheme } from 'next-themes'
 import { logout } from '@/app/auth/actions'
 
-function NavAvatar({ url }) {
-  if (url) return <img src={url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+function NavAvatar({ url, name }) {
+  const initials = (name || '?').split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
+  if (url) return (
+    <img
+      src={url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+      onError={e => { e.currentTarget.style.display = 'none' }}
+    />
+  )
   return (
-    <div className="w-7 h-7 rounded-full bg-gray-500/20 flex items-center justify-center flex-shrink-0">
-      <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 12c2.67 0 4.8-2.13 4.8-4.8S14.67 2.4 12 2.4 7.2 4.53 7.2 7.2 9.33 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
-      </svg>
+    <div className="w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+      <span className="text-xs font-bold text-green-600 dark:text-green-400">{initials}</span>
     </div>
   )
 }
@@ -102,7 +106,7 @@ export default function Navbar() {
               <div className="flex items-center gap-1">
                 <a href="/profile"
                   className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                  <NavAvatar url={avatarUrl} />
+                  <NavAvatar url={avatarUrl} name={name} />
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate max-w-[100px]">
                     {name}
                   </span>
@@ -128,7 +132,7 @@ export default function Navbar() {
               <div className="w-7 h-7 rounded-full" />
             ) : user ? (
               <a href="/profile" className="p-1">
-                <NavAvatar url={avatarUrl} />
+                <NavAvatar url={avatarUrl} name={name} />
               </a>
             ) : (
               <a href="/auth"

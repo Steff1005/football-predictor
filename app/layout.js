@@ -24,13 +24,15 @@ export default function RootLayout({ children }) {
   return (
     <html lang="uk" suppressHydrationWarning>
       <head>
+        {/* Applied before any CSS bundle — !important beats Tailwind utility specificity */}
+        <style dangerouslySetInnerHTML={{ __html: 'body{background-color:#030712!important}html.light body{background-color:#f9fafb!important}' }} />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d=document.documentElement;if(localStorage.getItem('theme')!=='light'){d.classList.add('dark');d.style.backgroundColor='#030712'}else{d.classList.remove('dark');d.style.backgroundColor='#f9fafb'}}catch(e){var d=document.documentElement;d.classList.add('dark');d.style.backgroundColor='#030712'}})();`,
+            __html: `(function(){try{var d=document.documentElement;var t=localStorage.getItem('theme');if(t==='light'){d.classList.remove('dark');d.classList.add('light');d.style.backgroundColor='#f9fafb'}else{d.classList.add('dark');d.style.backgroundColor='#030712'}}catch(e){document.documentElement.classList.add('dark')}})();`,
           }}
         />
       </head>
-      <body className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white min-h-screen">
+      <body className="dark:bg-gray-950 text-gray-900 dark:text-white min-h-screen">
         <ThemeProvider>
           <Navbar />
           <main className="max-w-6xl mx-auto px-4 py-6">

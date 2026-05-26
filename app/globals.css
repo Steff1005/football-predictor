@@ -3,9 +3,9 @@
 /* Class-based dark mode for next-themes */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Prevent FOUC: set background before hydration */
-html, body { background-color: #030712; color-scheme: dark; }
-html.light, html.light body { background-color: #f9fafb; color-scheme: light; }
+/* Prevent FOUC: applied by inline <style> in <head> with !important; these are fallbacks */
+html { color-scheme: dark; }
+html.light { color-scheme: light; }
 
 body {
   font-family: Arial, Helvetica, sans-serif;

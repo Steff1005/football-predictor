@@ -7,11 +7,16 @@ function displayName(profile) {
   return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
 }
 
-function UserIcon() {
+function PlayerAvatar({ profile }) {
+  const name = displayName(profile)
+  const initials = name === '—' ? '?' : name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
   return (
-    <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 12c2.67 0 4.8-2.13 4.8-4.8S14.67 2.4 12 2.4 7.2 4.53 7.2 7.2 9.33 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
-    </svg>
+    <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-green-500/20 flex items-center justify-center">
+      {profile?.avatar_url
+        ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+        : <span className="text-xs font-bold text-green-600 dark:text-green-400">{initials}</span>
+      }
+    </div>
   )
 }
 
@@ -202,12 +207,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                       {/* Mobile row: same 4-column flex as header above */}
                       <div className="sm:hidden flex items-center px-4 py-2 gap-3">
                         {/* Avatar (w-7) */}
-                        <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-gray-500/20 flex items-center justify-center">
-                          {profile?.avatar_url
-                            ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                            : <UserIcon />
-                          }
-                        </div>
+                        <PlayerAvatar profile={profile} />
 
                         {/* Name (flex-1) */}
                         <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
@@ -228,12 +228,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
 
                       {/* Desktop row (unchanged) */}
                       <div className="hidden sm:flex items-center px-4 py-2 gap-3">
-                        <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-gray-500/20 flex items-center justify-center">
-                          {profile?.avatar_url
-                            ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                            : <UserIcon />
-                          }
-                        </div>
+                        <PlayerAvatar profile={profile} />
 
                         <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
                           {displayName(profile)}

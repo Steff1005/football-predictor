@@ -117,6 +117,7 @@ export async function fetchPredictionRegistry(tournamentId) {
       .from('predictions')
       .select('user_id, match_id')
       .in('match_id', matchIds)
+      .limit(10000)
 
     return { matches: matches ?? [], predictions: predictions ?? [] }
   } catch (e) {

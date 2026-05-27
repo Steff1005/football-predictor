@@ -601,8 +601,17 @@ function AnalyticsTab({ matches, profiles: initProfiles, tournaments, setProfile
 
 // ── Registry tab ────────────────────────────────────────────────────────────
 
+const REG_STATUS_LABEL = { finished: 'Завершено', live: 'Live', scheduled: 'Заплановано' }
+const REG_STATUS_COLOR = {
+  finished: 'text-gray-400 dark:text-gray-500',
+  live:     'text-red-500 dark:text-red-400',
+  scheduled:'text-green-500 dark:text-green-400',
+}
+const REG_STATUS_SORT  = { scheduled: 0, live: 1, finished: 2 }
+
 function RegistryTab({ profiles, tournaments }) {
   const [tournamentId, setTournamentId] = useState(tournaments[0]?.id ?? '')
+  const [statusFilter, setStatusFilter] = useState('scheduled')
   const [data,         setData]         = useState(null)
   const [loading,      setLoading]      = useState(false)
   const [error,        setError]        = useState('')
@@ -618,7 +627,6 @@ function RegistryTab({ profiles, tournaments }) {
     setData(result)
   }
 
-  // Load on mount
   useEffect(() => { load(tournamentId) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleTournamentChange(tid) {
@@ -626,18 +634,21 @@ function RegistryTab({ profiles, tournaments }) {
     load(tid)
   }
 
-  const matches     = data?.matches ?? []
+  const allMatches  = data?.matches ?? []
   const predictions = data?.predictions ?? []
 
-  // Build presence set: "userId|matchId"
-  const presence = new Set(predictions.map(p => `${p.user_id}|${p.match_id}`))
+  const visibleMatches = allMatches
+    .filter(m => statusFilter === 'all' || m.status === statusFilter)
+    .sort((a, b) => {
+      const sd = (REG_STATUS_SORT[a.status] ?? 3) - (REG_STATUS_SORT[b.status] ?? 3)
+      if (sd !== 0) return sd
+      return new Date(a.kickoff_at) - new Date(b.kickoff_at)
+    })
 
-  // Only show participants who have at least one prediction in this tournament
-  const activeUserIds   = new Set(predictions.map(p => p.user_id))
-  const activeProfiles  = profiles.filter(p => activeUserIds.has(p.id))
-
-  // Per-participant total
-  const userTotal = {}
+  const presence       = new Set(predictions.map(p => `${p.user_id}|${p.match_id}`))
+  const activeUserIds  = new Set(predictions.map(p => p.user_id))
+  const activeProfiles = profiles.filter(p => activeUserIds.has(p.id))
+  const userTotal      = {}
   predictions.forEach(p => { userTotal[p.user_id] = (userTotal[p.user_id] ?? 0) + 1 })
 
   function shortName(p) {
@@ -645,30 +656,26 @@ function RegistryTab({ profiles, tournaments }) {
     return p.first_name || p.username || '—'
   }
 
-  function matchLabel(m) {
-    return `${m.home_team} vs ${m.away_team}`
-  }
-
   function matchDate(m) {
     return new Date(m.kickoff_at).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Kyiv' })
   }
 
-  const STATUS_DOT = { finished: '●', live: '🔴', scheduled: '○' }
-
   return (
     <div>
-      {/* Tournament selector */}
+      {/* Filters */}
       <div className="mb-5 flex items-center gap-3 flex-wrap">
-        <select
-          value={tournamentId}
-          onChange={e => handleTournamentChange(e.target.value)}
-          className={INPUT + ' sm:w-64'}
-        >
+        <select value={tournamentId} onChange={e => handleTournamentChange(e.target.value)} className={INPUT + ' sm:w-64'}>
           {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={INPUT + ' sm:w-44'}>
+          <option value="all">Всі статуси</option>
+          <option value="scheduled">Заплановані</option>
+          <option value="live">Live</option>
+          <option value="finished">Завершені</option>
         </select>
         {data && (
           <span className="text-sm text-gray-400 dark:text-gray-500">
-            {matches.length} матчів · {activeProfiles.length} учасників · {predictions.length} прогнозів
+            {visibleMatches.length}/{allMatches.length} матчів · {activeProfiles.length} учасників · {predictions.length} прогнозів
           </span>
         )}
       </div>
@@ -681,27 +688,29 @@ function RegistryTab({ profiles, tournaments }) {
 
       {error && <p className="text-red-500 text-sm">{error}</p>}
 
-      {!loading && data && matches.length === 0 && (
-        <p className="text-center py-12 text-gray-400 dark:text-gray-600">Матчів у цьому турнірі немає</p>
+      {!loading && data && visibleMatches.length === 0 && (
+        <p className="text-center py-12 text-gray-400 dark:text-gray-600">
+          {allMatches.length === 0 ? 'Матчів у цьому турнірі немає' : 'Немає матчів з обраним фільтром'}
+        </p>
       )}
 
-      {!loading && data && matches.length > 0 && activeProfiles.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
+      {!loading && data && visibleMatches.length > 0 && activeProfiles.length > 0 && (
+        <div className="overflow-auto rounded-xl border border-gray-200 dark:border-gray-800" style={{ maxHeight: '65vh' }}>
           <table className="text-sm border-collapse min-w-full">
             <thead>
-              {/* Participant names header */}
-              <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-                <th className="sticky left-0 z-20 bg-gray-50 dark:bg-gray-900 text-left px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap border-r border-gray-200 dark:border-gray-800 min-w-[200px]">
+              <tr className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+                <th className="sticky left-0 z-40 bg-gray-50 dark:bg-gray-900 text-left px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap border-r border-gray-200 dark:border-gray-800 min-w-[180px]">
                   Матч
                 </th>
-                <th className="px-2 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center whitespace-nowrap min-w-[40px]">
+                <th className="px-2 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center whitespace-nowrap min-w-[44px]">
                   Дата
+                </th>
+                <th className="px-2 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center whitespace-nowrap min-w-[96px]">
+                  Статус
                 </th>
                 {activeProfiles.map(p => (
                   <th key={p.id} className="px-2 py-2.5 text-center min-w-[52px]">
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                      {shortName(p)}
-                    </span>
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">{shortName(p)}</span>
                   </th>
                 ))}
                 <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center whitespace-nowrap">
@@ -711,9 +720,8 @@ function RegistryTab({ profiles, tournaments }) {
             </thead>
 
             <tbody>
-              {matches.map((m, i) => {
+              {visibleMatches.map((m, i) => {
                 const rowTotal = activeProfiles.filter(p => presence.has(`${p.id}|${m.id}`)).length
-                const isFinished = m.status === 'finished'
                 return (
                   <tr
                     key={m.id}
@@ -722,19 +730,19 @@ function RegistryTab({ profiles, tournaments }) {
                     }`}
                   >
                     <td className="sticky left-0 z-10 bg-white dark:bg-gray-950 px-3 py-2 border-r border-gray-200 dark:border-gray-800">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`text-xs ${isFinished ? 'text-gray-400' : 'text-green-500'}`}>
-                          {STATUS_DOT[m.status] ?? '○'}
-                        </span>
-                        <span className={`text-xs font-medium whitespace-nowrap ${
-                          isFinished ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'
-                        }`}>
-                          {m.home_team} — {m.away_team}
-                        </span>
-                      </div>
+                      <span className={`text-xs font-medium whitespace-nowrap ${
+                        m.status === 'finished' ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'
+                      }`}>
+                        {m.home_team} — {m.away_team}
+                      </span>
                     </td>
                     <td className="px-2 py-2 text-center text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
                       {matchDate(m)}
+                    </td>
+                    <td className="px-2 py-2 text-center whitespace-nowrap">
+                      <span className={`text-xs font-medium ${REG_STATUS_COLOR[m.status] ?? 'text-gray-400'}`}>
+                        {REG_STATUS_LABEL[m.status] ?? m.status}
+                      </span>
                     </td>
                     {activeProfiles.map(p => {
                       const has = presence.has(`${p.id}|${m.id}`)
@@ -763,18 +771,16 @@ function RegistryTab({ profiles, tournaments }) {
               })}
             </tbody>
 
-            {/* Summary row */}
             <tfoot>
-              <tr className="border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                <td className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-900 px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase border-r border-gray-200 dark:border-gray-800">
+              <tr className="sticky bottom-0 z-30 border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                <td className="sticky left-0 z-40 bg-gray-50 dark:bg-gray-900 px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase border-r border-gray-200 dark:border-gray-800 whitespace-nowrap">
                   Всього прогнозів
                 </td>
                 <td className="px-2 py-2.5" />
+                <td className="px-2 py-2.5" />
                 {activeProfiles.map(p => (
                   <td key={p.id} className="px-2 py-2.5 text-center">
-                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                      {userTotal[p.id] ?? 0}
-                    </span>
+                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{userTotal[p.id] ?? 0}</span>
                   </td>
                 ))}
                 <td className="px-3 py-2.5 text-center text-sm font-bold text-gray-700 dark:text-gray-300">

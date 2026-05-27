@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { updateMatch, updateProfile, mergeProfiles } from './actions'
+import { updateMatch, updateProfile, mergeProfiles, fetchTournamentStats } from './actions'
 
 const INPUT  = 'w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm'
 const BTN_SM = 'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors'
@@ -11,8 +11,6 @@ const STATUS_COLOR = {
   live:      'bg-red-500/20 text-red-500 dark:text-red-400',
   scheduled: 'bg-green-500/20 text-green-500 dark:text-green-400',
 }
-
-// ── Shared flash message ────────────────────────────────────────────────────
 
 function Flash({ msg }) {
   if (!msg) return null
@@ -28,13 +26,14 @@ function Flash({ msg }) {
 
 // ── Matches tab ─────────────────────────────────────────────────────────────
 
-function MatchesTab({ matches, setMatches }) {
-  const [editing,      setEditing]      = useState(null)
-  const [saving,       setSaving]       = useState(false)
-  const [recalcId,     setRecalcId]     = useState(null)
-  const [filter,       setFilter]       = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [msg,          setMsg]          = useState('')
+function MatchesTab({ matches, setMatches, tournaments }) {
+  const [editing,          setEditing]          = useState(null)
+  const [saving,           setSaving]           = useState(false)
+  const [recalcId,         setRecalcId]         = useState(null)
+  const [filter,           setFilter]           = useState('')
+  const [statusFilter,     setStatusFilter]     = useState('all')
+  const [tournamentFilter, setTournamentFilter] = useState('all')
+  const [msg,              setMsg]              = useState('')
 
   function flash(text) { setMsg(text); setTimeout(() => setMsg(''), 4000) }
 
@@ -71,6 +70,7 @@ function MatchesTab({ matches, setMatches }) {
 
   const visible = matches.filter(m => {
     if (statusFilter !== 'all' && m.status !== statusFilter) return false
+    if (tournamentFilter !== 'all' && m.tournament_id !== tournamentFilter) return false
     if (filter) {
       const q = filter.toLowerCase()
       if (!m.home_team?.toLowerCase().includes(q) && !m.away_team?.toLowerCase().includes(q)) return false
@@ -78,17 +78,27 @@ function MatchesTab({ matches, setMatches }) {
     return true
   })
 
+  const tournamentMap = {}
+  ;(tournaments ?? []).forEach(t => { tournamentMap[t.id] = t.name })
+
   return (
     <div>
       <Flash msg={msg} />
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 flex-wrap">
         <input
           type="text" placeholder="Пошук команди…"
           value={filter} onChange={e => setFilter(e.target.value)}
-          className={INPUT + ' sm:w-64'}
+          className={INPUT + ' sm:w-56'}
         />
+        <select value={tournamentFilter} onChange={e => setTournamentFilter(e.target.value)}
+          className={INPUT + ' sm:w-48'}>
+          <option value="all">Всі турніри</option>
+          {(tournaments ?? []).map(t => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
           className={INPUT + ' sm:w-44'}>
           <option value="all">Всі статуси</option>
@@ -105,8 +115,8 @@ function MatchesTab({ matches, setMatches }) {
         {visible.map(match => {
           const isEditing = editing?.id === match.id
           const kickoff   = new Date(match.kickoff_at)
-          const dateStr   = kickoff.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: '2-digit' })
-          const timeStr   = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+          const dateStr   = kickoff.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'Europe/Kyiv' })
+          const timeStr   = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' })
 
           return (
             <div key={match.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
@@ -152,7 +162,6 @@ function MatchesTab({ matches, setMatches }) {
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
-                  {/* Match info */}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                       {match.home_team}
@@ -163,15 +172,19 @@ function MatchesTab({ matches, setMatches }) {
                       </span>
                       {match.away_team}
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       <span className="text-xs text-gray-400 dark:text-gray-500">{dateStr} {timeStr}</span>
                       <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLOR[match.status] ?? STATUS_COLOR.scheduled}`}>
                         {STATUS_LABEL[match.status] ?? match.status}
                       </span>
+                      {tournamentMap[match.tournament_id] && (
+                        <span className="text-xs text-gray-400 dark:text-gray-600 truncate max-w-[140px]">
+                          {tournamentMap[match.tournament_id]}
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button onClick={() => startEdit(match)}
                       className={`${BTN_SM} bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300`}>
@@ -339,7 +352,7 @@ function MergeTab({ profiles, setProfiles, setTab }) {
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-5">
         <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
           Переносить усі прогнози з вихідного профілю до цільового, потім видаляє вихідний.
-          При конфлікті (обидва зробили прогноз на один матч) залишається прогноз <em>вихідного</em> профілю.
+          При конфлікті залишається прогноз <em>вихідного</em> профілю.
         </p>
 
         <div className="space-y-4">
@@ -370,7 +383,6 @@ function MergeTab({ profiles, setProfiles, setTab }) {
           </div>
         </div>
 
-        {/* Inline confirmation dialog */}
         {confirmStep ? (
           <div className="rounded-xl border border-red-300 dark:border-red-500/40 bg-red-50 dark:bg-red-500/10 p-4 space-y-4">
             <p className="text-sm font-semibold text-red-700 dark:text-red-400">⚠️ Підтвердити злиття?</p>
@@ -379,18 +391,14 @@ function MergeTab({ profiles, setProfiles, setTab }) {
               <div>Зберегти: <strong>{profileDisplay(target)}</strong></div>
             </div>
             <p className="text-xs text-red-600/80 dark:text-red-400/80">
-              Всі прогнози вихідного профілю будуть перенесені. При конфлікті прогноз вихідного профілю замінює прогноз цільового. Дія незворотна.
+              Дія незворотна.
             </p>
             <div className="flex gap-2">
-              <button
-                onClick={executeMerge}
-                disabled={merging}
+              <button onClick={executeMerge} disabled={merging}
                 className="flex-1 py-2 rounded-lg text-sm font-semibold bg-red-500 hover:bg-red-600 text-white disabled:opacity-50 transition-colors">
                 {merging ? 'Обробка…' : 'Підтвердити злиття'}
               </button>
-              <button
-                onClick={() => setConfirmStep(false)}
-                disabled={merging}
+              <button onClick={() => setConfirmStep(false)} disabled={merging}
                 className="flex-1 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors">
                 Скасувати
               </button>
@@ -416,18 +424,155 @@ function MergeTab({ profiles, setProfiles, setTab }) {
   )
 }
 
+// ── Analytics tab ───────────────────────────────────────────────────────────
+
+function StatCard({ label, value, sub }) {
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 text-center">
+      <div className="text-2xl font-bold text-gray-900 dark:text-white">{value}</div>
+      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</div>
+      {sub && <div className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{sub}</div>}
+    </div>
+  )
+}
+
+function AnalyticsTab({ matches, profiles, tournaments }) {
+  const [tourneyStats,  setTourneyStats]  = useState(null)
+  const [loadingStats,  setLoadingStats]  = useState(false)
+
+  const totalPredictions = profiles.reduce((s, p) => s + (p.total_predictions ?? 0), 0)
+  const totalPoints      = profiles.reduce((s, p) => s + (p.total_points ?? 0), 0)
+  const finishedMatches  = matches.filter(m => m.status === 'finished').length
+
+  const tournamentMap = {}
+  ;(tournaments ?? []).forEach(t => { tournamentMap[t.id] = t })
+
+  // Group matches by tournament
+  const matchesByTournament = {}
+  for (const m of matches) {
+    if (!matchesByTournament[m.tournament_id]) matchesByTournament[m.tournament_id] = { total: 0, finished: 0 }
+    matchesByTournament[m.tournament_id].total++
+    if (m.status === 'finished') matchesByTournament[m.tournament_id].finished++
+  }
+
+  async function loadStats() {
+    setLoadingStats(true)
+    try {
+      const stats = await fetchTournamentStats()
+      setTourneyStats(stats)
+    } finally {
+      setLoadingStats(false)
+    }
+  }
+
+  const top5 = [...profiles].slice(0, 5)
+
+  return (
+    <div className="space-y-6">
+      {/* Summary */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Загальна статистика</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard label="Учасників" value={profiles.length} />
+          <StatCard label="Прогнозів зроблено" value={totalPredictions.toLocaleString()} />
+          <StatCard label="Матчів" value={matches.length} sub={`${finishedMatches} завершено`} />
+          <StatCard label="Загалом балів" value={totalPoints.toLocaleString()} />
+        </div>
+      </div>
+
+      {/* Top 5 */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Топ-5 учасників</h3>
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
+                <th className="text-left px-4 py-2.5">Місце</th>
+                <th className="text-left px-4 py-2.5">Учасник</th>
+                <th className="text-right px-4 py-2.5">Балів</th>
+                <th className="text-right px-4 py-2.5">Прогнозів</th>
+              </tr>
+            </thead>
+            <tbody>
+              {top5.map((p, i) => {
+                const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.username || '—'
+                return (
+                  <tr key={p.id} className="border-b border-gray-100 dark:border-gray-800/50 last:border-0">
+                    <td className="px-4 py-2.5 text-base">
+                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : <span className="text-gray-400 text-sm">{i + 1}</span>}
+                    </td>
+                    <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-white">{name}</td>
+                    <td className="px-4 py-2.5 text-right font-bold text-green-500 dark:text-green-400">{p.total_points ?? 0}</td>
+                    <td className="px-4 py-2.5 text-right text-gray-500 dark:text-gray-400">{p.total_predictions ?? 0}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Tournament breakdown */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">По турнірах</h3>
+        </div>
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
+                <th className="text-left px-4 py-2.5">Турнір</th>
+                <th className="text-center px-3 py-2.5">Матчів</th>
+                <th className="text-center px-3 py-2.5">Завершено</th>
+                <th className="text-center px-3 py-2.5">Статус</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(tournaments ?? []).map(t => {
+                const ms = matchesByTournament[t.id] ?? { total: 0, finished: 0 }
+                const pct = ms.total > 0 ? Math.round(ms.finished / ms.total * 100) : 0
+                return (
+                  <tr key={t.id} className="border-b border-gray-100 dark:border-gray-800/50 last:border-0">
+                    <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-white">{t.name}</td>
+                    <td className="text-center px-3 py-2.5 text-gray-600 dark:text-gray-300">{ms.total}</td>
+                    <td className="text-center px-3 py-2.5">
+                      <span className="text-gray-600 dark:text-gray-300">{ms.finished}</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-600 ml-1">({pct}%)</span>
+                    </td>
+                    <td className="text-center px-3 py-2.5">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        t.is_active
+                          ? 'bg-green-500/20 text-green-600 dark:text-green-400'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                      }`}>
+                        {t.is_active ? 'Активний' : 'Завершено'}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Root panel ──────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'matches',  label: 'Матчі' },
-  { id: 'profiles', label: 'Учасники' },
-  { id: 'merge',    label: 'Злиття профілів' },
+  { id: 'matches',   label: 'Матчі' },
+  { id: 'profiles',  label: 'Учасники' },
+  { id: 'merge',     label: 'Злиття профілів' },
+  { id: 'analytics', label: 'Аналітика' },
 ]
 
-export default function AdminPanel({ matches: initMatches, profiles: initProfiles }) {
-  const [tab,      setTab]      = useState('matches')
-  const [matches,  setMatches]  = useState(initMatches)
-  const [profiles, setProfiles] = useState(initProfiles)
+export default function AdminPanel({ matches: initMatches, profiles: initProfiles, tournaments: initTournaments }) {
+  const [tab,         setTab]         = useState('matches')
+  const [matches,     setMatches]     = useState(initMatches)
+  const [profiles,    setProfiles]    = useState(initProfiles)
+  const tournaments = initTournaments ?? []
 
   return (
     <div>
@@ -445,9 +590,10 @@ export default function AdminPanel({ matches: initMatches, profiles: initProfile
         ))}
       </div>
 
-      {tab === 'matches'  && <MatchesTab  matches={matches}   setMatches={setMatches} />}
-      {tab === 'profiles' && <ProfilesTab profiles={profiles} setProfiles={setProfiles} />}
-      {tab === 'merge'    && <MergeTab    profiles={profiles} setProfiles={setProfiles} setTab={setTab} />}
+      {tab === 'matches'   && <MatchesTab   matches={matches}   setMatches={setMatches} tournaments={tournaments} />}
+      {tab === 'profiles'  && <ProfilesTab  profiles={profiles} setProfiles={setProfiles} />}
+      {tab === 'merge'     && <MergeTab     profiles={profiles} setProfiles={setProfiles} setTab={setTab} />}
+      {tab === 'analytics' && <AnalyticsTab matches={matches}   profiles={profiles} tournaments={tournaments} />}
     </div>
   )
 }

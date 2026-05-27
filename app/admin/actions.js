@@ -25,15 +25,33 @@ export async function checkAdmin() {
 
 export async function fetchAdminData() {
   const db = await getAdminDb()
-  const [{ data: matches }, { data: profiles }] = await Promise.all([
+  const [{ data: matches }, { data: profiles }, { data: tournaments }] = await Promise.all([
     db.from('matches')
       .select('id, tournament_id, home_team, away_team, home_score, away_score, status, kickoff_at, round')
       .order('kickoff_at', { ascending: false }),
     db.from('profiles')
       .select('id, username, first_name, last_name, total_points, total_predictions')
       .order('total_points', { ascending: false }),
+    db.from('tournaments')
+      .select('id, name, is_active')
+      .order('name'),
   ])
-  return { matches: matches ?? [], profiles: profiles ?? [] }
+  return { matches: matches ?? [], profiles: profiles ?? [], tournaments: tournaments ?? [] }
+}
+
+export async function fetchTournamentStats() {
+  const db = await getAdminDb()
+  const { data: matches } = await db
+    .from('matches')
+    .select('id, tournament_id, status')
+
+  const byTournament = {}
+  for (const m of matches ?? []) {
+    if (!byTournament[m.tournament_id]) byTournament[m.tournament_id] = { total: 0, finished: 0 }
+    byTournament[m.tournament_id].total++
+    if (m.status === 'finished') byTournament[m.tournament_id].finished++
+  }
+  return byTournament
 }
 
 async function getAdminDb() {

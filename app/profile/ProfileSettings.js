@@ -4,86 +4,60 @@ import { Eye, EyeOff, ChevronDown, Pencil } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { updateProfile } from './actions'
+import { useToast } from '../../components/ToastProvider'
 
 const INPUT = 'w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2.5 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50'
 
-function Flash({ msg, isErr }) {
-  if (!msg) return null
-  return (
-    <p className={`text-sm ${isErr ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'}`}>
-      {msg}
-    </p>
-  )
-}
-
 export default function ProfileSettings({ initialFirst, initialLast, initialUsername }) {
-  const [isOpen, setIsOpen] = useState(false)
+  const toast  = useToast()
   const router = useRouter()
+  const [isOpen, setIsOpen] = useState(false)
 
-  // Profile form state
   const [firstName, setFirstName] = useState(initialFirst ?? '')
   const [lastName,  setLastName]  = useState(initialLast  ?? '')
   const [username,  setUsername]  = useState(initialUsername ?? '')
   const [savingProfile, setSavingProfile] = useState(false)
-  const [profileMsg,    setProfileMsg]    = useState('')
-  const [profileErr,    setProfileErr]    = useState(false)
 
-  // Password form state
   const [password,     setPassword]     = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [savingPass,   setSavingPass]   = useState(false)
-  const [passMsg,      setPassMsg]      = useState('')
-  const [passErr,      setPassErr]      = useState(false)
 
   const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ), [])
 
-  function close() {
-    setIsOpen(false)
-    setProfileMsg('')
-    setPassMsg('')
-  }
-
   async function handleProfileSubmit(e) {
     e.preventDefault()
     setSavingProfile(true)
-    setProfileMsg('')
     const result = await updateProfile({ firstName, lastName, username })
     setSavingProfile(false)
     if (result.error) {
-      setProfileErr(true)
-      setProfileMsg(result.error === 'username_taken' ? 'Цей нікнейм вже зайнятий' : 'Помилка: ' + result.error)
+      toast(result.error === 'username_taken' ? 'Цей нікнейм вже зайнятий' : 'Помилка: ' + result.error, 'error')
     } else {
-      setProfileErr(false)
-      setProfileMsg('✅ Збережено')
+      toast('✅ Профіль збережено')
       router.refresh()
-      setTimeout(() => { setProfileMsg(''); setIsOpen(false) }, 1200)
+      setTimeout(() => setIsOpen(false), 800)
     }
   }
 
   async function handlePasswordSubmit(e) {
     e.preventDefault()
-    if (password.length < 6) { setPassErr(true); setPassMsg('Мінімум 6 символів'); return }
+    if (password.length < 6) { toast('Мінімум 6 символів', 'error'); return }
     setSavingPass(true)
-    setPassMsg('')
     const { error } = await supabase.auth.updateUser({ password })
     setSavingPass(false)
     if (error) {
-      setPassErr(true)
-      setPassMsg('Помилка: ' + error.message)
+      toast('Помилка: ' + error.message, 'error')
     } else {
-      setPassErr(false)
-      setPassMsg('✅ Пароль змінено')
+      toast('✅ Пароль змінено')
       setPassword('')
-      setTimeout(() => { setPassMsg(''); setIsOpen(false) }, 1200)
+      setTimeout(() => setIsOpen(false), 800)
     }
   }
 
   return (
     <div>
-      {/* Toggle trigger */}
       <button
         onClick={() => setIsOpen(v => !v)}
         className="flex items-center gap-1.5 mt-1.5 text-sm text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
@@ -96,11 +70,9 @@ export default function ProfileSettings({ initialFirst, initialLast, initialUser
         />
       </button>
 
-      {/* Accordion body */}
       {isOpen && (
         <div className="mt-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
 
-          {/* Personal data */}
           <form onSubmit={handleProfileSubmit} className="px-4 py-4 sm:px-5 space-y-3">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Особисті дані</p>
             <div className="flex gap-3">
@@ -125,15 +97,13 @@ export default function ProfileSettings({ initialFirst, initialLast, initialUser
                 className="px-4 py-2 bg-green-500 hover:bg-green-400 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
                 {savingProfile ? 'Збереження…' : 'Зберегти'}
               </button>
-              <button type="button" onClick={close}
+              <button type="button" onClick={() => setIsOpen(false)}
                 className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
                 Скасувати
               </button>
-              <Flash msg={profileMsg} isErr={profileErr} />
             </div>
           </form>
 
-          {/* Password */}
           <form onSubmit={handlePasswordSubmit} className="px-4 py-4 sm:px-5 space-y-3">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Зміна пароля</p>
             <div>
@@ -159,11 +129,10 @@ export default function ProfileSettings({ initialFirst, initialLast, initialUser
                 className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
                 {savingPass ? 'Збереження…' : 'Змінити пароль'}
               </button>
-              <button type="button" onClick={close}
+              <button type="button" onClick={() => setIsOpen(false)}
                 className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
                 Скасувати
               </button>
-              <Flash msg={passMsg} isErr={passErr} />
             </div>
           </form>
 

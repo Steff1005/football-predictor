@@ -2,33 +2,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useToast } from './ToastProvider'
+import { markDirty, markClean } from '../lib/unsaved-guard'
 
-// Module-level coordination: only one popstate listener for all MatchCard instances
 let _cardSeq = 0
-const _dirtyCards = new Set()
-
-function _popstateGuard() {
-  if (_dirtyCards.size > 0) {
-    if (!window.confirm('Є незбережені прогнози. Залишити сторінку?')) {
-      history.pushState(null, '')
-    }
-  }
-}
-
-function _markDirty(id) {
-  if (_dirtyCards.size === 0) {
-    history.pushState(null, '')
-    window.addEventListener('popstate', _popstateGuard)
-  }
-  _dirtyCards.add(id)
-}
-
-function _markClean(id) {
-  _dirtyCards.delete(id)
-  if (_dirtyCards.size === 0) {
-    window.removeEventListener('popstate', _popstateGuard)
-  }
-}
 
 function getClean(value) {
   const digits = value.replace(/[^0-9]/g, '')
@@ -80,12 +56,10 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
   useEffect(() => {
     const id = cardId.current
     if (isDirty) {
-      _markDirty(id)
-      const unloadHandler = e => { e.preventDefault(); e.returnValue = '' }
-      window.addEventListener('beforeunload', unloadHandler)
-      return () => { _markClean(id); window.removeEventListener('beforeunload', unloadHandler) }
+      markDirty(id)
+      return () => markClean(id)
     } else {
-      _markClean(id)
+      markClean(id)
     }
   }, [isDirty])
 

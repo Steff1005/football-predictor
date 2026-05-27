@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import MatchCard from '../../../components/MatchCard'
 import { groupAndSortMatches } from '../../../lib/round-sort'
+import { confirmLeave } from '../../../lib/unsaved-guard'
 
 export default function MatchesTab({ matches, userPredictions, userId, defaultRound }) {
   const groups = groupAndSortMatches(matches)
@@ -27,7 +28,10 @@ export default function MatchesTab({ matches, userPredictions, userId, defaultRo
         {rounds.map(round => (
           <button
             key={round}
-            onClick={() => setActiveRound(round)}
+            onClick={() => {
+              if (!confirmLeave('Є незбережений прогноз. Перейти на інший тур?')) return
+              setActiveRound(round)
+            }}
             className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
               activeRound === round
                 ? 'bg-green-500 text-white'

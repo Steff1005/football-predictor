@@ -1,14 +1,22 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import MatchCard from '../../../components/MatchCard'
 import { groupAndSortMatches } from '../../../lib/round-sort'
 import { confirmLeave } from '../../../lib/unsaved-guard'
+import { useToast } from '../../../components/ToastProvider'
 
 export default function MatchesTab({ matches, userPredictions, userId, defaultRound }) {
+  const toast  = useToast()
   const groups = groupAndSortMatches(matches)
   const rounds = groups.map(g => g.label)
 
   const [activeRound, setActiveRound] = useState(defaultRound ?? rounds[0] ?? null)
+
+  useEffect(() => {
+    const handler = () => toast('Спочатку збережіть незбережений прогноз', 'error')
+    window.addEventListener('kickoff:navblocked', handler)
+    return () => window.removeEventListener('kickoff:navblocked', handler)
+  }, [toast])
 
   if (!rounds.length) {
     return (

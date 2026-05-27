@@ -3,6 +3,33 @@ import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useToast } from './ToastProvider'
 
+// Module-level coordination: only one popstate listener for all MatchCard instances
+let _cardSeq = 0
+const _dirtyCards = new Set()
+
+function _popstateGuard() {
+  if (_dirtyCards.size > 0) {
+    if (!window.confirm('Є незбережені прогнози. Залишити сторінку?')) {
+      history.pushState(null, '')
+    }
+  }
+}
+
+function _markDirty(id) {
+  if (_dirtyCards.size === 0) {
+    history.pushState(null, '')
+    window.addEventListener('popstate', _popstateGuard)
+  }
+  _dirtyCards.add(id)
+}
+
+function _markClean(id) {
+  _dirtyCards.delete(id)
+  if (_dirtyCards.size === 0) {
+    window.removeEventListener('popstate', _popstateGuard)
+  }
+}
+
 function getClean(value) {
   const digits = value.replace(/[^0-9]/g, '')
   // Only single digit 0-9: take the last typed character so new digit naturally replaces old
@@ -42,6 +69,8 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
   const [saved,  setSaved]  = useState(!!userPrediction)
   const awayRef       = useRef(null)
   const mobileAwayRef = useRef(null)
+  const cardId        = useRef(null)
+  if (cardId.current === null) cardId.current = ++_cardSeq
 
   const isFinished = match.status === 'finished'
   const isPast     = new Date(match.kickoff_at) < new Date()
@@ -49,10 +78,15 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
   const isDirty    = !saved && !isPast && !isFinished && (home !== '' || away !== '')
 
   useEffect(() => {
-    if (!isDirty) return
-    const handler = e => { e.preventDefault(); e.returnValue = '' }
-    window.addEventListener('beforeunload', handler)
-    return () => window.removeEventListener('beforeunload', handler)
+    const id = cardId.current
+    if (isDirty) {
+      _markDirty(id)
+      const unloadHandler = e => { e.preventDefault(); e.returnValue = '' }
+      window.addEventListener('beforeunload', unloadHandler)
+      return () => { _markClean(id); window.removeEventListener('beforeunload', unloadHandler) }
+    } else {
+      _markClean(id)
+    }
   }, [isDirty])
 
   async function savePrediction() {

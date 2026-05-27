@@ -200,8 +200,14 @@ export default async function HomePage() {
       .filter(r => r.profile)
   }
 
-  // ── Leaderboard ───────────────────────────────────────────────────────────────
-  const leaderboard = (allProfiles ?? []).filter(p => (p.total_predictions ?? 0) > 0)
+  // ── Leaderboard — ranked by efficiency (points per prediction) ────────────────
+  const leaderboard = (allProfiles ?? [])
+    .filter(p => (p.total_predictions ?? 0) > 0)
+    .map(p => ({ ...p, efficiency: p.total_points / p.total_predictions }))
+    .sort((a, b) => b.efficiency - a.efficiency)
+
+  // Analytics rows sorted alphabetically by name
+  const analyticsRows = [...leaderboard].sort((a, b) => pdn(a).localeCompare(pdn(b), 'uk'))
 
   // ── Community stats ───────────────────────────────────────────────────────────
   const totalParticipants = leaderboard.length
@@ -266,10 +272,13 @@ export default async function HomePage() {
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
 
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
-                <span className="font-medium">Форма (8 останніх)</span>
+                <span className="font-medium">Форма (8 останніх):</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block" /> 4 бали</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> 1 бал</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> 0 балів</span>
+                <span className="text-gray-300 dark:text-gray-700 hidden sm:inline">|</span>
+                <span className="font-medium hidden sm:inline">Ефективність</span>
+                <span className="hidden sm:inline">= бали ÷ прогнози</span>
               </div>
 
               {leaderboard.length === 0 && (
@@ -284,7 +293,7 @@ export default async function HomePage() {
                       <th className="w-10 px-3 py-2.5 text-center">#</th>
                       <th className="px-3 py-2.5 text-left">Учасник</th>
                       <th className="px-3 py-2.5 text-left whitespace-nowrap">Форма</th>
-                      <th className="px-3 py-2.5 text-right whitespace-nowrap">Прогн./Бали</th>
+                      <th className="px-3 py-2.5 text-right whitespace-nowrap">Ефективність</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -313,8 +322,8 @@ export default async function HomePage() {
                             </div>
                           </td>
                           <td className="px-3 py-3 text-right">
-                            <div className="font-bold text-green-500 dark:text-green-400 tabular-nums leading-tight">{fmtNum(p.total_predictions)}/{fmtNum(p.total_points)}</div>
-                            <div className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">прогн./бали</div>
+                            <div className="font-bold text-green-500 dark:text-green-400 tabular-nums leading-tight">{p.efficiency.toFixed(2)}</div>
+                            <div className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight whitespace-nowrap">{fmtNum(p.total_predictions)} прогн. · {fmtNum(p.total_points)} б.</div>
                           </td>
                         </tr>
                       )
@@ -342,8 +351,8 @@ export default async function HomePage() {
                           </span>
                         </a>
                         <div className="flex-shrink-0 text-right ml-1">
-                          <div className="font-bold text-green-500 dark:text-green-400 text-sm leading-tight tabular-nums">{fmtNum(p.total_predictions)}/{fmtNum(p.total_points)}</div>
-                          <div className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">прогн./бали</div>
+                          <div className="font-bold text-green-500 dark:text-green-400 text-sm leading-tight tabular-nums">{p.efficiency.toFixed(2)}</div>
+                          <div className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight whitespace-nowrap">{fmtNum(p.total_predictions)} · {fmtNum(p.total_points)} б.</div>
                         </div>
                       </div>
                       {form.length > 0 && (
@@ -368,7 +377,6 @@ export default async function HomePage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                        <th className="text-center px-2 py-3" style={{width:'40px'}}>#</th>
                         <th className="sticky left-0 z-10 bg-white dark:bg-gray-900 text-left px-3 py-3 border-r border-gray-200 dark:border-gray-800 whitespace-nowrap" style={{minWidth:'130px'}}>Учасник</th>
                         <th className="text-right px-3 py-3 whitespace-nowrap">Прогн.</th>
                         <th className="text-right px-3 py-3 whitespace-nowrap">Рез-ти</th>
@@ -379,7 +387,7 @@ export default async function HomePage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {leaderboard.map((p, idx) => {
+                      {analyticsRows.map((p) => {
                         const an     = userAnalytics[p.id] ?? { scored: 0, exact: 0, correct: 0 }
                         const scored = an.scored
                         const corPct = pct(an.correct, scored)
@@ -388,7 +396,6 @@ export default async function HomePage() {
                         return (
                           <tr key={p.id}
                             className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}>
-                            <td className="px-2 py-2.5 text-center" style={{width:'40px'}}><RankBadge rank={idx + 1} /></td>
                             <td className={`sticky left-0 z-10 px-3 py-2.5 border-r border-gray-200 dark:border-gray-800 ${isMe ? 'bg-green-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'}`}>
                               <a href={`/players/${p.id}`} className="flex items-center gap-2 hover:opacity-75 transition-opacity">
                                 <ProfileAvatar profile={p} sizeCls="w-6 h-6" textCls="text-[10px]" />

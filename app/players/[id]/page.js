@@ -5,8 +5,6 @@ import { translateTeam } from '../../../lib/team-translations'
 import PlayerUpcomingPredictions from './PlayerUpcomingPredictions'
 import CLUB_CRESTS from '../../../lib/club-crests'
 
-export const revalidate = 60
-
 const PAGE = 1000
 async function fetchAll(supabase, buildQuery) {
   let all = [], from = 0
@@ -97,15 +95,24 @@ export default async function PlayerProfilePage({ params }) {
     .map(p => ({ ...p, match: finishedMatchMap[p.match_id] }))
     .filter(p => p.match && p.match.status === 'finished')
 
-  // ── Upcoming scheduled matches + player's predictions ────────────────────────
-  const { data: rawScheduled } = await supabase
-    .from('matches')
-    .select('id, home_team, away_team, home_logo, away_logo, kickoff_at, tournament_id, round, status')
-    .eq('status', 'scheduled')
-    .order('kickoff_at', { ascending: true })
-    .limit(500)
+  // ── Upcoming scheduled matches — only from tournaments the player plays in ────
+  // Find active tournament IDs: where player made ≥1 prediction
+  const activeTournamentIds = [...new Set(
+    rawPredictions.map(p => finishedMatchMap[p.match_id]?.tournament_id).filter(Boolean)
+  )]
 
-  const scheduledIds = (rawScheduled ?? []).map(m => m.id)
+  let rawScheduled = []
+  if (activeTournamentIds.length > 0) {
+    const { data } = await supabase
+      .from('matches')
+      .select('id, home_team, away_team, home_logo, away_logo, kickoff_at, tournament_id, round, status')
+      .eq('status', 'scheduled')
+      .in('tournament_id', activeTournamentIds)
+      .order('kickoff_at', { ascending: true })
+    rawScheduled = data ?? []
+  }
+
+  const scheduledIds = rawScheduled.map(m => m.id)
   const scheduledPredMap = {}
   if (scheduledIds.length > 0) {
     const CHUNK = 200
@@ -119,7 +126,7 @@ export default async function PlayerProfilePage({ params }) {
     }
   }
 
-  const upcomingItems = (rawScheduled ?? []).map(m => {
+  const upcomingItems = rawScheduled.map(m => {
     const ht   = translateTeam(m.home_team)
     const at   = translateTeam(m.away_team)
     const pred = scheduledPredMap[m.id]

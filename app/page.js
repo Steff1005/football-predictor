@@ -177,9 +177,18 @@ export default async function HomePage() {
   const userFormData = {}
   for (const [uid, entries] of Object.entries(userFormRaw)) {
     userFormData[uid] = entries
-      .sort((a, b) => b.date.localeCompare(a.date))
+      .sort((a, b) => b.date.localeCompare(a.date)) // sorts in-place — entries now desc
       .slice(0, 8)
       .reverse()
+  }
+
+  // Trend: compare last-20 efficiency vs overall (arrays already sorted desc after above loop)
+  const userTrend = {}
+  for (const [uid, entries] of Object.entries(userFormRaw)) {
+    const last20 = entries.slice(0, 20)
+    if (last20.length >= 5) {
+      userTrend[uid] = last20.reduce((s, e) => s + e.pts, 0) / last20.length
+    }
   }
 
   // ── Hall of fame: top 3 per finished tournament ───────────────────────────────
@@ -203,8 +212,11 @@ export default async function HomePage() {
   // ── Leaderboard — ranked by efficiency (points per prediction) ────────────────
   const leaderboard = (allProfiles ?? [])
     .filter(p => (p.total_predictions ?? 0) > 0)
+    .filter(p => p.first_name !== 'Адмін')
     .map(p => ({ ...p, efficiency: p.total_points / p.total_predictions }))
     .sort((a, b) => b.efficiency - a.efficiency)
+
+  const maxEfficiency = leaderboard[0]?.efficiency ?? 1
 
   // Analytics rows sorted alphabetically by name
   const analyticsRows = [...leaderboard].sort((a, b) => pdn(a).localeCompare(pdn(b), 'uk'))
@@ -277,8 +289,7 @@ export default async function HomePage() {
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> 1 бал</span>
                 <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> 0 балів</span>
                 <span className="text-gray-300 dark:text-gray-700 hidden sm:inline">|</span>
-                <span className="font-medium hidden sm:inline">Ефективність</span>
-                <span className="hidden sm:inline">= бали ÷ прогнози</span>
+                <span className="hidden sm:inline"><span className="font-medium">Ефективність</span> = бали &divide; прогнози · <span className="text-green-500">↑</span> зростає · <span className="text-red-400">↓</span> падає</span>
               </div>
 
               {leaderboard.length === 0 && (
@@ -298,12 +309,18 @@ export default async function HomePage() {
                   </thead>
                   <tbody>
                     {leaderboard.map((p, idx) => {
-                      const rank = idx + 1
-                      const isMe = p.id === userId
-                      const form = userFormData[p.id] ?? []
+                      const rank      = idx + 1
+                      const isMe      = p.id === userId
+                      const form      = userFormData[p.id] ?? []
+                      const recentEff = userTrend[p.id]
+                      const trend     = recentEff !== undefined
+                        ? (recentEff > p.efficiency + 0.05 ? 1 : recentEff < p.efficiency - 0.05 ? -1 : 0)
+                        : null
+                      const barWidth  = Math.round(p.efficiency / maxEfficiency * 100)
                       return (
                         <tr key={p.id}
-                          className={`border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}>
+                          className={`border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 animate-fade-in ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}
+                          style={{ animationDelay: `${idx * 50}ms` }}>
                           <td className="px-3 py-3 text-center"><RankBadge rank={rank} /></td>
                           <td className="px-3 py-3">
                             <a href={`/players/${p.id}`} className="flex items-center gap-2.5 hover:opacity-75 transition-opacity">
@@ -321,9 +338,21 @@ export default async function HomePage() {
                               }
                             </div>
                           </td>
-                          <td className="px-3 py-3 text-right">
-                            <div className="font-bold text-green-500 dark:text-green-400 tabular-nums leading-tight">{p.efficiency.toFixed(2)}</div>
-                            <div className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight whitespace-nowrap">{fmtNum(p.total_predictions)} прогн. · {fmtNum(p.total_points)} б.</div>
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center justify-end gap-1.5 mb-0.5">
+                              {trend !== null && (
+                                <span className={`text-xs font-semibold ${trend > 0 ? 'text-green-500' : trend < 0 ? 'text-red-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                                  {trend > 0 ? '↑' : trend < 0 ? '↓' : '—'}
+                                </span>
+                              )}
+                              <span className="font-bold text-green-500 dark:text-green-400 tabular-nums">{p.efficiency.toFixed(2)}</span>
+                            </div>
+                            <div className="text-[10px] text-gray-400 dark:text-gray-500 text-right whitespace-nowrap mb-1.5">
+                              {fmtNum(p.total_points)} б. · {fmtNum(p.total_predictions)} прогн.
+                            </div>
+                            <div className="h-0.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div className="h-full bg-green-500/70 rounded-full" style={{width:`${barWidth}%`}} />
+                            </div>
                           </td>
                         </tr>
                       )
@@ -335,12 +364,18 @@ export default async function HomePage() {
               {/* Mobile cards */}
               <div className="sm:hidden">
                 {leaderboard.map((p, idx) => {
-                  const rank = idx + 1
-                  const isMe = p.id === userId
-                  const form = userFormData[p.id] ?? []
+                  const rank      = idx + 1
+                  const isMe      = p.id === userId
+                  const form      = userFormData[p.id] ?? []
+                  const recentEff = userTrend[p.id]
+                  const trend     = recentEff !== undefined
+                    ? (recentEff > p.efficiency + 0.05 ? 1 : recentEff < p.efficiency - 0.05 ? -1 : 0)
+                    : null
+                  const barWidth  = Math.round(p.efficiency / maxEfficiency * 100)
                   return (
                     <div key={p.id}
-                      className={`px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}>
+                      className={`px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 animate-fade-in ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}
+                      style={{ animationDelay: `${idx * 50}ms` }}>
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 flex-shrink-0 text-center"><RankBadge rank={rank} /></div>
                         <a href={`/players/${p.id}`}
@@ -351,15 +386,27 @@ export default async function HomePage() {
                           </span>
                         </a>
                         <div className="flex-shrink-0 text-right ml-1">
-                          <div className="font-bold text-green-500 dark:text-green-400 text-sm leading-tight tabular-nums">{p.efficiency.toFixed(2)}</div>
-                          <div className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight whitespace-nowrap">{fmtNum(p.total_predictions)} · {fmtNum(p.total_points)} б.</div>
+                          <div className="flex items-center justify-end gap-1">
+                            {trend !== null && (
+                              <span className={`text-xs font-semibold ${trend > 0 ? 'text-green-500' : trend < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                                {trend > 0 ? '↑' : trend < 0 ? '↓' : '—'}
+                              </span>
+                            )}
+                            <span className="font-bold text-green-500 dark:text-green-400 text-sm tabular-nums">{p.efficiency.toFixed(2)}</span>
+                          </div>
+                          <div className="text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap">{fmtNum(p.total_points)} б. · {fmtNum(p.total_predictions)} прогн.</div>
                         </div>
                       </div>
-                      {form.length > 0 && (
-                        <div className="flex gap-1 mt-1.5 pl-9">
-                          {form.map((entry, i) => <FormDot key={i} pts={entry.pts} />)}
+                      <div className="pl-9 mt-1.5">
+                        {form.length > 0 && (
+                          <div className="flex gap-1 mb-1.5">
+                            {form.map((entry, i) => <FormDot key={i} pts={entry.pts} />)}
+                          </div>
+                        )}
+                        <div className="h-0.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div className="h-full bg-green-500/70 rounded-full" style={{width:`${barWidth}%`}} />
                         </div>
-                      )}
+                      </div>
                     </div>
                   )
                 })}

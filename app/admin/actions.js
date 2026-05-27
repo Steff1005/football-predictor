@@ -100,6 +100,37 @@ export async function updateProfile(userId, { first_name, last_name, username })
   }
 }
 
+export async function syncAllProfileStats() {
+  try {
+    const db = await getAdminDb()
+
+    const { data: profiles, error: pErr } = await db
+      .from('profiles').select('id')
+    if (pErr) return { error: pErr.message }
+
+    let updated = 0
+    for (const { id } of profiles ?? []) {
+      const { data: preds } = await db
+        .from('predictions')
+        .select('points, is_calculated')
+        .eq('user_id', id)
+
+      const scored          = (preds ?? []).filter(p => p.is_calculated)
+      const totalPoints     = scored.reduce((s, p) => s + (p.points ?? 0), 0)
+      const totalPredictions = (preds ?? []).length
+
+      await db.from('profiles')
+        .update({ total_points: totalPoints, total_predictions: totalPredictions })
+        .eq('id', id)
+      updated++
+    }
+
+    return { updated }
+  } catch (e) {
+    return { error: e.message }
+  }
+}
+
 export async function mergeProfiles(sourceId, targetId) {
   try {
     const db = await getAdminDb()

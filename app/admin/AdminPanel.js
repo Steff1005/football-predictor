@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { updateMatch, updateProfile, mergeProfiles, fetchTournamentStats } from './actions'
+import { updateMatch, updateProfile, mergeProfiles, fetchTournamentStats, syncAllProfileStats } from './actions'
 
 const INPUT  = 'w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm'
 const BTN_SM = 'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors'
@@ -436,9 +436,26 @@ function StatCard({ label, value, sub }) {
   )
 }
 
-function AnalyticsTab({ matches, profiles, tournaments }) {
+function AnalyticsTab({ matches, profiles: initProfiles, tournaments, setProfiles }) {
+  const [profiles,      setLocalProfiles] = useState(initProfiles)
   const [tourneyStats,  setTourneyStats]  = useState(null)
   const [loadingStats,  setLoadingStats]  = useState(false)
+  const [syncing,       setSyncing]       = useState(false)
+  const [syncMsg,       setSyncMsg]       = useState('')
+
+  async function handleSync() {
+    setSyncing(true)
+    setSyncMsg('')
+    const result = await syncAllProfileStats()
+    setSyncing(false)
+    if (result.error) {
+      setSyncMsg('Помилка: ' + result.error)
+    } else {
+      setSyncMsg(`✅ Синхронізовано ${result.updated} профілів`)
+      // Reload profiles so the table reflects fresh totals
+      setTimeout(() => window.location.reload(), 1200)
+    }
+  }
 
   const totalPredictions = profiles.reduce((s, p) => s + (p.total_predictions ?? 0), 0)
   const totalPoints      = profiles.reduce((s, p) => s + (p.total_points ?? 0), 0)
@@ -471,7 +488,22 @@ function AnalyticsTab({ matches, profiles, tournaments }) {
     <div className="space-y-6">
       {/* Summary */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Загальна статистика</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Загальна статистика</h3>
+          <div className="flex items-center gap-3">
+            {syncMsg && <span className="text-sm text-green-600 dark:text-green-400">{syncMsg}</span>}
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 disabled:opacity-50 transition-colors"
+            >
+              {syncing ? 'Синхронізація…' : '🔄 Синхронізувати статистику'}
+            </button>
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 dark:text-gray-600 mb-3">
+          Якщо кількість прогнозів в адмінці не збігається з профілем гравця — натисни кнопку вище.
+        </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label="Учасників" value={profiles.length} />
           <StatCard label="Прогнозів зроблено" value={totalPredictions.toLocaleString()} />
@@ -593,7 +625,7 @@ export default function AdminPanel({ matches: initMatches, profiles: initProfile
       {tab === 'matches'   && <MatchesTab   matches={matches}   setMatches={setMatches} tournaments={tournaments} />}
       {tab === 'profiles'  && <ProfilesTab  profiles={profiles} setProfiles={setProfiles} />}
       {tab === 'merge'     && <MergeTab     profiles={profiles} setProfiles={setProfiles} setTab={setTab} />}
-      {tab === 'analytics' && <AnalyticsTab matches={matches}   profiles={profiles} tournaments={tournaments} />}
+      {tab === 'analytics' && <AnalyticsTab matches={matches}   profiles={profiles} tournaments={tournaments} setProfiles={setProfiles} />}
     </div>
   )
 }

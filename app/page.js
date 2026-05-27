@@ -283,13 +283,26 @@ export default async function HomePage() {
             <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Загальний рейтинг</h2>
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
 
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
-                <span className="font-medium">Форма (8 останніх):</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block" /> 4 бали</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> 1 бал</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> 0 балів</span>
-                <span className="text-gray-300 dark:text-gray-700 hidden sm:inline">|</span>
-                <span className="hidden sm:inline"><span className="font-medium">Ефективність</span> = бали &divide; прогнози · <span className="text-green-500">↑</span> зростає · <span className="text-red-400">↓</span> падає</span>
+              <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
+                {/* Mobile legend */}
+                <div className="sm:hidden space-y-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="font-medium">Форма (8 останніх):</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block" /> точний</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> вірний</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> промах</span>
+                  </div>
+                  <div><span className="font-medium">PPP</span> = бали &divide; прогнози &nbsp;·&nbsp; <span className="text-green-500">↑</span> зростає &nbsp;·&nbsp; <span className="text-red-400">↓</span> падає</div>
+                </div>
+                {/* Desktop legend */}
+                <div className="hidden sm:flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="font-medium">Форма — останні 8 прогнозів:</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block" /> точний рахунок</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> правильний результат</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> промах</span>
+                  <span className="text-gray-300 dark:text-gray-700">|</span>
+                  <span><span className="font-medium">PPP</span> = бали &divide; прогнози &nbsp;·&nbsp; <span className="text-green-500">↑</span> зростає &nbsp;·&nbsp; <span className="text-red-400">↓</span> падає</span>
+                </div>
               </div>
 
               {leaderboard.length === 0 && (
@@ -304,7 +317,7 @@ export default async function HomePage() {
                       <th className="w-10 px-3 py-2.5 text-center">#</th>
                       <th className="px-3 py-2.5 text-left">Учасник</th>
                       <th className="px-3 py-2.5 text-left whitespace-nowrap">Форма</th>
-                      <th className="px-3 py-2.5 text-right whitespace-nowrap">Ефективність</th>
+                      <th className="px-3 py-2.5 text-right whitespace-nowrap">PPP</th>
                     </tr>
                   </thead>
                   <tbody>

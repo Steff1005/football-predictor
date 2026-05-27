@@ -238,7 +238,7 @@ export default async function HomePage() {
                     ? <span className="flex-shrink-0"><RankBadge rank={myRank} /></span>
                     : <span className="text-sm text-gray-400 dark:text-gray-500 font-medium flex-shrink-0">#{myRank}</span>
                 )}
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight truncate">
+                <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight truncate min-w-0">
                   {pdn(myProfile)}
                 </h2>
               </div>
@@ -284,8 +284,7 @@ export default async function HomePage() {
                       <th className="w-10 px-3 py-2.5 text-center">#</th>
                       <th className="px-3 py-2.5 text-left">Учасник</th>
                       <th className="px-3 py-2.5 text-left whitespace-nowrap">Форма</th>
-                      <th className="px-3 py-2.5 text-right whitespace-nowrap">Бали</th>
-                      <th className="px-3 py-2.5 text-right whitespace-nowrap">Прогн.</th>
+                      <th className="px-3 py-2.5 text-right whitespace-nowrap">Прогн./Бали</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -313,8 +312,10 @@ export default async function HomePage() {
                               }
                             </div>
                           </td>
-                          <td className="px-3 py-3 text-right font-bold text-green-500 dark:text-green-400 tabular-nums">{fmtNum(p.total_points)}</td>
-                          <td className="px-3 py-3 text-right text-xs text-gray-400 dark:text-gray-500 tabular-nums">{fmtNum(p.total_predictions)}</td>
+                          <td className="px-3 py-3 text-right">
+                            <div className="font-bold text-green-500 dark:text-green-400 tabular-nums leading-tight">{fmtNum(p.total_predictions)}/{fmtNum(p.total_points)}</div>
+                            <div className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">прогн./бали</div>
+                          </td>
                         </tr>
                       )
                     })}
@@ -341,8 +342,8 @@ export default async function HomePage() {
                           </span>
                         </a>
                         <div className="flex-shrink-0 text-right ml-1">
-                          <div className="font-bold text-green-500 dark:text-green-400 text-sm leading-tight">{fmtNum(p.total_points)}</div>
-                          <div className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight">{fmtNum(p.total_predictions)} прогн.</div>
+                          <div className="font-bold text-green-500 dark:text-green-400 text-sm leading-tight tabular-nums">{fmtNum(p.total_predictions)}/{fmtNum(p.total_points)}</div>
+                          <div className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">прогн./бали</div>
                         </div>
                       </div>
                       {form.length > 0 && (
@@ -367,8 +368,8 @@ export default async function HomePage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                        <th className="sticky left-0 z-10 bg-white dark:bg-gray-900 text-center px-2 py-3" style={{width:'48px'}}>#</th>
-                        <th className="sticky z-10 bg-white dark:bg-gray-900 text-left px-3 py-3 border-r border-gray-200 dark:border-gray-800 whitespace-nowrap" style={{left:'48px', minWidth:'130px'}}>Учасник</th>
+                        <th className="text-center px-2 py-3" style={{width:'40px'}}>#</th>
+                        <th className="sticky left-0 z-10 bg-white dark:bg-gray-900 text-left px-3 py-3 border-r border-gray-200 dark:border-gray-800 whitespace-nowrap" style={{minWidth:'130px'}}>Учасник</th>
                         <th className="text-right px-3 py-3 whitespace-nowrap">Прогн.</th>
                         <th className="text-right px-3 py-3 whitespace-nowrap">Рез-ти</th>
                         <th className="text-right px-3 py-3 whitespace-nowrap">% рез.</th>
@@ -387,8 +388,8 @@ export default async function HomePage() {
                         return (
                           <tr key={p.id}
                             className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}>
-                            <td className={`sticky left-0 z-10 px-2 py-2.5 text-center ${isMe ? 'bg-green-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'}`} style={{width:'48px'}}><RankBadge rank={idx + 1} /></td>
-                            <td className={`sticky z-10 px-3 py-2.5 border-r border-gray-200 dark:border-gray-800 ${isMe ? 'bg-green-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'}`} style={{left:'48px'}}>
+                            <td className="px-2 py-2.5 text-center" style={{width:'40px'}}><RankBadge rank={idx + 1} /></td>
+                            <td className={`sticky left-0 z-10 px-3 py-2.5 border-r border-gray-200 dark:border-gray-800 ${isMe ? 'bg-green-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'}`}>
                               <a href={`/players/${p.id}`} className="flex items-center gap-2 hover:opacity-75 transition-opacity">
                                 <ProfileAvatar profile={p} sizeCls="w-6 h-6" textCls="text-[10px]" />
                                 <span className="font-medium text-gray-900 dark:text-white truncate">

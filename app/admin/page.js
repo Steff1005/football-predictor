@@ -6,10 +6,11 @@ import AdminPanel from './AdminPanel'
 
 export default function AdminPage() {
   const router  = useRouter()
-  const [ready,    setReady]    = useState(false)
-  const [email,    setEmail]    = useState('')
-  const [matches,  setMatches]  = useState([])
-  const [profiles, setProfiles] = useState([])
+  const [ready,       setReady]       = useState(false)
+  const [email,       setEmail]       = useState('')
+  const [matches,     setMatches]     = useState([])
+  const [profiles,    setProfiles]    = useState([])
+  const [tournaments, setTournaments] = useState([])
 
   useEffect(() => {
     async function init() {
@@ -20,6 +21,7 @@ export default function AdminPage() {
         const data = await fetchAdminData()
         setMatches(data.matches)
         setProfiles(data.profiles)
+        setTournaments(data.tournaments)
       } catch {
         // fetchAdminData throws if session somehow changed; redirect cleanly
         router.replace('/')
@@ -52,7 +54,7 @@ export default function AdminPage() {
         </span>
       </div>
 
-      <AdminPanel matches={matches} profiles={profiles} />
+      <AdminPanel matches={matches} profiles={profiles} tournaments={tournaments} />
     </div>
   )
 }

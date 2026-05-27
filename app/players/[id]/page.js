@@ -104,7 +104,7 @@ export default async function PlayerProfilePage({ params }) {
 
   const allPredictions = rawPredictions
     .map(p => ({ ...p, match: matchMap[p.match_id] }))
-    .filter(p => p.match)
+    .filter(p => p.match && p.match.status === 'finished')
     .sort((a, b) => new Date(b.match.kickoff_at) - new Date(a.match.kickoff_at))
 
   const totalPoints     = allPredictions.reduce((s, p) => s + (p.points ?? 0), 0)

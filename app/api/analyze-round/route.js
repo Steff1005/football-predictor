@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { isAdminEmail } from '../../../lib/admin'
 
 function displayName(profile) {
   return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || 'Невідомий'
@@ -21,7 +22,7 @@ export async function POST(request) {
       { cookies: { getAll() { return cookieStore.getAll() } } }
     )
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session || session.user.email !== process.env.ADMIN_EMAIL) {
+    if (!session || !isAdminEmail(session.user.email)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

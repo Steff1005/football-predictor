@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { useToast } from './ToastProvider'
 
 function getClean(value) {
   const digits = value.replace(/[^0-9]/g, '')
@@ -34,6 +35,7 @@ const blockKeys = e => {
 }
 
 export default function MatchCard({ match, userPrediction, userId, highlight }) {
+  const toast = useToast()
   const [home, setHome] = useState(userPrediction?.predicted_home ?? '')
   const [away, setAway] = useState(userPrediction?.predicted_away ?? '')
   const [saving, setSaving] = useState(false)
@@ -46,7 +48,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
   const isValid    = home !== '' && away !== '' && Number(home) >= 0 && Number(away) >= 0 && Number(home) <= 9 && Number(away) <= 9
 
   async function savePrediction() {
-    if (!userId) { alert('Спочатку увійди в акаунт!'); return }
+    if (!userId) { toast('Спочатку увійди в акаунт', 'error'); return }
     setSaving(true)
     const { error } = await supabase.from('predictions').upsert({
       user_id: userId,
@@ -56,7 +58,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
     }, { onConflict: 'user_id,match_id' })
     setSaving(false)
     if (!error) setSaved(true)
-    else alert('Помилка: ' + error.message)
+    else toast('Помилка: ' + error.message, 'error')
   }
 
   const kickoff = new Date(match.kickoff_at)

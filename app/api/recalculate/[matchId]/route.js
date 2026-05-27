@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { rebuildProbabilityCache } from '../../../../lib/probability'
+import { isAdminEmail } from '../../../../lib/admin'
 
 const adminDb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -35,7 +36,7 @@ export async function GET(request, { params }) {
       { cookies: { getAll() { return cookieStore.getAll() } } }
     )
     const { data: { session } } = await supabase.auth.getSession()
-    if (session?.user?.email === process.env.ADMIN_EMAIL) authorized = true
+    if (isAdminEmail(session?.user?.email)) authorized = true
   }
 
   if (!authorized) return Response.json({ error: 'Unauthorized' }, { status: 401 })

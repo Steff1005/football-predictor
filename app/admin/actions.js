@@ -2,6 +2,7 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
+import { isAdminEmail } from '../../lib/admin'
 
 async function getSupabase() {
   const cookieStore = await cookies()
@@ -16,7 +17,7 @@ export async function checkAdmin() {
   try {
     const supabase = await getSupabase()
     const { data: { session } } = await supabase.auth.getSession()
-    const isAdmin = session?.user?.email === process.env.ADMIN_EMAIL
+    const isAdmin = isAdminEmail(session?.user?.email)
     return { isAdmin, email: isAdmin ? session.user.email : null }
   } catch {
     return { isAdmin: false, email: null }
@@ -25,21 +26,39 @@ export async function checkAdmin() {
 
 export async function fetchAdminData() {
   const db = await getAdminDb()
-  const [{ data: matches }, { data: profiles }] = await Promise.all([
+  const [{ data: matches }, { data: profiles }, { data: tournaments }] = await Promise.all([
     db.from('matches')
       .select('id, tournament_id, home_team, away_team, home_score, away_score, status, kickoff_at, round')
       .order('kickoff_at', { ascending: false }),
     db.from('profiles')
       .select('id, username, first_name, last_name, total_points, total_predictions')
       .order('total_points', { ascending: false }),
+    db.from('tournaments')
+      .select('id, name, is_active')
+      .order('name'),
   ])
-  return { matches: matches ?? [], profiles: profiles ?? [] }
+  return { matches: matches ?? [], profiles: profiles ?? [], tournaments: tournaments ?? [] }
+}
+
+export async function fetchTournamentStats() {
+  const db = await getAdminDb()
+  const { data: matches } = await db
+    .from('matches')
+    .select('id, tournament_id, status')
+
+  const byTournament = {}
+  for (const m of matches ?? []) {
+    if (!byTournament[m.tournament_id]) byTournament[m.tournament_id] = { total: 0, finished: 0 }
+    byTournament[m.tournament_id].total++
+    if (m.status === 'finished') byTournament[m.tournament_id].finished++
+  }
+  return byTournament
 }
 
 async function getAdminDb() {
   const supabase = await getSupabase()
   const { data: { session } } = await supabase.auth.getSession()
-  if (!session || session.user.email !== process.env.ADMIN_EMAIL) {
+  if (!session || !isAdminEmail(session.user.email)) {
     throw new Error('Unauthorized')
   }
   return createClient(

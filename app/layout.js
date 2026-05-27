@@ -6,6 +6,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import ThemeProvider from '@/components/ThemeProvider'
 import Navbar from '@/components/Navbar'
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
+import ToastProvider from '@/components/ToastProvider'
 
 export const metadata = {
   title: 'Kickoff',
@@ -69,10 +70,12 @@ export default async function RootLayout({ children }) {
       </head>
       <body className="dark:bg-gray-950 text-gray-900 dark:text-white min-h-screen">
         <ThemeProvider>
-          <Navbar initialUser={session?.user ?? null} initialProfile={initialProfile} initialTheme={themeCookie === 'light' ? 'light' : 'dark'} />
-          <main className="max-w-6xl mx-auto px-4 py-6">
-            {children}
-          </main>
+          <ToastProvider>
+            <Navbar initialUser={session?.user ?? null} initialProfile={initialProfile} initialTheme={themeCookie === 'light' ? 'light' : 'dark'} />
+            <main className="max-w-6xl mx-auto px-4 py-6">
+              {children}
+            </main>
+          </ToastProvider>
         </ThemeProvider>
         <ServiceWorkerRegister />
         <Analytics />

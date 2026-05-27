@@ -29,7 +29,7 @@ export async function fetchAdminData() {
   const [{ data: matches }, { data: profiles }, { data: tournaments }] = await Promise.all([
     db.from('matches')
       .select('id, tournament_id, home_team, away_team, home_score, away_score, status, kickoff_at, round')
-      .order('kickoff_at', { ascending: false }),
+      .order('kickoff_at', { ascending: true }),
     db.from('profiles')
       .select('id, username, first_name, last_name, total_points, total_predictions')
       .order('total_points', { ascending: false }),

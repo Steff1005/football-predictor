@@ -68,15 +68,23 @@ function MatchesTab({ matches, setMatches, tournaments }) {
     setRecalcId(null)
   }
 
-  const visible = matches.filter(m => {
-    if (statusFilter !== 'all' && m.status !== statusFilter) return false
-    if (tournamentFilter !== 'all' && m.tournament_id !== tournamentFilter) return false
-    if (filter) {
-      const q = filter.toLowerCase()
-      if (!m.home_team?.toLowerCase().includes(q) && !m.away_team?.toLowerCase().includes(q)) return false
-    }
-    return true
-  })
+  const STATUS_ORDER = { scheduled: 0, live: 1, finished: 2 }
+
+  const visible = matches
+    .filter(m => {
+      if (statusFilter !== 'all' && m.status !== statusFilter) return false
+      if (tournamentFilter !== 'all' && m.tournament_id !== tournamentFilter) return false
+      if (filter) {
+        const q = filter.toLowerCase()
+        if (!m.home_team?.toLowerCase().includes(q) && !m.away_team?.toLowerCase().includes(q)) return false
+      }
+      return true
+    })
+    .sort((a, b) => {
+      const statusDiff = (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3)
+      if (statusDiff !== 0) return statusDiff
+      return new Date(a.kickoff_at) - new Date(b.kickoff_at)
+    })
 
   const tournamentMap = {}
   ;(tournaments ?? []).forEach(t => { tournamentMap[t.id] = t.name })

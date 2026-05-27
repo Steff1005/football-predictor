@@ -100,6 +100,30 @@ export async function updateProfile(userId, { first_name, last_name, username })
   }
 }
 
+export async function fetchPredictionRegistry(tournamentId) {
+  try {
+    const db = await getAdminDb()
+
+    const { data: matches } = await db
+      .from('matches')
+      .select('id, home_team, away_team, kickoff_at, status, round')
+      .eq('tournament_id', tournamentId)
+      .order('kickoff_at', { ascending: true })
+
+    const matchIds = (matches ?? []).map(m => m.id)
+    if (!matchIds.length) return { matches: [], predictions: [] }
+
+    const { data: predictions } = await db
+      .from('predictions')
+      .select('user_id, match_id')
+      .in('match_id', matchIds)
+
+    return { matches: matches ?? [], predictions: predictions ?? [] }
+  } catch (e) {
+    return { error: e.message }
+  }
+}
+
 export async function syncAllProfileStats() {
   try {
     const db = await getAdminDb()

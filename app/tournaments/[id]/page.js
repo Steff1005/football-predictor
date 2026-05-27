@@ -95,7 +95,7 @@ export default async function TournamentPage({ params, searchParams }) {
 
   const matchIds         = allMatches.map(m => m.id)
   const now              = new Date()
-  const finishedMatchIds = allMatches.filter(m => new Date(m.kickoff_at) <= now).map(m => m.id)
+  const finishedMatchIds = allMatches.filter(m => m.status === 'finished').map(m => m.id)
 
   // Current user's predictions (for matches tab progress bar)
   let userPredictions = {}
@@ -208,7 +208,7 @@ export default async function TournamentPage({ params, searchParams }) {
     predsByMatch[p.match_id].push(p)
   }
   const finishedMatches = allMatches
-    .filter(m => new Date(m.kickoff_at) <= now)
+    .filter(m => m.status === 'finished')
     .sort((a, b) => new Date(b.kickoff_at) - new Date(a.kickoff_at))
 
   const roundLabels = roundTables.map(rt => rt.label)

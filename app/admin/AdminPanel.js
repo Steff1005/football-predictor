@@ -1,6 +1,6 @@
 'use client'
-import { useState } from 'react'
-import { updateMatch, updateProfile, mergeProfiles, fetchTournamentStats, syncAllProfileStats } from './actions'
+import { useState, useEffect } from 'react'
+import { updateMatch, updateProfile, mergeProfiles, fetchTournamentStats, syncAllProfileStats, fetchPredictionRegistry } from './actions'
 
 const INPUT  = 'w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm'
 const BTN_SM = 'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors'
@@ -599,6 +599,196 @@ function AnalyticsTab({ matches, profiles: initProfiles, tournaments, setProfile
   )
 }
 
+// ── Registry tab ────────────────────────────────────────────────────────────
+
+function RegistryTab({ profiles, tournaments }) {
+  const [tournamentId, setTournamentId] = useState(tournaments[0]?.id ?? '')
+  const [data,         setData]         = useState(null)
+  const [loading,      setLoading]      = useState(false)
+  const [error,        setError]        = useState('')
+
+  async function load(tid) {
+    if (!tid) return
+    setLoading(true)
+    setError('')
+    setData(null)
+    const result = await fetchPredictionRegistry(tid)
+    setLoading(false)
+    if (result.error) { setError(result.error); return }
+    setData(result)
+  }
+
+  // Load on mount
+  useEffect(() => { load(tournamentId) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleTournamentChange(tid) {
+    setTournamentId(tid)
+    load(tid)
+  }
+
+  const matches     = data?.matches ?? []
+  const predictions = data?.predictions ?? []
+
+  // Build presence set: "userId|matchId"
+  const presence = new Set(predictions.map(p => `${p.user_id}|${p.match_id}`))
+
+  // Only show participants who have at least one prediction in this tournament
+  const activeUserIds   = new Set(predictions.map(p => p.user_id))
+  const activeProfiles  = profiles.filter(p => activeUserIds.has(p.id))
+
+  // Per-participant total
+  const userTotal = {}
+  predictions.forEach(p => { userTotal[p.user_id] = (userTotal[p.user_id] ?? 0) + 1 })
+
+  function shortName(p) {
+    if (p.first_name && p.last_name) return `${p.first_name[0]}. ${p.last_name}`
+    return p.first_name || p.username || '—'
+  }
+
+  function matchLabel(m) {
+    return `${m.home_team} vs ${m.away_team}`
+  }
+
+  function matchDate(m) {
+    return new Date(m.kickoff_at).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Kyiv' })
+  }
+
+  const STATUS_DOT = { finished: '●', live: '🔴', scheduled: '○' }
+
+  return (
+    <div>
+      {/* Tournament selector */}
+      <div className="mb-5 flex items-center gap-3 flex-wrap">
+        <select
+          value={tournamentId}
+          onChange={e => handleTournamentChange(e.target.value)}
+          className={INPUT + ' sm:w-64'}
+        >
+          {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+        {data && (
+          <span className="text-sm text-gray-400 dark:text-gray-500">
+            {matches.length} матчів · {activeProfiles.length} учасників · {predictions.length} прогнозів
+          </span>
+        )}
+      </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-16">
+          <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+
+      {!loading && data && matches.length === 0 && (
+        <p className="text-center py-12 text-gray-400 dark:text-gray-600">Матчів у цьому турнірі немає</p>
+      )}
+
+      {!loading && data && matches.length > 0 && activeProfiles.length > 0 && (
+        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
+          <table className="text-sm border-collapse min-w-full">
+            <thead>
+              {/* Participant names header */}
+              <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+                <th className="sticky left-0 z-20 bg-gray-50 dark:bg-gray-900 text-left px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap border-r border-gray-200 dark:border-gray-800 min-w-[200px]">
+                  Матч
+                </th>
+                <th className="px-2 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center whitespace-nowrap min-w-[40px]">
+                  Дата
+                </th>
+                {activeProfiles.map(p => (
+                  <th key={p.id} className="px-2 py-2.5 text-center min-w-[52px]">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                      {shortName(p)}
+                    </span>
+                  </th>
+                ))}
+                <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center whitespace-nowrap">
+                  Всього
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {matches.map((m, i) => {
+                const rowTotal = activeProfiles.filter(p => presence.has(`${p.id}|${m.id}`)).length
+                const isFinished = m.status === 'finished'
+                return (
+                  <tr
+                    key={m.id}
+                    className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 ${
+                      i % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-800/20'
+                    }`}
+                  >
+                    <td className="sticky left-0 z-10 bg-white dark:bg-gray-950 px-3 py-2 border-r border-gray-200 dark:border-gray-800">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-xs ${isFinished ? 'text-gray-400' : 'text-green-500'}`}>
+                          {STATUS_DOT[m.status] ?? '○'}
+                        </span>
+                        <span className={`text-xs font-medium whitespace-nowrap ${
+                          isFinished ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'
+                        }`}>
+                          {m.home_team} — {m.away_team}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-2 text-center text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                      {matchDate(m)}
+                    </td>
+                    {activeProfiles.map(p => {
+                      const has = presence.has(`${p.id}|${m.id}`)
+                      return (
+                        <td key={p.id} className="px-2 py-2 text-center">
+                          {has
+                            ? <span className="text-green-500 text-base leading-none" title="Є прогноз">✓</span>
+                            : <span className="text-gray-300 dark:text-gray-700 text-xs">—</span>
+                          }
+                        </td>
+                      )
+                    })}
+                    <td className="px-3 py-2 text-center">
+                      <span className={`text-sm font-bold ${
+                        rowTotal === activeProfiles.length
+                          ? 'text-green-500 dark:text-green-400'
+                          : rowTotal === 0
+                            ? 'text-gray-400 dark:text-gray-600'
+                            : 'text-amber-500 dark:text-amber-400'
+                      }`}>
+                        {rowTotal}/{activeProfiles.length}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+
+            {/* Summary row */}
+            <tfoot>
+              <tr className="border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                <td className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-900 px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase border-r border-gray-200 dark:border-gray-800">
+                  Всього прогнозів
+                </td>
+                <td className="px-2 py-2.5" />
+                {activeProfiles.map(p => (
+                  <td key={p.id} className="px-2 py-2.5 text-center">
+                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                      {userTotal[p.id] ?? 0}
+                    </span>
+                  </td>
+                ))}
+                <td className="px-3 py-2.5 text-center text-sm font-bold text-gray-700 dark:text-gray-300">
+                  {predictions.length}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Root panel ──────────────────────────────────────────────────────────────
 
 const TABS = [
@@ -606,6 +796,7 @@ const TABS = [
   { id: 'profiles',  label: 'Учасники' },
   { id: 'merge',     label: 'Злиття профілів' },
   { id: 'analytics', label: 'Аналітика' },
+  { id: 'registry',  label: 'Реєстр' },
 ]
 
 export default function AdminPanel({ matches: initMatches, profiles: initProfiles, tournaments: initTournaments }) {
@@ -634,6 +825,7 @@ export default function AdminPanel({ matches: initMatches, profiles: initProfile
       {tab === 'profiles'  && <ProfilesTab  profiles={profiles} setProfiles={setProfiles} />}
       {tab === 'merge'     && <MergeTab     profiles={profiles} setProfiles={setProfiles} setTab={setTab} />}
       {tab === 'analytics' && <AnalyticsTab matches={matches}   profiles={profiles} tournaments={tournaments} setProfiles={setProfiles} />}
+      {tab === 'registry'  && <RegistryTab  profiles={profiles} tournaments={tournaments} />}
     </div>
   )
 }

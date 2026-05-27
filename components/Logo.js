@@ -1,8 +1,11 @@
-import Link from 'next/link'
+'use client'
+import { confirmLeave } from '@/lib/unsaved-guard'
 
 export default function Logo({ className = '' }) {
   return (
-    <Link href="/" className={`flex items-center flex-shrink-0 ${className}`}>
+    <a href="/"
+      className={`flex items-center flex-shrink-0 ${className}`}
+      onClick={e => { if (!confirmLeave()) e.preventDefault() }}>
       <svg viewBox="0 0 220 56" width="172" height="44" xmlns="http://www.w3.org/2000/svg" aria-label="Kickoff">
         {/* Green icon box */}
         <rect x="4" y="4" width="48" height="48" rx="10" fill="#16a34a"/>
@@ -18,6 +21,6 @@ export default function Logo({ className = '' }) {
           <tspan className="fill-green-600 dark:fill-green-400" fontStyle="italic">off</tspan>
         </text>
       </svg>
-    </Link>
+    </a>
   )
 }

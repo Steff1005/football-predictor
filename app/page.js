@@ -15,18 +15,29 @@ export const metadata = {
 
 const LEAGUE_EMOJI = { WC: '🌍', CL: '⭐', EC: '🇪🇺' }
 
-function profileDisplayName(p) {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function pdn(p) {
   const full = [p?.first_name, p?.last_name].filter(Boolean).join(' ')
   return full || p?.username || 'Гравець'
 }
 
-function profileInitials(p) {
-  const n = profileDisplayName(p)
+function pini(p) {
+  const n = pdn(p)
   return n.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?'
 }
 
-function ProfileAvatar({ profile, sizeCls = 'w-9 h-9', textCls = 'text-xs' }) {
-  const ini = profileInitials(profile)
+function fmtNum(n) {
+  if (n == null) return '0'
+  return new Intl.NumberFormat('uk-UA').format(n)
+}
+
+function pct(a, b) {
+  return b > 0 ? Math.round(a / b * 100) : 0
+}
+
+function ProfileAvatar({ profile, sizeCls = 'w-8 h-8', textCls = 'text-xs' }) {
+  const ini = pini(profile)
   if (profile?.avatar_url) {
     return <img src={profile.avatar_url} alt="" className={`${sizeCls} rounded-full object-cover flex-shrink-0`} />
   }
@@ -38,19 +49,52 @@ function ProfileAvatar({ profile, sizeCls = 'w-9 h-9', textCls = 'text-xs' }) {
 }
 
 function RankBadge({ rank }) {
-  if (rank === 1) return <span className="text-xl">🥇</span>
-  if (rank === 2) return <span className="text-xl">🥈</span>
-  if (rank === 3) return <span className="text-xl">🥉</span>
+  if (rank === 1) return <span className="text-xl leading-none">🥇</span>
+  if (rank === 2) return <span className="text-xl leading-none">🥈</span>
+  if (rank === 3) return <span className="text-xl leading-none">🥉</span>
   return <span className="text-sm font-bold text-gray-400 dark:text-gray-500">{rank}</span>
 }
 
-// pts: undefined = no prediction, null = unscored, 0/1/4 = scored
+// pts: undefined = no prediction shown, null = unscored, 0/1/4 = scored
 function FormDot({ pts }) {
-  if (pts == null)  return <span className="w-2.5 h-2.5 rounded-full bg-gray-200 dark:bg-gray-700 inline-block" />
-  if (pts === 4)    return <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block" />
-  if (pts === 1)    return <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />
-  return              <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" />
+  if (pts == null)  return <span className="w-2.5 h-2.5 rounded-full bg-gray-200 dark:bg-gray-700 inline-block flex-shrink-0" />
+  if (pts === 4)    return <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block flex-shrink-0" title="4 бали — точний рахунок" />
+  if (pts === 1)    return <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block flex-shrink-0" title="1 бал — правильний результат" />
+  return              <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block flex-shrink-0" title="0 балів" />
 }
+
+function MiniBar({ value, max = 100, colorCls = 'bg-green-500' }) {
+  const w = max > 0 ? Math.round(value / max * 100) : 0
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="tabular-nums text-xs w-8 text-right">{value}%</span>
+      <div className="w-14 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex-shrink-0">
+        <div className={`h-full ${colorCls} rounded-full`} style={{ width: `${w}%` }} />
+      </div>
+    </div>
+  )
+}
+
+// ── Data helpers ──────────────────────────────────────────────────────────────
+
+async function fetchPagedPreds(supabase) {
+  const PAGE = 1000
+  let all = [], from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('predictions')
+      .select('user_id, match_id, points')
+      .not('points', 'is', null)
+      .range(from, from + PAGE - 1)
+    if (error || !data?.length) break
+    all = all.concat(data)
+    if (data.length < PAGE) break
+    from += PAGE
+  }
+  return all
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
   const cookieStore = await cookies()
@@ -63,7 +107,7 @@ export default async function HomePage() {
   const { data: { session } } = await supabase.auth.getSession()
   const userId = session?.user?.id
 
-  // ── Core data ─────────────────────────────────────────────────────────────
+  // ── Phase 1: core ────────────────────────────────────────────────────────────
   const [{ data: tournaments }, { data: allProfiles }] = await Promise.all([
     supabase.from('tournaments').select('*'),
     supabase.from('profiles')
@@ -72,94 +116,129 @@ export default async function HomePage() {
   ])
 
   const now = new Date()
+  const activeTournaments  = (tournaments ?? []).filter(t =>  t.is_active).sort((a, b) => a.name.localeCompare(b.name, 'uk'))
+  const finishedTournaments = (tournaments ?? []).filter(t => !t.is_active).sort((a, b) => b.name.localeCompare(a.name, 'uk'))
+  const activeTids   = activeTournaments.map(t => t.id)
+  const finishedTids = finishedTournaments.map(t => t.id)
 
-  const activeTournaments = (tournaments ?? [])
-    .filter(t => t.is_active)
-    .sort((a, b) => a.name.localeCompare(b.name, 'uk'))
+  // ── Phase 2: match metadata ───────────────────────────────────────────────────
+  const [activeMatchesResult, finishedTourneyMatchesResult] = await Promise.all([
+    activeTids.length > 0
+      ? supabase.from('matches').select('id, tournament_id, status, kickoff_at').in('tournament_id', activeTids).order('kickoff_at', { ascending: false })
+      : { data: [] },
+    finishedTids.length > 0
+      ? supabase.from('matches').select('id, tournament_id, kickoff_at').in('tournament_id', finishedTids)
+      : { data: [] },
+  ])
 
-  const finishedTournaments = (tournaments ?? [])
-    .filter(t => !t.is_active)
-    .sort((a, b) => b.name.localeCompare(a.name, 'uk'))
+  const allActiveMatches        = activeMatchesResult.data ?? []
+  const finishedTourneyMatches  = finishedTourneyMatchesResult.data ?? []
 
-  const activeTids = activeTournaments.map(t => t.id)
-
-  // ── Active match data ─────────────────────────────────────────────────────
-  let allActiveMatches = []
-  if (activeTids.length > 0) {
-    const { data } = await supabase
-      .from('matches')
-      .select('id, tournament_id, status, kickoff_at')
-      .in('tournament_id', activeTids)
-      .order('kickoff_at', { ascending: false })
-    allActiveMatches = data ?? []
+  // Match lookup maps
+  const matchDateMap = {}
+  const matchTidMap  = {}
+  for (const m of allActiveMatches) {
+    matchDateMap[m.id] = m.kickoff_at
+    matchTidMap[m.id]  = m.tournament_id
+  }
+  for (const m of finishedTourneyMatches) {
+    matchDateMap[m.id] = m.kickoff_at
+    matchTidMap[m.id]  = m.tournament_id
   }
 
-  // Per-tournament stats + upcoming match IDs
+  // Active tournament stats
   const activeMatchStats = {}
   for (const m of allActiveMatches) {
-    if (!activeMatchStats[m.tournament_id]) {
-      activeMatchStats[m.tournament_id] = { total: 0, finished: 0, upcomingIds: [] }
-    }
+    if (!activeMatchStats[m.tournament_id]) activeMatchStats[m.tournament_id] = { total: 0, finished: 0, upcomingIds: [] }
     const s = activeMatchStats[m.tournament_id]
     s.total++
     if (m.status === 'finished') s.finished++
     else if (new Date(m.kickoff_at) > now) s.upcomingIds.push(m.id)
   }
 
-  // Last 8 finished matches across active tournaments (newest → oldest; reversed for strip display)
-  const recentFinishedIds = allActiveMatches
-    .filter(m => m.status === 'finished')
-    .slice(0, 8)
-    .reverse()
-    .map(m => m.id)
-
   const allUpcomingIds = activeTournaments.flatMap(t => activeMatchStats[t.id]?.upcomingIds ?? [])
 
-  // ── Predictions data ──────────────────────────────────────────────────────
-  const [formPredsResult, userUpcomingPredsResult] = await Promise.all([
-    recentFinishedIds.length > 0
-      ? supabase.from('predictions').select('user_id, match_id, points').in('match_id', recentFinishedIds)
-      : { data: [] },
+  // ── Phase 3: predictions ──────────────────────────────────────────────────────
+  const [allScoredPreds, userUpcomingPredsResult] = await Promise.all([
+    fetchPagedPreds(supabase),
     userId && allUpcomingIds.length > 0
       ? supabase.from('predictions').select('match_id').eq('user_id', userId).in('match_id', allUpcomingIds)
-      : { data: [] },
+      : Promise.resolve({ data: [] }),
   ])
-
-  // form map: { userId: { matchId: points } }
-  const formMap = {}
-  for (const p of formPredsResult.data ?? []) {
-    if (!formMap[p.user_id]) formMap[p.user_id] = {}
-    formMap[p.user_id][p.match_id] = p.points
-  }
 
   const userPredictedIds = new Set((userUpcomingPredsResult.data ?? []).map(p => p.match_id))
 
-  // ── Leaderboard (profiles with at least 1 prediction) ────────────────────
+  // ── Analytics: per-user stats ─────────────────────────────────────────────────
+  const userAnalytics = {}
+  for (const p of allScoredPreds) {
+    if (!userAnalytics[p.user_id]) userAnalytics[p.user_id] = { scored: 0, exact: 0, correct: 0 }
+    const s = userAnalytics[p.user_id]
+    s.scored++
+    if (p.points === 4) s.exact++
+    if (p.points === 1) s.correct++
+  }
+
+  // ── Form: per-user last 8 scored predictions (by match date desc) ─────────────
+  const userFormRaw = {}
+  for (const p of allScoredPreds) {
+    const date = matchDateMap[p.match_id]
+    if (!date) continue
+    if (!userFormRaw[p.user_id]) userFormRaw[p.user_id] = []
+    userFormRaw[p.user_id].push({ pts: p.points, date })
+  }
+  const userFormData = {}
+  for (const [uid, entries] of Object.entries(userFormRaw)) {
+    userFormData[uid] = entries
+      .sort((a, b) => b.date.localeCompare(a.date)) // newest first
+      .slice(0, 8)
+      .reverse()                                      // oldest-first for left→right display
+  }
+
+  // ── Hall of fame: top 3 per finished tournament ───────────────────────────────
+  const hofPts = {}
+  for (const p of allScoredPreds) {
+    const tid = matchTidMap[p.match_id]
+    if (!tid || !finishedTids.includes(tid)) continue
+    if (!hofPts[tid]) hofPts[tid] = {}
+    hofPts[tid][p.user_id] = (hofPts[tid][p.user_id] ?? 0) + p.points
+  }
+  const profileMap = Object.fromEntries((allProfiles ?? []).map(p => [p.id, p]))
+  const hofRankings = {}
+  for (const [tid, ptsMap] of Object.entries(hofPts)) {
+    hofRankings[tid] = Object.entries(ptsMap)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 3)
+      .map(([uid, pts]) => ({ uid, pts, profile: profileMap[uid] ?? null }))
+      .filter(r => r.profile)
+  }
+
+  // ── Leaderboard ───────────────────────────────────────────────────────────────
   const leaderboard = (allProfiles ?? []).filter(p => (p.total_predictions ?? 0) > 0)
 
-  // ── Community stats ───────────────────────────────────────────────────────
+  // ── Community stats ───────────────────────────────────────────────────────────
   const totalParticipants = leaderboard.length
   const totalPredictions  = leaderboard.reduce((s, p) => s + (p.total_predictions ?? 0), 0)
   const totalPoints       = leaderboard.reduce((s, p) => s + (p.total_points ?? 0), 0)
   const avgPoints         = totalParticipants > 0 ? Math.round(totalPoints / totalParticipants) : 0
 
-  // ── Current user data ─────────────────────────────────────────────────────
+  // ── Current user ──────────────────────────────────────────────────────────────
   const myProfile = userId ? (allProfiles ?? []).find(p => p.id === userId) ?? null : null
   const myRank    = myProfile ? leaderboard.findIndex(p => p.id === userId) + 1 : null
 
-  // Per active-tournament prediction progress
   const tourneyProgress = {}
   for (const t of activeTournaments) {
-    const stats = activeMatchStats[t.id] ?? { total: 0, finished: 0, upcomingIds: [] }
-    const upcoming  = stats.upcomingIds.length
-    const predicted = userId ? stats.upcomingIds.filter(id => userPredictedIds.has(id)).length : 0
-    tourneyProgress[t.id] = { upcoming, predicted, total: stats.total, finished: stats.finished }
+    const s = activeMatchStats[t.id] ?? { total: 0, finished: 0, upcomingIds: [] }
+    const upcoming  = s.upcomingIds.length
+    const predicted = userId ? s.upcomingIds.filter(id => userPredictedIds.has(id)).length : 0
+    tourneyProgress[t.id] = { upcoming, predicted, total: s.total, finished: s.finished }
   }
+
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
 
-      {/* ── Personal welcome card ───────────────────────────────────────── */}
+      {/* Personal welcome card */}
       {myProfile && (
         <div className="bg-gradient-to-r from-green-500/10 to-transparent dark:from-green-500/15 dark:to-transparent rounded-2xl p-5 border border-green-500/20">
           <div className="flex items-center gap-4">
@@ -167,107 +246,75 @@ export default async function HomePage() {
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-1">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight truncate">
-                  {profileDisplayName(myProfile)}
+                  {pdn(myProfile)}
                 </h2>
                 {myRank && (
                   myRank <= 3
-                    ? <span className="text-lg leading-none"><RankBadge rank={myRank} /></span>
+                    ? <RankBadge rank={myRank} />
                     : <span className="text-sm text-gray-400 dark:text-gray-500 font-medium">#{myRank} місце</span>
                 )}
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-0 text-sm">
-                <span className="font-semibold text-green-600 dark:text-green-400">
-                  {myProfile.total_points ?? 0} балів
-                </span>
-                <span className="text-gray-400 dark:text-gray-500">
-                  {myProfile.total_predictions ?? 0} прогнозів
-                </span>
+                <span className="font-semibold text-green-600 dark:text-green-400">{fmtNum(myProfile.total_points)} балів</span>
+                <span className="text-gray-400 dark:text-gray-500">{fmtNum(myProfile.total_predictions)} прогнозів</span>
               </div>
             </div>
-            <a href="/profile"
-              className="text-xs text-gray-400 dark:text-gray-500 hover:text-green-500 dark:hover:text-green-400 transition-colors whitespace-nowrap flex-shrink-0">
+            <a href="/profile" className="text-xs text-gray-400 dark:text-gray-500 hover:text-green-500 dark:hover:text-green-400 transition-colors whitespace-nowrap flex-shrink-0">
               Профіль →
             </a>
           </div>
         </div>
       )}
 
-      {/* ── Main grid ───────────────────────────────────────────────────── */}
+      {/* Main 2-column grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Leaderboard ──────────────────────────────────────────────────── */}
+        {/* ── Leaderboard ─────────────────────────────────────────────────── */}
         <div className="lg:col-span-2">
-          <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
-            Загальний рейтинг
-          </h2>
+          <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Загальний рейтинг</h2>
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
 
-            {/* Form strip legend */}
-            {recentFinishedIds.length > 0 && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
-                <span className="font-medium">Форма</span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block" /> 4 бали
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> 1 бал
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> 0 балів
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-gray-200 dark:bg-gray-700 inline-block" /> без прогнозу
-                </span>
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
+              <span className="font-medium">Форма (8 останніх)</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block" /> 4 бали</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> 1 бал</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> 0 балів</span>
+            </div>
 
             {leaderboard.length === 0 && (
-              <div className="text-center py-12 text-gray-400 dark:text-gray-600 text-sm">
-                Ще немає учасників
-              </div>
+              <div className="text-center py-12 text-gray-400 dark:text-gray-600 text-sm">Ще немає учасників</div>
             )}
 
             {leaderboard.map((p, idx) => {
-              const rank = idx + 1
-              const isMe = p.id === userId
-              const form = recentFinishedIds.map(mid => {
-                const entry = formMap[p.id]
-                return entry ? entry[mid] : undefined
-              })
+              const rank  = idx + 1
+              const isMe  = p.id === userId
+              const form  = userFormData[p.id] ?? []
               return (
                 <div key={p.id}
-                  className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 ${
-                    isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''
-                  }`}>
-                  {/* Rank badge */}
-                  <div className="w-7 text-center flex-shrink-0">
-                    <RankBadge rank={rank} />
-                  </div>
+                  className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}>
 
-                  {/* Avatar */}
-                  <ProfileAvatar profile={p} sizeCls="w-8 h-8" textCls="text-xs" />
+                  <div className="w-7 text-center flex-shrink-0"><RankBadge rank={rank} /></div>
 
-                  {/* Name + form strip */}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white truncate leading-snug">
-                      {profileDisplayName(p)}
-                      {isMe && <span className="text-green-500 dark:text-green-400 ml-1 text-xs font-normal">(я)</span>}
-                    </div>
-                    {recentFinishedIds.length > 0 && (
-                      <div className="flex gap-1 mt-1.5">
-                        {form.map((pts, i) => <FormDot key={i} pts={pts} />)}
-                      </div>
-                    )}
+                  {/* Clickable: avatar + name */}
+                  <a href={`/players/${p.id}`} className="flex items-center gap-2 min-w-0 hover:opacity-75 transition-opacity flex-shrink-0">
+                    <ProfileAvatar profile={p} sizeCls="w-8 h-8" textCls="text-xs" />
+                    <span className="text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap max-w-[110px] truncate">
+                      {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
+                    </span>
+                  </a>
+
+                  {/* Form strip */}
+                  <div className="flex gap-1 flex-1 justify-start">
+                    {form.length > 0
+                      ? form.map((entry, i) => <FormDot key={i} pts={entry.pts} />)
+                      : <span className="text-xs text-gray-300 dark:text-gray-600 italic">—</span>
+                    }
                   </div>
 
                   {/* Points */}
-                  <div className="text-right flex-shrink-0 ml-2">
-                    <div className="font-bold text-green-500 dark:text-green-400 leading-tight">
-                      {p.total_points ?? 0}
-                    </div>
-                    <div className="text-xs text-gray-400 dark:text-gray-500 leading-tight">
-                      {p.total_predictions ?? 0} прогн.
-                    </div>
+                  <div className="text-right flex-shrink-0 ml-1">
+                    <div className="font-bold text-green-500 dark:text-green-400 leading-tight">{fmtNum(p.total_points)}</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500 leading-tight">{fmtNum(p.total_predictions)} прогн.</div>
                   </div>
                 </div>
               )
@@ -275,15 +322,13 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* Sidebar ──────────────────────────────────────────────────────── */}
+        {/* ── Sidebar ─────────────────────────────────────────────────────── */}
         <div className="space-y-5">
 
           {/* Active tournaments */}
           {activeTournaments.length > 0 && (
             <div>
-              <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
-                Активні турніри
-              </h2>
+              <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Активні турніри</h2>
               <div className="space-y-3">
                 {activeTournaments.map(t => {
                   const prog = tourneyProgress[t.id] ?? { upcoming: 0, predicted: 0, total: 0, finished: 0 }
@@ -296,34 +341,19 @@ export default async function HomePage() {
                           ? <img src={TOURNAMENT_LOGOS[t.league_id]} alt="" className="w-8 h-8 object-contain flex-shrink-0" />
                           : <span className="text-2xl leading-none">{LEAGUE_EMOJI[t.league_id] ?? '🏆'}</span>
                         }
-                        <div className="font-semibold text-sm text-gray-900 dark:text-white group-hover:text-green-500 dark:group-hover:text-green-400 transition-colors leading-tight">
-                          {t.name}
-                        </div>
+                        <div className="font-semibold text-sm text-gray-900 dark:text-white group-hover:text-green-500 dark:group-hover:text-green-400 transition-colors leading-tight">{t.name}</div>
                       </div>
-
-                      <div className="text-xs text-gray-400 dark:text-gray-500 mb-2">
-                        {prog.finished} / {prog.total} матчів зіграно
-                      </div>
-
-                      {/* Match progress bar */}
+                      <div className="text-xs text-gray-400 dark:text-gray-500 mb-2">{prog.finished} / {prog.total} матчів зіграно</div>
                       <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-2">
-                        <div
-                          className="bg-gray-400 dark:bg-gray-500 rounded-full h-1.5 transition-all"
-                          style={{ width: `${prog.total > 0 ? Math.round(prog.finished / prog.total * 100) : 0}%` }}
-                        />
+                        <div className="bg-gray-400 dark:bg-gray-500 rounded-full h-1.5" style={{ width: `${prog.total > 0 ? Math.round(prog.finished / prog.total * 100) : 0}%` }} />
                       </div>
-
-                      {/* User prediction progress */}
                       {userId && prog.upcoming > 0 && (
                         <>
                           <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-1">
-                            <div className="bg-green-500 rounded-full h-1.5 transition-all" style={{ width: `${pct}%` }} />
+                            <div className="bg-green-500 rounded-full h-1.5" style={{ width: `${pct}%` }} />
                           </div>
                           <div className={`text-xs ${pct === 100 ? 'text-green-500 dark:text-green-400' : 'text-amber-500 dark:text-amber-400'}`}>
-                            {pct === 100
-                              ? '✅ Всі прогнози зроблені'
-                              : `Прогнози: ${prog.predicted} / ${prog.upcoming}`
-                            }
+                            {pct === 100 ? '✅ Всі прогнози зроблені' : `Прогнози: ${prog.predicted} / ${prog.upcoming}`}
                           </div>
                         </>
                       )}
@@ -336,55 +366,131 @@ export default async function HomePage() {
 
           {/* Community stats */}
           <div>
-            <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
-              Спільнота
-            </h2>
+            <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Спільнота</h2>
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 grid grid-cols-2 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalParticipants}</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{fmtNum(totalParticipants)}</div>
                 <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">учасників</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-500 dark:text-green-400">{totalPoints}</div>
+                <div className="text-2xl font-bold text-green-500 dark:text-green-400">{fmtNum(totalPoints)}</div>
                 <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">загальних балів</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalPredictions}</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{fmtNum(totalPredictions)}</div>
                 <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">прогнозів</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{avgPoints}</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{fmtNum(avgPoints)}</div>
                 <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">сер. балів</div>
               </div>
             </div>
           </div>
 
-          {/* Finished tournaments */}
+          {/* Hall of fame — finished tournaments with podium */}
           {finishedTournaments.length > 0 && (
             <div>
-              <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
-                Завершені турніри
-              </h2>
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-                {finishedTournaments.map((t, i) => (
-                  <a key={t.id} href={`/tournaments/${t.id}`}
-                    className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
-                      i < finishedTournaments.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''
-                    }`}>
-                    {TOURNAMENT_LOGOS[t.league_id]
-                      ? <img src={TOURNAMENT_LOGOS[t.league_id]} alt="" className="w-5 h-5 object-contain flex-shrink-0" />
-                      : <span className="text-base leading-none">{LEAGUE_EMOJI[t.league_id] ?? '🏆'}</span>
-                    }
-                    <span className="text-sm text-gray-600 dark:text-gray-300 flex-1">{t.name}</span>
-                    <span className="text-gray-300 dark:text-gray-600 text-xs flex-shrink-0">→</span>
-                  </a>
-                ))}
+              <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">🏆 Зал слави</h2>
+              <div className="space-y-3">
+                {finishedTournaments.map(t => {
+                  const top = hofRankings[t.id] ?? []
+                  return (
+                    <div key={t.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+                      <a href={`/tournaments/${t.id}`}
+                        className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+                        {TOURNAMENT_LOGOS[t.league_id]
+                          ? <img src={TOURNAMENT_LOGOS[t.league_id]} alt="" className="w-5 h-5 object-contain flex-shrink-0" />
+                          : <span className="text-base leading-none">{LEAGUE_EMOJI[t.league_id] ?? '🏆'}</span>
+                        }
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex-1 group-hover:text-green-500 dark:group-hover:text-green-400 transition-colors truncate">{t.name}</span>
+                        <span className="text-gray-300 dark:text-gray-600 text-xs flex-shrink-0">→</span>
+                      </a>
+                      {top.length > 0 && (
+                        <div className="px-4 py-2.5 space-y-1.5">
+                          {top.map((r, i) => (
+                            <a key={r.uid} href={`/players/${r.uid}`}
+                              className="flex items-center gap-2 hover:opacity-75 transition-opacity">
+                              <span className="text-base leading-none w-5 text-center flex-shrink-0">
+                                {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
+                              </span>
+                              <ProfileAvatar profile={r.profile} sizeCls="w-6 h-6" textCls="text-[10px]" />
+                              <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 min-w-0 truncate">{pdn(r.profile)}</span>
+                              <span className="text-sm font-bold text-green-500 dark:text-green-400 flex-shrink-0">{fmtNum(r.pts)}</span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                      {top.length === 0 && (
+                        <div className="px-4 py-2 text-xs text-gray-400 dark:text-gray-600">Немає даних</div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
 
         </div>
       </div>
+
+      {/* ── Analytics table ───────────────────────────────────────────────── */}
+      {leaderboard.length > 0 && (
+        <div>
+          <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Детальна статистика</h2>
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                    <th className="text-center px-3 py-3 w-10">#</th>
+                    <th className="text-left px-3 py-3 min-w-[140px]">Учасник</th>
+                    <th className="text-right px-3 py-3 whitespace-nowrap">Прогнози</th>
+                    <th className="text-right px-3 py-3 whitespace-nowrap hidden sm:table-cell">Рез-ти</th>
+                    <th className="text-right px-4 py-3 whitespace-nowrap">% рез.</th>
+                    <th className="text-right px-3 py-3 whitespace-nowrap hidden sm:table-cell">Точних</th>
+                    <th className="text-right px-4 py-3 whitespace-nowrap">% точних</th>
+                    <th className="text-right px-4 py-3 whitespace-nowrap font-semibold text-green-500 dark:text-green-400">Бали</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.map((p, idx) => {
+                    const an     = userAnalytics[p.id] ?? { scored: 0, exact: 0, correct: 0 }
+                    const scored = an.scored
+                    const corPct = pct(an.correct, scored)
+                    const exPct  = pct(an.exact, scored)
+                    const isMe   = p.id === userId
+                    return (
+                      <tr key={p.id}
+                        className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}>
+                        <td className="px-3 py-3 text-center text-lg"><RankBadge rank={idx + 1} /></td>
+                        <td className="px-3 py-3">
+                          <a href={`/players/${p.id}`} className="flex items-center gap-2.5 hover:opacity-75 transition-opacity">
+                            <ProfileAvatar profile={p} sizeCls="w-7 h-7" textCls="text-[10px]" />
+                            <span className="font-medium text-gray-900 dark:text-white truncate">
+                              {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
+                            </span>
+                          </a>
+                        </td>
+                        <td className="px-3 py-3 text-right tabular-nums text-gray-600 dark:text-gray-300">{fmtNum(scored)}</td>
+                        <td className="px-3 py-3 text-right tabular-nums text-gray-600 dark:text-gray-300 hidden sm:table-cell">{an.correct}</td>
+                        <td className="px-4 py-3 text-right">
+                          <MiniBar value={corPct} colorCls="bg-green-500" />
+                        </td>
+                        <td className="px-3 py-3 text-right tabular-nums text-yellow-500 dark:text-yellow-400 hidden sm:table-cell">{an.exact}</td>
+                        <td className="px-4 py-3 text-right">
+                          <MiniBar value={exPct} colorCls="bg-yellow-400" />
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-green-500 dark:text-green-400 text-base tabular-nums">{fmtNum(p.total_points)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

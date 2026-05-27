@@ -2,6 +2,7 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
+import { isAdminEmail } from '../../lib/admin'
 
 async function getSupabase() {
   const cookieStore = await cookies()
@@ -16,7 +17,7 @@ export async function checkAdmin() {
   try {
     const supabase = await getSupabase()
     const { data: { session } } = await supabase.auth.getSession()
-    const isAdmin = session?.user?.email === process.env.ADMIN_EMAIL
+    const isAdmin = isAdminEmail(session?.user?.email)
     return { isAdmin, email: isAdmin ? session.user.email : null }
   } catch {
     return { isAdmin: false, email: null }
@@ -57,7 +58,7 @@ export async function fetchTournamentStats() {
 async function getAdminDb() {
   const supabase = await getSupabase()
   const { data: { session } } = await supabase.auth.getSession()
-  if (!session || session.user.email !== process.env.ADMIN_EMAIL) {
+  if (!session || !isAdminEmail(session.user.email)) {
     throw new Error('Unauthorized')
   }
   return createClient(

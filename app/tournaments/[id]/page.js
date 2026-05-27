@@ -10,6 +10,7 @@ import TOURNAMENT_LOGOS from '../../../lib/tournament-logos'
 import { groupAndSortMatches } from '../../../lib/round-sort'
 import { translateTeam } from '../../../lib/team-translations'
 import { simulateProbabilities } from '../../../lib/probability'
+import { isAdminEmail } from '../../../lib/admin'
 
 export const revalidate = 60
 
@@ -67,7 +68,7 @@ export default async function TournamentPage({ params, searchParams }) {
 
   const { data: { session } } = await supabase.auth.getSession()
   const userId  = session?.user?.id
-  const isAdmin = session?.user?.email === process.env.ADMIN_EMAIL
+  const isAdmin = isAdminEmail(session?.user?.email)
 
   const [{ data: tournament }, { data: matches }, { data: roundAnalysesRows }] = await Promise.all([
     supabase.from('tournaments').select('*').eq('id', id).single(),

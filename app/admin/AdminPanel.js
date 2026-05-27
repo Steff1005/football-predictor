@@ -698,22 +698,22 @@ function RegistryTab({ profiles, tournaments }) {
         <div className="overflow-auto rounded-xl border border-gray-200 dark:border-gray-800" style={{ maxHeight: '65vh' }}>
           <table className="text-sm border-collapse min-w-full">
             <thead>
-              <tr className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-                <th className="sticky left-0 z-40 bg-gray-50 dark:bg-gray-900 text-left px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap border-r border-gray-200 dark:border-gray-800 min-w-[180px]">
+              <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+                <th className="sticky top-0 left-0 z-40 bg-gray-50 dark:bg-gray-900 text-left px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap border-r border-gray-200 dark:border-gray-800 min-w-[180px]">
                   Матч
                 </th>
-                <th className="px-2 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center whitespace-nowrap min-w-[44px]">
+                <th className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-900 px-2 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center whitespace-nowrap min-w-[44px]">
                   Дата
                 </th>
-                <th className="px-2 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center whitespace-nowrap min-w-[96px]">
+                <th className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-900 px-2 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center whitespace-nowrap min-w-[96px]">
                   Статус
                 </th>
                 {activeProfiles.map(p => (
-                  <th key={p.id} className="px-2 py-2.5 text-center min-w-[52px]">
+                  <th key={p.id} className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-900 px-2 py-2.5 text-center min-w-[52px]">
                     <span className="text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">{shortName(p)}</span>
                   </th>
                 ))}
-                <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center whitespace-nowrap">
+                <th className="sticky top-0 z-30 bg-gray-50 dark:bg-gray-900 px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center whitespace-nowrap">
                   Всього
                 </th>
               </tr>
@@ -772,18 +772,18 @@ function RegistryTab({ profiles, tournaments }) {
             </tbody>
 
             <tfoot>
-              <tr className="sticky bottom-0 z-30 border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                <td className="sticky left-0 z-40 bg-gray-50 dark:bg-gray-900 px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase border-r border-gray-200 dark:border-gray-800 whitespace-nowrap">
+              <tr className="border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                <td className="sticky bottom-0 left-0 z-40 bg-gray-50 dark:bg-gray-900 px-3 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase border-r border-gray-200 dark:border-gray-800 whitespace-nowrap">
                   Всього прогнозів
                 </td>
-                <td className="px-2 py-2.5" />
-                <td className="px-2 py-2.5" />
+                <td className="sticky bottom-0 z-30 bg-gray-50 dark:bg-gray-900 px-2 py-2.5" />
+                <td className="sticky bottom-0 z-30 bg-gray-50 dark:bg-gray-900 px-2 py-2.5" />
                 {activeProfiles.map(p => (
-                  <td key={p.id} className="px-2 py-2.5 text-center">
+                  <td key={p.id} className="sticky bottom-0 z-30 bg-gray-50 dark:bg-gray-900 px-2 py-2.5 text-center">
                     <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{userTotal[p.id] ?? 0}</span>
                   </td>
                 ))}
-                <td className="px-3 py-2.5 text-center text-sm font-bold text-gray-700 dark:text-gray-300">
+                <td className="sticky bottom-0 z-30 bg-gray-50 dark:bg-gray-900 px-3 py-2.5 text-center text-sm font-bold text-gray-700 dark:text-gray-300">
                   {predictions.length}
                 </td>
               </tr>

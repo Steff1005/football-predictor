@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { notFound } from 'next/navigation'
 import { translateTeam } from '../../../lib/team-translations'
-import ProfilePredictions from '../../profile/ProfilePredictions'
+import PlayerUpcomingPredictions from './PlayerUpcomingPredictions'
 import CLUB_CRESTS from '../../../lib/club-crests'
 
 export const revalidate = 60
@@ -71,40 +71,71 @@ export default async function PlayerProfilePage({ params }) {
   const initials    = (profile.first_name?.[0] ?? displayName[0] ?? '?').toUpperCase() +
                       (profile.last_name?.[0]  ?? displayName[1] ?? '').toUpperCase()
 
-  // Only scored predictions — never expose upcoming/unstarted match picks
+  // ── Finished predictions (for stats + history only) ─────────────────────────
   const rawPredictions = await fetchAll(supabase, (from, to) =>
     supabase.from('predictions')
-      .select('id, match_id, predicted_home, predicted_away, points')
+      .select('id, match_id, points')
       .eq('user_id', id)
       .not('points', 'is', null)
       .range(from, to)
   )
 
-  const matchIds = rawPredictions.map(p => p.match_id)
-  let matchMap = {}
-  if (matchIds.length > 0) {
+  const finishedMatchIds = rawPredictions.map(p => p.match_id)
+  let finishedMatchMap = {}
+  if (finishedMatchIds.length > 0) {
     const CHUNK = 200
-    for (let i = 0; i < matchIds.length; i += CHUNK) {
+    for (let i = 0; i < finishedMatchIds.length; i += CHUNK) {
       const { data } = await supabase
         .from('matches')
-        .select('id, home_team, away_team, home_logo, away_logo, home_score, away_score, status, kickoff_at, tournament_id, round')
-        .in('id', matchIds.slice(i, i + CHUNK))
-      if (data) data.forEach(m => {
-        const ht = translateTeam(m.home_team)
-        const at = translateTeam(m.away_team)
-        matchMap[m.id] = {
-          ...m, home_team: ht, away_team: at,
-          home_logo: m.home_logo ?? CLUB_CRESTS[ht] ?? null,
-          away_logo: m.away_logo ?? CLUB_CRESTS[at] ?? null,
-        }
-      })
+        .select('id, status, kickoff_at, tournament_id')
+        .in('id', finishedMatchIds.slice(i, i + CHUNK))
+      if (data) data.forEach(m => { finishedMatchMap[m.id] = m })
     }
   }
 
   const allPredictions = rawPredictions
-    .map(p => ({ ...p, match: matchMap[p.match_id] }))
+    .map(p => ({ ...p, match: finishedMatchMap[p.match_id] }))
     .filter(p => p.match && p.match.status === 'finished')
-    .sort((a, b) => new Date(b.match.kickoff_at) - new Date(a.match.kickoff_at))
+
+  // ── Upcoming scheduled matches + player's predictions ────────────────────────
+  const { data: rawScheduled } = await supabase
+    .from('matches')
+    .select('id, home_team, away_team, home_logo, away_logo, kickoff_at, tournament_id, round, status')
+    .eq('status', 'scheduled')
+    .order('kickoff_at', { ascending: true })
+    .limit(500)
+
+  const scheduledIds = (rawScheduled ?? []).map(m => m.id)
+  const scheduledPredMap = {}
+  if (scheduledIds.length > 0) {
+    const CHUNK = 200
+    for (let i = 0; i < scheduledIds.length; i += CHUNK) {
+      const { data: preds } = await supabase
+        .from('predictions')
+        .select('match_id, predicted_home, predicted_away')
+        .eq('user_id', id)
+        .in('match_id', scheduledIds.slice(i, i + CHUNK))
+      preds?.forEach(p => { scheduledPredMap[p.match_id] = p })
+    }
+  }
+
+  const upcomingItems = (rawScheduled ?? []).map(m => {
+    const ht   = translateTeam(m.home_team)
+    const at   = translateTeam(m.away_team)
+    const pred = scheduledPredMap[m.id]
+    return {
+      id:             m.id,
+      hasPrediction:  !!pred,
+      predicted_home: isOwn ? (pred?.predicted_home ?? null) : null,
+      predicted_away: isOwn ? (pred?.predicted_away ?? null) : null,
+      match: {
+        ...m,
+        home_team: ht, away_team: at,
+        home_logo: m.home_logo ?? CLUB_CRESTS[ht] ?? null,
+        away_logo: m.away_logo ?? CLUB_CRESTS[at] ?? null,
+      },
+    }
+  })
 
   const totalPoints     = allPredictions.reduce((s, p) => s + (p.points ?? 0), 0)
   const exactScores     = allPredictions.filter(p => p.points === 4).length
@@ -274,11 +305,9 @@ export default async function PlayerProfilePage({ params }) {
         </div>
       )}
 
-      {/* ── Predictions (finished only) ── */}
-      {allPredictions.length > 0 && (
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Прогнози</h2>
-      )}
-      <ProfilePredictions predictions={allPredictions} />
+      {/* ── Upcoming scheduled matches ── */}
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Прогнози</h2>
+      <PlayerUpcomingPredictions items={upcomingItems} isOwn={isOwn} />
     </div>
   )
 }

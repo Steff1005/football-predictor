@@ -7,21 +7,9 @@ import ProfileSettings from './ProfileSettings'
 import ProfilePredictions from './ProfilePredictions'
 import { translateTeam } from '../../lib/team-translations'
 import CLUB_CRESTS from '../../lib/club-crests'
+import { computeTourneyRanks } from '../../lib/rankings'
 
 export const metadata = { title: 'Профіль — Kickoff' }
-
-const PAGE = 1000
-async function fetchAll(buildQuery) {
-  let all = [], from = 0
-  while (true) {
-    const { data, error } = await buildQuery(from, from + PAGE - 1)
-    if (error || !data?.length) break
-    all = all.concat(data)
-    if (data.length < PAGE) break
-    from += PAGE
-  }
-  return all
-}
 
 export default async function ProfilePage({ searchParams }) {
   const { tournament: tournamentFilter = 'all' } = await searchParams
@@ -112,54 +100,7 @@ export default async function ProfilePage({ searchParams }) {
     }
   }
 
-  // Fetch all matches in those tournaments to compute proper rankings
-  let tourneyRankMap = {}
-  if (userTournamentIds.length > 0) {
-    const { data: tourneyMatches } = await supabase
-      .from('matches')
-      .select('id, tournament_id')
-      .in('tournament_id', userTournamentIds)
-
-    const allTMIds  = tourneyMatches?.map(m => m.id) ?? []
-    const midToTid  = {}
-    tourneyMatches?.forEach(m => { midToTid[m.id] = m.tournament_id })
-
-    if (allTMIds.length > 0) {
-      const CHUNK = 200
-      let rankPreds = []
-      for (let i = 0; i < allTMIds.length; i += CHUNK) {
-        const chunk = allTMIds.slice(i, i + CHUNK)
-        const chunkPreds = await fetchAll((from, to) =>
-          supabase.from('predictions')
-            .select('user_id, match_id, points')
-            .in('match_id', chunk)
-            .not('points', 'is', null)
-            .range(from, to)
-        )
-        rankPreds = rankPreds.concat(chunkPreds)
-      }
-
-      const tidUsers = {}
-      for (const p of rankPreds) {
-        const tid = midToTid[p.match_id]
-        if (!tid) continue
-        if (!tidUsers[tid]) tidUsers[tid] = {}
-        if (!tidUsers[tid][p.user_id]) tidUsers[tid][p.user_id] = { total: 0, exact: 0, correct: 0, preds: 0 }
-        const u = tidUsers[tid][p.user_id]
-        u.preds++; u.total += p.points
-        if (p.points === 4) u.exact++
-        if (p.points === 1) u.correct++
-      }
-
-      for (const [tid, users] of Object.entries(tidUsers)) {
-        const sorted = Object.entries(users).sort(([, a], [, b]) =>
-          b.total - a.total || b.exact - a.exact || b.correct - a.correct || b.preds - a.preds
-        )
-        const rank = sorted.findIndex(([uid]) => uid === userId) + 1
-        tourneyRankMap[tid] = rank > 0 ? rank : null
-      }
-    }
-  }
+  const tourneyRankMap = await computeTourneyRanks(supabase, userTournamentIds, userId)
 
   // Tournament map for display names
   const tournamentMap = {}

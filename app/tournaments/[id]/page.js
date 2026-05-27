@@ -11,8 +11,28 @@ import { groupAndSortMatches } from '../../../lib/round-sort'
 import { translateTeam } from '../../../lib/team-translations'
 import { simulateProbabilities } from '../../../lib/probability'
 import { isAdminEmail } from '../../../lib/admin'
+import { compareTournamentStandings } from '../../../lib/rankings'
 
 export const revalidate = 60
+
+export async function generateMetadata({ params }) {
+  const { id } = await params
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    { cookies: { getAll: () => [] } }
+  )
+  const { data: t } = await supabase.from('tournaments').select('name').eq('id', id).single()
+  if (!t) return { title: 'Турнір — Kickoff' }
+  return {
+    title: `${t.name} — Kickoff`,
+    openGraph: {
+      title: `${t.name} — Kickoff`,
+      description: `Прогнози та результати турніру ${t.name}`,
+      images: [{ url: '/icons/icon-512.png' }],
+    },
+  }
+}
 
 // ── Country flag helpers ──────────────────────────────────────────────────────
 
@@ -172,12 +192,7 @@ export default async function TournamentPage({ params, searchParams }) {
   const standings = Object.entries(userStats)
     .map(([uid, stats]) => ({ uid, ...stats, profile: profileMap[uid] }))
     .filter(s => s.profile)
-    .sort((a, b) =>
-      b.total - a.total ||
-      b.exact - a.exact ||
-      b.results - a.results ||
-      b.predictions - a.predictions
-    )
+    .sort(compareTournamentStandings)
 
   // ── По-турах ──────────────────────────────────────────────────────────────
   const roundedGroups   = groupAndSortMatches(allMatches)

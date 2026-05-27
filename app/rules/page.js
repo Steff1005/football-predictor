@@ -1,3 +1,12 @@
+export const metadata = {
+  title: 'Правила — Kickoff',
+  openGraph: {
+    title: 'Правила — Kickoff',
+    description: 'Як прогнозувати матчі та нараховуються бали у Kickoff',
+    images: [{ url: '/icons/icon-512.png' }],
+  },
+}
+
 export default function RulesPage() {
   return (
     <div className="max-w-2xl mx-auto">

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useToast } from './ToastProvider'
 
@@ -46,6 +46,14 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
   const isFinished = match.status === 'finished'
   const isPast     = new Date(match.kickoff_at) < new Date()
   const isValid    = home !== '' && away !== '' && Number(home) >= 0 && Number(away) >= 0 && Number(home) <= 9 && Number(away) <= 9
+  const isDirty    = !saved && !isPast && !isFinished && (home !== '' || away !== '')
+
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = e => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
 
   async function savePrediction() {
     if (!userId) { toast('Спочатку увійди в акаунт', 'error'); return }
@@ -98,16 +106,21 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
         : 'border-gray-200 dark:border-gray-700'
     }`}>
 
-      {/* Top row: date + status badge */}
+      {/* Top row: date + dirty indicator + status badge */}
       <div className="flex justify-between items-center mb-2 text-xs text-gray-400 dark:text-gray-500">
         <span>{dateStr}, {timeStr}</span>
-        <span className={`px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${
-          isFinished              ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' :
-          match.status === 'live' ? 'bg-red-500/20 text-red-400' :
-                                    daysColor
-        }`}>
-          {isFinished ? 'Завершено' : match.status === 'live' ? '🔴 Live' : daysLabel}
-        </span>
+        <div className="flex items-center gap-2">
+          {isDirty && (
+            <span className="text-amber-500 dark:text-amber-400 font-medium">● не збережено</span>
+          )}
+          <span className={`px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${
+            isFinished              ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' :
+            match.status === 'live' ? 'bg-red-500/20 text-red-400' :
+                                      daysColor
+          }`}>
+            {isFinished ? 'Завершено' : match.status === 'live' ? '🔴 Live' : daysLabel}
+          </span>
+        </div>
       </div>
 
       {/* ── Mobile layout (< sm) ────────────────────────────────────── */}

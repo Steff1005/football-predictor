@@ -3,7 +3,6 @@ const CACHE = 'predictor-v1'
 const APP_SHELL = [
   '/',
   '/rules',
-  '/leaderboard',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
 ]

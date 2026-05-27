@@ -113,13 +113,21 @@ export async function fetchPredictionRegistry(tournamentId) {
     const matchIds = (matches ?? []).map(m => m.id)
     if (!matchIds.length) return { matches: [], predictions: [] }
 
-    const { data: predictions } = await db
-      .from('predictions')
-      .select('user_id, match_id')
-      .in('match_id', matchIds)
-      .limit(10000)
+    let predictions = [], from = 0
+    const PAGE = 1000
+    while (true) {
+      const { data, error } = await db
+        .from('predictions')
+        .select('user_id, match_id')
+        .in('match_id', matchIds)
+        .range(from, from + PAGE - 1)
+      if (error || !data?.length) break
+      predictions = predictions.concat(data)
+      if (data.length < PAGE) break
+      from += PAGE
+    }
 
-    return { matches: matches ?? [], predictions: predictions ?? [] }
+    return { matches: matches ?? [], predictions }
   } catch (e) {
     return { error: e.message }
   }

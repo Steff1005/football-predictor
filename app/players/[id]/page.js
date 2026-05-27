@@ -2,7 +2,6 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { notFound } from 'next/navigation'
 import { translateTeam } from '../../../lib/team-translations'
-import PlayerUpcomingPredictions from './PlayerUpcomingPredictions'
 import CLUB_CRESTS from '../../../lib/club-crests'
 
 const PAGE = 1000
@@ -95,54 +94,6 @@ export default async function PlayerProfilePage({ params }) {
     .map(p => ({ ...p, match: finishedMatchMap[p.match_id] }))
     .filter(p => p.match && p.match.status === 'finished')
 
-  // ── Upcoming scheduled matches — only from tournaments the player plays in ────
-  // Find active tournament IDs: where player made ≥1 prediction
-  const activeTournamentIds = [...new Set(
-    rawPredictions.map(p => finishedMatchMap[p.match_id]?.tournament_id).filter(Boolean)
-  )]
-
-  let rawScheduled = []
-  if (activeTournamentIds.length > 0) {
-    const { data } = await supabase
-      .from('matches')
-      .select('id, home_team, away_team, home_logo, away_logo, kickoff_at, tournament_id, round, status')
-      .eq('status', 'scheduled')
-      .in('tournament_id', activeTournamentIds)
-      .order('kickoff_at', { ascending: true })
-    rawScheduled = data ?? []
-  }
-
-  const scheduledIds = rawScheduled.map(m => m.id)
-  const scheduledPredMap = {}
-  if (scheduledIds.length > 0) {
-    const CHUNK = 200
-    for (let i = 0; i < scheduledIds.length; i += CHUNK) {
-      const { data: preds } = await supabase
-        .from('predictions')
-        .select('match_id, predicted_home, predicted_away')
-        .eq('user_id', id)
-        .in('match_id', scheduledIds.slice(i, i + CHUNK))
-      preds?.forEach(p => { scheduledPredMap[p.match_id] = p })
-    }
-  }
-
-  const upcomingItems = rawScheduled.map(m => {
-    const ht   = translateTeam(m.home_team)
-    const at   = translateTeam(m.away_team)
-    const pred = scheduledPredMap[m.id]
-    return {
-      id:             m.id,
-      hasPrediction:  !!pred,
-      predicted_home: isOwn ? (pred?.predicted_home ?? null) : null,
-      predicted_away: isOwn ? (pred?.predicted_away ?? null) : null,
-      match: {
-        ...m,
-        home_team: ht, away_team: at,
-        home_logo: m.home_logo ?? CLUB_CRESTS[ht] ?? null,
-        away_logo: m.away_logo ?? CLUB_CRESTS[at] ?? null,
-      },
-    }
-  })
 
   const totalPoints     = allPredictions.reduce((s, p) => s + (p.points ?? 0), 0)
   const exactScores     = allPredictions.filter(p => p.points === 4).length
@@ -312,9 +263,7 @@ export default async function PlayerProfilePage({ params }) {
         </div>
       )}
 
-      {/* ── Upcoming scheduled matches ── */}
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Прогнози</h2>
-      <PlayerUpcomingPredictions items={upcomingItems} isOwn={isOwn} />
+      {/* Predictions section intentionally hidden on public profile */}
     </div>
   )
 }

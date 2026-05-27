@@ -362,8 +362,8 @@ export default async function HomePage() {
           {leaderboard.length > 0 && (
             <div>
               <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Детальна статистика</h2>
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-                <div className="overflow-x-auto">
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+                <div className="overflow-x-auto rounded-xl">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
@@ -387,8 +387,8 @@ export default async function HomePage() {
                         return (
                           <tr key={p.id}
                             className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}>
-                            <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 px-2 py-2.5 text-center" style={{width:'48px'}}><RankBadge rank={idx + 1} /></td>
-                            <td className="sticky z-10 bg-white dark:bg-gray-900 px-3 py-2.5 border-r border-gray-200 dark:border-gray-800" style={{left:'48px'}}>
+                            <td className={`sticky left-0 z-10 px-2 py-2.5 text-center ${isMe ? 'bg-green-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'}`} style={{width:'48px'}}><RankBadge rank={idx + 1} /></td>
+                            <td className={`sticky z-10 px-3 py-2.5 border-r border-gray-200 dark:border-gray-800 ${isMe ? 'bg-green-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'}`} style={{left:'48px'}}>
                               <a href={`/players/${p.id}`} className="flex items-center gap-2 hover:opacity-75 transition-opacity">
                                 <ProfileAvatar profile={p} sizeCls="w-6 h-6" textCls="text-[10px]" />
                                 <span className="font-medium text-gray-900 dark:text-white truncate">
@@ -397,8 +397,8 @@ export default async function HomePage() {
                               </a>
                             </td>
                             <td className="px-3 py-2.5 text-right tabular-nums text-gray-600 dark:text-gray-300">{fmtNum(scored)}</td>
-                            <td className="px-3 py-2.5 text-right tabular-nums text-gray-600 dark:text-gray-300">{an.correct}</td>
-                            <td className="px-3 py-2.5 text-right tabular-nums text-green-600 dark:text-green-400">{corPct}%</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-blue-600 dark:text-blue-400">{an.correct}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-blue-600 dark:text-blue-400">{corPct}%</td>
                             <td className="px-3 py-2.5 text-right tabular-nums text-yellow-500 dark:text-yellow-400">{an.exact}</td>
                             <td className="px-3 py-2.5 text-right tabular-nums text-yellow-500 dark:text-yellow-400">{exPct}%</td>
                             <td className="px-3 py-2.5 text-right font-bold text-green-500 dark:text-green-400 tabular-nums">{fmtNum(p.total_points)}</td>

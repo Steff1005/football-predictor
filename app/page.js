@@ -63,18 +63,6 @@ function FormDot({ pts }) {
   return              <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block flex-shrink-0" title="0 балів" />
 }
 
-function MiniBar({ value, max = 100, colorCls = 'bg-green-500' }) {
-  const w = max > 0 ? Math.round(value / max * 100) : 0
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="tabular-nums text-xs w-8 text-right">{value}%</span>
-      <div className="w-14 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex-shrink-0">
-        <div className={`h-full ${colorCls} rounded-full`} style={{ width: `${w}%` }} />
-      </div>
-    </div>
-  )
-}
-
 // ── Data helpers ──────────────────────────────────────────────────────────────
 
 async function fetchPagedPreds(supabase) {
@@ -189,9 +177,9 @@ export default async function HomePage() {
   const userFormData = {}
   for (const [uid, entries] of Object.entries(userFormRaw)) {
     userFormData[uid] = entries
-      .sort((a, b) => b.date.localeCompare(a.date)) // newest first
+      .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 8)
-      .reverse()                                      // oldest-first for left→right display
+      .reverse()
   }
 
   // ── Hall of fame: top 3 per finished tournament ───────────────────────────────
@@ -244,15 +232,15 @@ export default async function HomePage() {
           <div className="flex items-center gap-4">
             <ProfileAvatar profile={myProfile} sizeCls="w-12 h-12" textCls="text-sm" />
             <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-1">
+              <div className="flex items-center gap-2 mb-1 min-w-0">
+                {myRank && (
+                  myRank <= 3
+                    ? <span className="flex-shrink-0"><RankBadge rank={myRank} /></span>
+                    : <span className="text-sm text-gray-400 dark:text-gray-500 font-medium flex-shrink-0">#{myRank}</span>
+                )}
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight truncate">
                   {pdn(myProfile)}
                 </h2>
-                {myRank && (
-                  myRank <= 3
-                    ? <RankBadge rank={myRank} />
-                    : <span className="text-sm text-gray-400 dark:text-gray-500 font-medium">#{myRank} місце</span>
-                )}
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-0 text-sm">
                 <span className="font-semibold text-green-600 dark:text-green-400">{fmtNum(myProfile.total_points)} балів</span>
@@ -269,60 +257,164 @@ export default async function HomePage() {
       {/* Main 2-column grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* ── Leaderboard ─────────────────────────────────────────────────── */}
-        <div className="lg:col-span-2">
-          <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Загальний рейтинг</h2>
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        {/* ── Left column: Leaderboard + Analytics ─────────────────── */}
+        <div className="lg:col-span-2 space-y-5">
 
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
-              <span className="font-medium">Форма (8 останніх)</span>
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block" /> 4 бали</span>
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> 1 бал</span>
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> 0 балів</span>
+          {/* Leaderboard */}
+          <div>
+            <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Загальний рейтинг</h2>
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
+                <span className="font-medium">Форма (8 останніх)</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block" /> 4 бали</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> 1 бал</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" /> 0 балів</span>
+              </div>
+
+              {leaderboard.length === 0 && (
+                <div className="text-center py-12 text-gray-400 dark:text-gray-600 text-sm">Ще немає учасників</div>
+              )}
+
+              {/* Desktop table */}
+              {leaderboard.length > 0 && (
+                <table className="w-full text-sm hidden sm:table">
+                  <thead>
+                    <tr className="border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
+                      <th className="w-10 px-3 py-2.5 text-center">#</th>
+                      <th className="px-3 py-2.5 text-left">Учасник</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap">Форма</th>
+                      <th className="px-3 py-2.5 text-right whitespace-nowrap">Бали</th>
+                      <th className="px-3 py-2.5 text-right whitespace-nowrap">Прогн.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaderboard.map((p, idx) => {
+                      const rank = idx + 1
+                      const isMe = p.id === userId
+                      const form = userFormData[p.id] ?? []
+                      return (
+                        <tr key={p.id}
+                          className={`border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}>
+                          <td className="px-3 py-3 text-center"><RankBadge rank={rank} /></td>
+                          <td className="px-3 py-3">
+                            <a href={`/players/${p.id}`} className="flex items-center gap-2.5 hover:opacity-75 transition-opacity">
+                              <ProfileAvatar profile={p} sizeCls="w-8 h-8" textCls="text-xs" />
+                              <span className="font-medium text-gray-900 dark:text-white truncate">
+                                {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
+                              </span>
+                            </a>
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex gap-1">
+                              {form.length > 0
+                                ? form.map((entry, i) => <FormDot key={i} pts={entry.pts} />)
+                                : <span className="text-xs text-gray-300 dark:text-gray-600 italic">—</span>
+                              }
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-right font-bold text-green-500 dark:text-green-400 tabular-nums">{fmtNum(p.total_points)}</td>
+                          <td className="px-3 py-3 text-right text-xs text-gray-400 dark:text-gray-500 tabular-nums">{fmtNum(p.total_predictions)}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+
+              {/* Mobile cards */}
+              <div className="sm:hidden">
+                {leaderboard.map((p, idx) => {
+                  const rank = idx + 1
+                  const isMe = p.id === userId
+                  const form = userFormData[p.id] ?? []
+                  return (
+                    <div key={p.id}
+                      className={`px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 flex-shrink-0 text-center"><RankBadge rank={rank} /></div>
+                        <a href={`/players/${p.id}`}
+                          className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-75 transition-opacity">
+                          <ProfileAvatar profile={p} sizeCls="w-8 h-8" textCls="text-xs" />
+                          <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
+                          </span>
+                        </a>
+                        <div className="flex-shrink-0 text-right ml-1">
+                          <div className="font-bold text-green-500 dark:text-green-400 text-sm leading-tight">{fmtNum(p.total_points)}</div>
+                          <div className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight">{fmtNum(p.total_predictions)} прогн.</div>
+                        </div>
+                      </div>
+                      {form.length > 0 && (
+                        <div className="flex gap-1 mt-1.5 pl-9">
+                          {form.map((entry, i) => <FormDot key={i} pts={entry.pts} />)}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
             </div>
-
-            {leaderboard.length === 0 && (
-              <div className="text-center py-12 text-gray-400 dark:text-gray-600 text-sm">Ще немає учасників</div>
-            )}
-
-            {leaderboard.map((p, idx) => {
-              const rank  = idx + 1
-              const isMe  = p.id === userId
-              const form  = userFormData[p.id] ?? []
-              return (
-                <div key={p.id}
-                  className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}>
-
-                  <div className="w-7 text-center flex-shrink-0"><RankBadge rank={rank} /></div>
-
-                  {/* Clickable: avatar + name */}
-                  <a href={`/players/${p.id}`} className="flex items-center gap-2 min-w-0 hover:opacity-75 transition-opacity flex-shrink-0">
-                    <ProfileAvatar profile={p} sizeCls="w-8 h-8" textCls="text-xs" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap max-w-[110px] truncate">
-                      {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
-                    </span>
-                  </a>
-
-                  {/* Form strip */}
-                  <div className="flex gap-1 flex-1 justify-start">
-                    {form.length > 0
-                      ? form.map((entry, i) => <FormDot key={i} pts={entry.pts} />)
-                      : <span className="text-xs text-gray-300 dark:text-gray-600 italic">—</span>
-                    }
-                  </div>
-
-                  {/* Points */}
-                  <div className="text-right flex-shrink-0 ml-1">
-                    <div className="font-bold text-green-500 dark:text-green-400 leading-tight">{fmtNum(p.total_points)}</div>
-                    <div className="text-xs text-gray-400 dark:text-gray-500 leading-tight">{fmtNum(p.total_predictions)} прогн.</div>
-                  </div>
-                </div>
-              )
-            })}
           </div>
+
+          {/* Analytics table */}
+          {leaderboard.length > 0 && (
+            <div>
+              <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Детальна статистика</h2>
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                        <th className="sticky left-0 z-10 bg-white dark:bg-gray-900 text-center px-2 py-3" style={{width:'48px'}}>#</th>
+                        <th className="sticky z-10 bg-white dark:bg-gray-900 text-left px-3 py-3 border-r border-gray-200 dark:border-gray-800 whitespace-nowrap" style={{left:'48px', minWidth:'130px'}}>Учасник</th>
+                        <th className="text-right px-3 py-3 whitespace-nowrap">Прогн.</th>
+                        <th className="text-right px-3 py-3 whitespace-nowrap">Рез-ти</th>
+                        <th className="text-right px-3 py-3 whitespace-nowrap">% рез.</th>
+                        <th className="text-right px-3 py-3 whitespace-nowrap">Точних</th>
+                        <th className="text-right px-3 py-3 whitespace-nowrap">% точних</th>
+                        <th className="text-right px-3 py-3 whitespace-nowrap font-semibold text-green-500 dark:text-green-400">Бали</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leaderboard.map((p, idx) => {
+                        const an     = userAnalytics[p.id] ?? { scored: 0, exact: 0, correct: 0 }
+                        const scored = an.scored
+                        const corPct = pct(an.correct, scored)
+                        const exPct  = pct(an.exact, scored)
+                        const isMe   = p.id === userId
+                        return (
+                          <tr key={p.id}
+                            className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}>
+                            <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 px-2 py-2.5 text-center" style={{width:'48px'}}><RankBadge rank={idx + 1} /></td>
+                            <td className="sticky z-10 bg-white dark:bg-gray-900 px-3 py-2.5 border-r border-gray-200 dark:border-gray-800" style={{left:'48px'}}>
+                              <a href={`/players/${p.id}`} className="flex items-center gap-2 hover:opacity-75 transition-opacity">
+                                <ProfileAvatar profile={p} sizeCls="w-6 h-6" textCls="text-[10px]" />
+                                <span className="font-medium text-gray-900 dark:text-white truncate">
+                                  {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
+                                </span>
+                              </a>
+                            </td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-gray-600 dark:text-gray-300">{fmtNum(scored)}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-gray-600 dark:text-gray-300">{an.correct}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-green-600 dark:text-green-400">{corPct}%</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-yellow-500 dark:text-yellow-400">{an.exact}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-yellow-500 dark:text-yellow-400">{exPct}%</td>
+                            <td className="px-3 py-2.5 text-right font-bold text-green-500 dark:text-green-400 tabular-nums">{fmtNum(p.total_points)}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
 
-        {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+        {/* ── Sidebar ─────────────────────────────────────────────────── */}
         <div className="space-y-5">
 
           {/* Active tournaments */}
@@ -332,7 +424,7 @@ export default async function HomePage() {
               <div className="space-y-3">
                 {activeTournaments.map(t => {
                   const prog = tourneyProgress[t.id] ?? { upcoming: 0, predicted: 0, total: 0, finished: 0 }
-                  const pct  = prog.upcoming > 0 ? Math.round(prog.predicted / prog.upcoming * 100) : 100
+                  const progPct = prog.upcoming > 0 ? Math.round(prog.predicted / prog.upcoming * 100) : 100
                   return (
                     <a key={t.id} href={`/tournaments/${t.id}`}
                       className="block bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800 hover:border-green-500/50 transition-colors group">
@@ -350,10 +442,10 @@ export default async function HomePage() {
                       {userId && prog.upcoming > 0 && (
                         <>
                           <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-1">
-                            <div className="bg-green-500 rounded-full h-1.5" style={{ width: `${pct}%` }} />
+                            <div className="bg-green-500 rounded-full h-1.5" style={{ width: `${progPct}%` }} />
                           </div>
-                          <div className={`text-xs ${pct === 100 ? 'text-green-500 dark:text-green-400' : 'text-amber-500 dark:text-amber-400'}`}>
-                            {pct === 100 ? '✅ Всі прогнози зроблені' : `Прогнози: ${prog.predicted} / ${prog.upcoming}`}
+                          <div className={`text-xs ${progPct === 100 ? 'text-green-500 dark:text-green-400' : 'text-amber-500 dark:text-amber-400'}`}>
+                            {progPct === 100 ? '✅ Всі прогнози зроблені' : `Прогнози: ${prog.predicted} / ${prog.upcoming}`}
                           </div>
                         </>
                       )}
@@ -387,7 +479,7 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Hall of fame — finished tournaments with podium */}
+          {/* Hall of fame */}
           {finishedTournaments.length > 0 && (
             <div>
               <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">🏆 Зал слави</h2>
@@ -432,64 +524,6 @@ export default async function HomePage() {
 
         </div>
       </div>
-
-      {/* ── Analytics table ───────────────────────────────────────────────── */}
-      {leaderboard.length > 0 && (
-        <div>
-          <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Детальна статистика</h2>
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                    <th className="text-center px-3 py-3 w-10">#</th>
-                    <th className="text-left px-3 py-3 min-w-[140px]">Учасник</th>
-                    <th className="text-right px-3 py-3 whitespace-nowrap">Прогнози</th>
-                    <th className="text-right px-3 py-3 whitespace-nowrap hidden sm:table-cell">Рез-ти</th>
-                    <th className="text-right px-4 py-3 whitespace-nowrap">% рез.</th>
-                    <th className="text-right px-3 py-3 whitespace-nowrap hidden sm:table-cell">Точних</th>
-                    <th className="text-right px-4 py-3 whitespace-nowrap">% точних</th>
-                    <th className="text-right px-4 py-3 whitespace-nowrap font-semibold text-green-500 dark:text-green-400">Бали</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaderboard.map((p, idx) => {
-                    const an     = userAnalytics[p.id] ?? { scored: 0, exact: 0, correct: 0 }
-                    const scored = an.scored
-                    const corPct = pct(an.correct, scored)
-                    const exPct  = pct(an.exact, scored)
-                    const isMe   = p.id === userId
-                    return (
-                      <tr key={p.id}
-                        className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}>
-                        <td className="px-3 py-3 text-center text-lg"><RankBadge rank={idx + 1} /></td>
-                        <td className="px-3 py-3">
-                          <a href={`/players/${p.id}`} className="flex items-center gap-2.5 hover:opacity-75 transition-opacity">
-                            <ProfileAvatar profile={p} sizeCls="w-7 h-7" textCls="text-[10px]" />
-                            <span className="font-medium text-gray-900 dark:text-white truncate">
-                              {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
-                            </span>
-                          </a>
-                        </td>
-                        <td className="px-3 py-3 text-right tabular-nums text-gray-600 dark:text-gray-300">{fmtNum(scored)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums text-gray-600 dark:text-gray-300 hidden sm:table-cell">{an.correct}</td>
-                        <td className="px-4 py-3 text-right">
-                          <MiniBar value={corPct} colorCls="bg-green-500" />
-                        </td>
-                        <td className="px-3 py-3 text-right tabular-nums text-yellow-500 dark:text-yellow-400 hidden sm:table-cell">{an.exact}</td>
-                        <td className="px-4 py-3 text-right">
-                          <MiniBar value={exPct} colorCls="bg-yellow-400" />
-                        </td>
-                        <td className="px-4 py-3 text-right font-bold text-green-500 dark:text-green-400 text-base tabular-nums">{fmtNum(p.total_points)}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   )

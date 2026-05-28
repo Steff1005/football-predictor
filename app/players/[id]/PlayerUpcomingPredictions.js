@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { getRoundLabel } from '../../../lib/round-sort'
+import { formatMatchy } from '../../../lib/formatters'
 
 const PAGE_SIZE = 20
 
@@ -78,13 +79,13 @@ export default function PlayerUpcomingPredictions({ items, isOwn }) {
           onClick={() => setShown(s => s + PAGE_SIZE)}
           className="w-full mt-4 py-3 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
         >
-          Ще {Math.min(PAGE_SIZE, remaining)} з {remaining} матчів
+          Ще {Math.min(PAGE_SIZE, remaining)} з {formatMatchy(remaining)}
         </button>
       )}
 
       {shown > PAGE_SIZE && remaining === 0 && (
         <p className="text-center text-xs text-gray-400 dark:text-gray-600 mt-4">
-          Показано всі {items.length} матчів
+          Показано всі {formatMatchy(items.length)}
         </p>
       )}
     </>

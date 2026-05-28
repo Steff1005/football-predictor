@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import TOURNAMENT_LOGOS from '../../lib/tournament-logos'
+import { pluralMatches } from '../../lib/formatters'
 
 export const revalidate = 60
 export const metadata = { title: 'Турніри — Kickoff' }
@@ -13,12 +14,6 @@ const TOURNAMENT_DESCRIPTIONS = {
   'Ліга чемпіонів 2024-25': '189 матчів · 17.09.24 – 31.05.25',
   'Ліга чемпіонів 2023-24': '125 матчів · 19.09.23 – 01.06.24',
   'Чемпіонат Європи 2024':  '51 матч · 14.06.24 – 14.07.24',
-}
-
-function pluralMatches(n) {
-  if (n % 10 === 1 && n % 100 !== 11) return 'матч'
-  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return 'матчі'
-  return 'матчів'
 }
 
 function formatDateRange(min, max) {

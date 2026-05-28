@@ -4,11 +4,7 @@ export function displayName(profile) {
   return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
 }
 
-export function pluralMatches(n) {
-  if (n % 10 === 1 && n % 100 !== 11) return 'матч'
-  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return 'матчі'
-  return 'матчів'
-}
+export { pluralMatches } from '../../../lib/formatters'
 
 export function Avatar({ profile }) {
   const name     = displayName(profile)

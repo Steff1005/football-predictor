@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import TOURNAMENT_LOGOS from '../lib/tournament-logos'
+import { formatBaly, formatPrognazy } from '../lib/formatters'
 
 export const revalidate = 60
 
@@ -261,8 +262,8 @@ export default async function HomePage() {
                 </h2>
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-0 text-sm">
-                <span className="font-semibold text-green-600 dark:text-green-400">{fmtNum(myProfile.total_points)} балів</span>
-                <span className="text-gray-400 dark:text-gray-500">{fmtNum(myProfile.total_predictions)} прогнозів</span>
+                <span className="font-semibold text-green-600 dark:text-green-400">{formatBaly(myProfile.total_points)}</span>
+                <span className="text-gray-400 dark:text-gray-500">{formatPrognazy(myProfile.total_predictions)}</span>
               </div>
             </div>
             <a href="/profile" className="text-xs text-gray-400 dark:text-gray-500 hover:text-green-500 dark:hover:text-green-400 transition-colors whitespace-nowrap flex-shrink-0">

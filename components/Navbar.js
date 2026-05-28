@@ -101,6 +101,9 @@ export default function Navbar({ initialUser = null, initialProfile = null, init
 
           {/* ── Desktop nav ─────────────────────────────────────────────── */}
           <div className="hidden sm:flex items-center gap-1 sm:gap-3">
+            <a href="/" onClick={e => guardedHref('/', e)} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-sm px-2 py-1">
+              Головна
+            </a>
             <a href="/tournaments" onClick={e => guardedHref('/tournaments', e)} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-sm px-2 py-1">
               Турніри
             </a>
@@ -185,6 +188,11 @@ export default function Navbar({ initialUser = null, initialProfile = null, init
             </div>
 
             <div className="flex-1 px-2 py-3 space-y-1">
+              <a href="/" onClick={e => { guardedHref('/', e); setMenuOpen(false) }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <span className="text-lg">🏠</span>
+                <span className="font-medium">Головна</span>
+              </a>
               <a href="/tournaments" onClick={e => { guardedHref('/tournaments', e); setMenuOpen(false) }}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                 <span className="text-lg">🏆</span>

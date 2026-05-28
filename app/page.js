@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import TOURNAMENT_LOGOS from '../lib/tournament-logos'
 import { formatBaly, formatPrognazy } from '../lib/formatters'
+import AnalyticsTable from '../components/AnalyticsTable'
 
 export const revalidate = 60
 
@@ -219,8 +220,15 @@ export default async function HomePage() {
 
   const maxEfficiency = leaderboard[0]?.efficiency ?? 1
 
-  // Analytics rows sorted alphabetically by name
-  const analyticsRows = [...leaderboard].sort((a, b) => pdn(a).localeCompare(pdn(b), 'uk'))
+  // Analytics rows sorted by % correct results desc, then by total points
+  const analyticsRows = [...leaderboard].sort((a, b) => {
+    const anA = userAnalytics[a.id] ?? { scored: 0, exact: 0, correct: 0 }
+    const anB = userAnalytics[b.id] ?? { scored: 0, exact: 0, correct: 0 }
+    const corPctA = pct(anA.correct, anA.scored)
+    const corPctB = pct(anB.correct, anB.scored)
+    if (corPctB !== corPctA) return corPctB - corPctA
+    return b.total_points - a.total_points
+  })
 
   // ── Community stats ───────────────────────────────────────────────────────────
   const totalParticipants = leaderboard.length
@@ -433,51 +441,7 @@ export default async function HomePage() {
           {leaderboard.length > 0 && (
             <div>
               <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Детальна статистика</h2>
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
-                <div className="overflow-x-auto rounded-xl">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                        <th className="sticky left-0 z-10 bg-white dark:bg-gray-900 text-left px-3 py-3 border-r border-gray-200 dark:border-gray-800 whitespace-nowrap" style={{minWidth:'130px'}}>Учасник</th>
-                        <th className="text-right px-3 py-3 whitespace-nowrap">Прогн.</th>
-                        <th className="text-right px-3 py-3 whitespace-nowrap">Рез-ти</th>
-                        <th className="text-right px-3 py-3 whitespace-nowrap">% рез.</th>
-                        <th className="text-right px-3 py-3 whitespace-nowrap">Точних</th>
-                        <th className="text-right px-3 py-3 whitespace-nowrap">% точних</th>
-                        <th className="text-right px-3 py-3 whitespace-nowrap font-semibold text-green-500 dark:text-green-400">Бали</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analyticsRows.map((p) => {
-                        const an     = userAnalytics[p.id] ?? { scored: 0, exact: 0, correct: 0 }
-                        const scored = an.scored
-                        const corPct = pct(an.correct, scored)
-                        const exPct  = pct(an.exact, scored)
-                        const isMe   = p.id === userId
-                        return (
-                          <tr key={p.id}
-                            className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}>
-                            <td className={`sticky left-0 z-10 px-3 py-2.5 border-r border-gray-200 dark:border-gray-800 ${isMe ? 'bg-green-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'}`}>
-                              <a href={`/players/${p.id}`} className="flex items-center gap-2 hover:opacity-75 transition-opacity">
-                                <ProfileAvatar profile={p} sizeCls="w-6 h-6" textCls="text-[10px]" />
-                                <span className="font-medium text-gray-900 dark:text-white truncate">
-                                  {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
-                                </span>
-                              </a>
-                            </td>
-                            <td className="px-3 py-2.5 text-right tabular-nums text-gray-600 dark:text-gray-300">{fmtNum(scored)}</td>
-                            <td className="px-3 py-2.5 text-right tabular-nums text-blue-600 dark:text-blue-400">{an.correct}</td>
-                            <td className="px-3 py-2.5 text-right tabular-nums text-blue-600 dark:text-blue-400">{corPct}%</td>
-                            <td className="px-3 py-2.5 text-right tabular-nums text-yellow-500 dark:text-yellow-400">{an.exact}</td>
-                            <td className="px-3 py-2.5 text-right tabular-nums text-yellow-500 dark:text-yellow-400">{exPct}%</td>
-                            <td className="px-3 py-2.5 text-right font-bold text-green-500 dark:text-green-400 tabular-nums">{fmtNum(p.total_points)}</td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <AnalyticsTable rows={analyticsRows} userAnalytics={userAnalytics} userId={userId} />
             </div>
           )}
 

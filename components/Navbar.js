@@ -110,10 +110,6 @@ export default function Navbar({ initialUser = null, initialProfile = null, init
             <a href="/rules" onClick={e => guardedHref('/rules', e)} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-sm px-2 py-1">
               Правила
             </a>
-            <a href="/bracket" onClick={e => guardedHref('/bracket', e)} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-sm px-2 py-1 flex items-center gap-1">
-              <span>🏆</span> ЧС 2026
-            </a>
-
             <button
               onClick={() => setTheme(effectiveTheme === 'dark' ? 'light' : 'dark')}
               className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-base"
@@ -205,11 +201,6 @@ export default function Navbar({ initialUser = null, initialProfile = null, init
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                 <span className="text-lg">📋</span>
                 <span className="font-medium">Правила</span>
-              </a>
-              <a href="/bracket" onClick={e => { guardedHref('/bracket', e); setMenuOpen(false) }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                <span className="text-lg">🏆</span>
-                <span className="font-medium">Сітка ЧС 2026</span>
               </a>
               <button
                 onClick={() => setTheme(effectiveTheme === 'dark' ? 'light' : 'dark')}

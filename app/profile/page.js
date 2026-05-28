@@ -173,12 +173,36 @@ export default async function ProfilePage({ searchParams }) {
       {historyRows.length > 0 && (
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Історія турнірів</h2>
-          <div className="bg-white dark:bg-gray-900 overflow-x-auto scrollbar-hide rounded-xl table-inset-ring">
-              <table className="w-full text-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 flex">
+            {/* Fixed: Турнір column */}
+            <div className="flex-shrink-0 border-r border-gray-200 dark:border-gray-800">
+              <table className="text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                    <th className="text-left px-4 py-2.5 sticky left-0 z-10 bg-white dark:bg-gray-900 min-w-[140px] border-r border-gray-200 dark:border-gray-800">Турнір</th>
+                    <th className="text-left px-4 py-2.5 min-w-[140px]">Турнір</th>
                     <th className="text-center px-3 py-2.5">Місце</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyRows.map((r, i) => (
+                    <tr key={r.id} className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 ${i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/30'}`}>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <a href={`/tournaments/${r.id}`}
+                          className="font-medium text-gray-900 dark:text-white hover:text-green-500 dark:hover:text-green-400 transition-colors">
+                          {r.name}
+                        </a>
+                      </td>
+                      <td className="text-center px-3 py-2.5">{rankBadge(r.rank)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Scrollable: remaining columns */}
+            <div className="overflow-x-auto scrollbar-hide flex-1 min-w-0">
+              <table className="text-sm w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
                     <th className="text-right px-3 py-2.5">Балів</th>
                     <th className="text-right px-3 py-2.5">Прогн.</th>
                     <th className="text-right px-3 py-2.5">Точних</th>
@@ -187,17 +211,7 @@ export default async function ProfilePage({ searchParams }) {
                 </thead>
                 <tbody>
                   {historyRows.map((r, i) => (
-                    <tr key={r.id}
-                      className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 ${
-                        i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/30'
-                      }`}>
-                      <td className="px-4 py-2.5 sticky left-0 z-10 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
-                        <a href={`/tournaments/${r.id}`}
-                          className="font-medium text-gray-900 dark:text-white hover:text-green-500 dark:hover:text-green-400 transition-colors">
-                          {r.name}
-                        </a>
-                      </td>
-                      <td className="text-center px-3 py-2.5 text-base">{rankBadge(r.rank)}</td>
+                    <tr key={r.id} className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 ${i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/30'}`}>
                       <td className="text-right px-3 py-2.5 font-bold text-green-500 dark:text-green-400">{r.total}</td>
                       <td className="text-right px-3 py-2.5 text-gray-600 dark:text-gray-300">{r.predictions}</td>
                       <td className="text-right px-3 py-2.5 text-yellow-500 dark:text-yellow-400">{r.exact}</td>
@@ -206,6 +220,7 @@ export default async function ProfilePage({ searchParams }) {
                   ))}
                 </tbody>
               </table>
+            </div>
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { updateMatch, updateProfile, mergeProfiles, fetchTournamentStats, syncAllProfileStats, fetchPredictionRegistry } from './actions'
+import { updateMatch, updateProfile, mergeProfiles, fetchTournamentStats, syncAllProfileStats, fetchPredictionRegistry, fetchActivityData } from './actions'
 
 const INPUT  = 'w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm'
 const BTN_SM = 'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors'
@@ -599,6 +599,228 @@ function AnalyticsTab({ matches, profiles: initProfiles, tournaments, setProfile
   )
 }
 
+// ── Activity tab ────────────────────────────────────────────────────────────
+
+const SETUP_SQL = `create table if not exists user_activity (
+  user_id     uuid primary key references auth.users(id) on delete cascade,
+  last_seen   timestamptz not null default now(),
+  last_device text not null default 'unknown',
+  visit_days  jsonb not null default '{}',
+  created_at  timestamptz not null default now()
+);
+alter table user_activity enable row level security;
+create policy "users_own" on user_activity
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);`
+
+function timeAgo(ts) {
+  if (!ts) return '—'
+  const diff = Date.now() - new Date(ts).getTime()
+  const secs  = Math.floor(diff / 1000)
+  if (secs < 60)  return 'щойно'
+  const mins  = Math.floor(secs / 60)
+  if (mins < 60)  return `${mins} хв`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours} год`
+  const days  = Math.floor(hours / 24)
+  return `${days}д`
+}
+
+function ActivityTab() {
+  const [data,        setData]        = useState(null)
+  const [loading,     setLoading]     = useState(false)
+  const [lastRefresh, setLastRefresh] = useState(null)
+  const [elapsed,     setElapsed]     = useState(0)
+  const [copied,      setCopied]      = useState(false)
+
+  async function load() {
+    setLoading(true)
+    const result = await fetchActivityData()
+    setLoading(false)
+    setData(result)
+    if (!result?.error && !result?.tableNotFound) {
+      setLastRefresh(Date.now())
+      setElapsed(0)
+    }
+  }
+
+  useEffect(() => {
+    load()
+    const iv = setInterval(load, 30000)
+    return () => clearInterval(iv)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!lastRefresh) return
+    const iv = setInterval(() => setElapsed(Math.floor((Date.now() - lastRefresh) / 1000)), 1000)
+    return () => clearInterval(iv)
+  }, [lastRefresh])
+
+  function copySQL() {
+    navigator.clipboard.writeText(SETUP_SQL).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  if (!data && loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (data?.tableNotFound) {
+    return (
+      <div className="max-w-2xl space-y-4">
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 space-y-3">
+          <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">Потрібна міграція БД</p>
+          <p className="text-sm text-amber-700/80 dark:text-amber-400/80">
+            Таблиця <code className="font-mono bg-amber-500/10 px-1 rounded">user_activity</code> не існує.
+            Виконай цей SQL у Supabase SQL Editor:
+          </p>
+          <pre className="bg-gray-900 text-green-400 text-xs rounded-lg p-4 overflow-x-auto whitespace-pre-wrap">{SETUP_SQL}</pre>
+          <button onClick={copySQL}
+            className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-400 rounded-lg text-sm font-medium transition-colors">
+            {copied ? '✓ Скопійовано' : 'Копіювати SQL'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (data?.error) {
+    return <p className="text-red-500 text-sm">{data.error}</p>
+  }
+
+  const now = Date.now()
+  const cutoff30 = new Date()
+  cutoff30.setDate(cutoff30.getDate() - 30)
+  const cutoffStr = cutoff30.toISOString().slice(0, 10)
+
+  const activityMap = {}
+  ;(data?.activity ?? []).forEach(a => { activityMap[a.user_id] = a })
+  const authMap = data?.authUsers ?? {}
+
+  const rows = (data?.profiles ?? []).map(p => {
+    const a    = activityMap[p.id]
+    const auth = authMap[p.id]
+    const lastSeen = a?.last_seen ?? auth?.last_sign_in_at ?? null
+    const isOnline = lastSeen && (now - new Date(lastSeen).getTime()) < 6 * 60 * 1000
+
+    let visits30d = 0, desktop = 0, mobile = 0, tablet = 0
+    for (const [day, counts] of Object.entries(a?.visit_days ?? {})) {
+      if (day >= cutoffStr && typeof counts === 'object') {
+        visits30d += Object.values(counts).reduce((s, n) => s + n, 0)
+        desktop   += counts.desktop ?? 0
+        mobile    += counts.mobile  ?? 0
+        tablet    += counts.tablet  ?? 0
+      }
+    }
+
+    return { ...p, lastSeen, isOnline, visits30d, desktop, mobile, tablet, lastDevice: a?.last_device ?? null }
+  }).sort((a, b) => {
+    if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1
+    if (!a.lastSeen && !b.lastSeen) return 0
+    if (!a.lastSeen) return 1
+    if (!b.lastSeen) return -1
+    return new Date(b.lastSeen) - new Date(a.lastSeen)
+  })
+
+  const onlineCount = rows.filter(r => r.isOnline).length
+
+  function pName(p) {
+    return [p.first_name, p.last_name].filter(Boolean).join(' ') || p.username || '—'
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Активність</h3>
+          {onlineCount > 0 && (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/15 text-green-600 dark:text-green-400 rounded-full text-xs font-semibold">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse inline-block" />
+              {onlineCount} онлайн
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {lastRefresh && (
+            <span className="text-xs text-gray-400 dark:text-gray-600">оновлено {elapsed}с тому</span>
+          )}
+          <button onClick={load} disabled={loading}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-50 transition-colors">
+            {loading ? '…' : '↻ Оновити'}
+          </button>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+              <th className="text-left px-4 py-2.5">Учасник</th>
+              <th className="text-center px-3 py-2.5">Статус</th>
+              <th className="text-right px-3 py-2.5 whitespace-nowrap">Остання активність</th>
+              <th className="text-right px-3 py-2.5 whitespace-nowrap">Відвід. / 30д</th>
+              <th className="text-right px-4 py-2.5 whitespace-nowrap">Пристрої 30д</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.id} className="border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                <td className="px-4 py-2.5">
+                  <div className="font-medium text-gray-900 dark:text-white">{pName(r)}</div>
+                  {r.username && <div className="text-xs text-gray-400 dark:text-gray-500">@{r.username}</div>}
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  {r.isOnline ? (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-green-500/15 text-green-600 dark:text-green-400 rounded-full text-xs font-medium">
+                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full inline-block" />
+                      онлайн
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 rounded-full text-xs">
+                      <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-600 rounded-full inline-block" />
+                      офлайн
+                    </span>
+                  )}
+                </td>
+                <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-300 tabular-nums text-xs">
+                  {timeAgo(r.lastSeen)}
+                </td>
+                <td className="px-3 py-2.5 text-right tabular-nums font-medium text-gray-900 dark:text-white">
+                  {r.visits30d > 0 ? r.visits30d : <span className="text-gray-300 dark:text-gray-700">—</span>}
+                </td>
+                <td className="px-4 py-2.5 text-right">
+                  {(r.desktop + r.mobile + r.tablet) > 0 ? (
+                    <div className="flex items-center justify-end gap-1.5 text-xs">
+                      {r.desktop > 0 && (
+                        <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded font-medium">Д {r.desktop}</span>
+                      )}
+                      {r.mobile > 0 && (
+                        <span className="px-1.5 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded font-medium">М {r.mobile}</span>
+                      )}
+                      {r.tablet > 0 && (
+                        <span className="px-1.5 py-0.5 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded font-medium">П {r.tablet}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-300 dark:text-gray-700 text-xs">—</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 // ── Registry tab ────────────────────────────────────────────────────────────
 
 const REG_STATUS_LABEL = { finished: 'Завершено', live: 'Live', scheduled: 'Заплановано' }
@@ -803,6 +1025,7 @@ const TABS = [
   { id: 'merge',     label: 'Злиття профілів' },
   { id: 'analytics', label: 'Аналітика' },
   { id: 'registry',  label: 'Реєстр' },
+  { id: 'activity',  label: 'Активність' },
 ]
 
 export default function AdminPanel({ matches: initMatches, profiles: initProfiles, tournaments: initTournaments }) {
@@ -832,6 +1055,7 @@ export default function AdminPanel({ matches: initMatches, profiles: initProfile
       {tab === 'merge'     && <MergeTab     profiles={profiles} setProfiles={setProfiles} setTab={setTab} />}
       {tab === 'analytics' && <AnalyticsTab matches={matches}   profiles={profiles} tournaments={tournaments} setProfiles={setProfiles} />}
       {tab === 'registry'  && <RegistryTab  profiles={profiles} tournaments={tournaments} />}
+      {tab === 'activity'  && <ActivityTab />}
     </div>
   )
 }

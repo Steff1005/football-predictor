@@ -133,6 +133,33 @@ export async function fetchPredictionRegistry(tournamentId) {
   }
 }
 
+export async function fetchActivityData() {
+  try {
+    const db = await getAdminDb()
+
+    const [{ data: profiles }, { data: activity, error: aErr }] = await Promise.all([
+      db.from('profiles').select('id, username, first_name, last_name'),
+      db.from('user_activity').select('*').order('last_seen', { ascending: false }),
+    ])
+
+    if (aErr) {
+      return { tableNotFound: true, profiles: profiles ?? [], authUsers: {} }
+    }
+
+    let authUsers = {}
+    try {
+      const { data } = await db.auth.admin.listUsers({ perPage: 1000 })
+      ;(data?.users ?? []).forEach(u => {
+        authUsers[u.id] = { created_at: u.created_at, last_sign_in_at: u.last_sign_in_at, email: u.email }
+      })
+    } catch {}
+
+    return { profiles: profiles ?? [], activity: activity ?? [], authUsers }
+  } catch (e) {
+    return { error: e.message }
+  }
+}
+
 export async function syncAllProfileStats() {
   try {
     const db = await getAdminDb()

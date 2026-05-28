@@ -7,6 +7,7 @@ import ThemeProvider from '@/components/ThemeProvider'
 import Navbar from '@/components/Navbar'
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
 import ToastProvider from '@/components/ToastProvider'
+import ActivityTracker from '@/components/ActivityTracker'
 
 export const metadata = {
   title: 'Kickoff',
@@ -77,6 +78,7 @@ export default async function RootLayout({ children }) {
             </main>
           </ToastProvider>
         </ThemeProvider>
+        <ActivityTracker userId={session?.user?.id ?? null} />
         <ServiceWorkerRegister />
         <Analytics />
         <SpeedInsights />

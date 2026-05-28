@@ -32,7 +32,7 @@ export default function AnalyticsTable({ rows, userAnalytics, userId }) {
   const router = useRouter()
 
   return (
-    <div className="overflow-x-auto scrollbar-hide rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 bg-white dark:bg-gray-900">
+    <div className="overflow-x-auto scrollbar-hide rounded-xl table-inset-ring bg-white dark:bg-gray-900">
       <table className="w-full table-fixed text-sm border-collapse">
         <colgroup>
           <col />                        {/* # + УЧАСНИК — flexible */}

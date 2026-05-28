@@ -29,6 +29,10 @@ body {
 .sticky-col-shadow { box-shadow: 2px 0 5px rgba(0,0,0,0.08); }
 html.dark .sticky-col-shadow { box-shadow: 2px 0 5px rgba(0,0,0,0.45); }
 
+/* Inset ring for table wrappers — renders on top of scrolled content in Safari iOS */
+.table-inset-ring { box-shadow: inset 0 0 0 1px rgb(229 231 235); }
+html.dark .table-inset-ring { box-shadow: inset 0 0 0 1px rgb(31 41 55); }
+
 /* Remove number input arrows */
 .no-spin::-webkit-outer-spin-button,
 .no-spin::-webkit-inner-spin-button {

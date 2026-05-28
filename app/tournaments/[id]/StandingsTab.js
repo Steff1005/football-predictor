@@ -37,7 +37,7 @@ export default function StandingsTab({ standings, roundLabels, roundPointsMap, p
       </div>
 
       {/* Desktop — summary table */}
-      <div className="hidden sm:block bg-white dark:bg-gray-900 overflow-x-auto scrollbar-hide rounded-2xl ring-1 ring-gray-200 dark:ring-gray-800">
+      <div className="hidden sm:block bg-white dark:bg-gray-900 overflow-x-auto scrollbar-hide rounded-2xl table-inset-ring">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-800">
@@ -78,7 +78,7 @@ export default function StandingsTab({ standings, roundLabels, roundPointsMap, p
 
       {/* Round-by-round breakdown */}
       {roundLabels?.length > 0 && (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden" style={{transform:'translateZ(0)'}}>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl table-inset-ring">
           <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
             <h2 className="font-semibold text-gray-900 dark:text-white text-sm">Очки по стадіях</h2>
           </div>

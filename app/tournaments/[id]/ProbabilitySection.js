@@ -29,7 +29,7 @@ export default function ProbabilitySection({ probMatrix, remainingCount }) {
     .filter(place => probMatrix.some(row => (row.probs[place] ?? 0) > 0))
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden" style={{transform:'translateZ(0)'}}>
+    <div className="bg-white dark:bg-gray-900 rounded-2xl table-inset-ring">
       <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
         <h2 className="font-semibold text-gray-900 dark:text-white text-sm">Прогноз підсумкових місць</h2>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
@@ -61,19 +61,14 @@ export default function ProbabilitySection({ probMatrix, remainingCount }) {
                     <span className="w-6 text-sm text-center flex-shrink-0">
                       {placeLabel(place)}
                     </span>
-                    <div className="flex-1 bg-gray-100 dark:bg-white/10 rounded-full h-5 overflow-hidden">
+                    <div className="flex-1 bg-gray-100 dark:bg-white/10 rounded-full h-7 overflow-hidden relative">
                       <div
-                        className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                        className="h-full rounded-full flex items-center justify-center transition-all duration-500 min-w-[32px]"
                         style={{ width: `${prob}%`, backgroundColor: barColor(prob) }}
                       >
-                        {prob >= 20 && (
-                          <span className="text-white text-xs font-medium">{prob}%</span>
-                        )}
+                        <span className="text-white text-xs font-medium px-2 whitespace-nowrap">{prob}%</span>
                       </div>
                     </div>
-                    {prob < 20 && (
-                      <span className="text-xs text-gray-400 dark:text-gray-500 w-8 flex-shrink-0">{prob}%</span>
-                    )}
                   </div>
                 ))}
               </div>

@@ -37,8 +37,7 @@ export default function StandingsTab({ standings, roundLabels, roundPointsMap, p
       </div>
 
       {/* Desktop — summary table */}
-      <div className="hidden sm:block bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
-        <div className="overflow-x-auto scrollbar-hide">
+      <div className="hidden sm:block bg-white dark:bg-gray-900 overflow-x-auto scrollbar-hide rounded-2xl ring-1 ring-gray-200 dark:ring-gray-800">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-800">
@@ -75,12 +74,11 @@ export default function StandingsTab({ standings, roundLabels, roundPointsMap, p
               ))}
             </tbody>
           </table>
-        </div>
       </div>
 
       {/* Round-by-round breakdown */}
       {roundLabels?.length > 0 && (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden" style={{transform:'translateZ(0)'}}>
           <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
             <h2 className="font-semibold text-gray-900 dark:text-white text-sm">Очки по стадіях</h2>
           </div>
@@ -88,7 +86,7 @@ export default function StandingsTab({ standings, roundLabels, roundPointsMap, p
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap sticky left-0 bg-white dark:bg-gray-900">Учасник</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap sticky left-0 z-10 bg-white dark:bg-gray-900">Учасник</th>
                   {roundLabels.map(label => (
                     <th key={label} className="text-center px-1 py-2.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap min-w-[60px] w-[60px]">{label}</th>
                   ))}
@@ -98,7 +96,7 @@ export default function StandingsTab({ standings, roundLabels, roundPointsMap, p
               <tbody>
                 {standings.map(s => (
                   <tr key={s.uid} className="border-b border-gray-100 dark:border-gray-800/50 last:border-0">
-                    <td className="px-4 py-2.5 sticky left-0 bg-white dark:bg-gray-900">
+                    <td className="px-4 py-2.5 sticky left-0 z-10 bg-white dark:bg-gray-900">
                       <Link href={`/players/${s.uid}`} className="flex items-center gap-2 hover:opacity-75 transition-opacity">
                         <Avatar profile={s.profile} />
                         <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">{displayName(s.profile)}</span>

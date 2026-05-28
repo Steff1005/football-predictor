@@ -191,8 +191,7 @@ export default async function PlayerProfilePage({ params }) {
       {historyRows.length > 0 && (
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Історія турнірів</h2>
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-            <div className="overflow-x-auto scrollbar-hide">
+          <div className="bg-white dark:bg-gray-900 overflow-x-auto scrollbar-hide rounded-xl ring-1 ring-gray-200 dark:ring-gray-800">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
@@ -225,7 +224,6 @@ export default async function PlayerProfilePage({ params }) {
                   ))}
                 </tbody>
               </table>
-            </div>
           </div>
         </div>
       )}

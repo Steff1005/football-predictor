@@ -23,7 +23,7 @@ export default function ProbabilitySection({ probMatrix, remainingCount }) {
     .filter(place => probMatrix.some(row => (row.probs[place] ?? 0) > 0))
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden" style={{transform:'translateZ(0)'}}>
       <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
         <h2 className="font-semibold text-gray-900 dark:text-white text-sm">Прогноз підсумкових місць</h2>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">

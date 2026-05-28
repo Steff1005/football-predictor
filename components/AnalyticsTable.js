@@ -40,8 +40,7 @@ export default function AnalyticsTable({ rows, userAnalytics, userId }) {
   const router = useRouter()
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-      <div className="overflow-x-auto scrollbar-hide bg-white dark:bg-gray-900">
+    <div className="overflow-x-auto scrollbar-hide rounded-xl ring-1 ring-gray-200 dark:ring-gray-800 bg-white dark:bg-gray-900">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
@@ -125,7 +124,6 @@ export default function AnalyticsTable({ rows, userAnalytics, userId }) {
             })}
           </tbody>
         </table>
-      </div>
     </div>
   )
 }

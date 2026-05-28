@@ -30,9 +30,10 @@ function Th({ children, right = false, className = '' }) {
   )
 }
 
-// bg must exactly match the table background so scrolled content doesn't bleed through
-const stickyBg      = 'bg-white dark:bg-gray-900'
-const stickyBgIsMe  = 'bg-green-50 dark:bg-gray-800'
+// bg must be opaque and exactly match the table background so scrolled content doesn't bleed through.
+// isMe dark: computed from gray-900 (#111827) + green-500/10 → rgb(19,41,45) = #13292d
+const stickyBg     = 'bg-white dark:bg-gray-900'
+const stickyBgIsMe = 'bg-green-50 dark:bg-[#13292d]'
 
 export default function AnalyticsTable({ rows, userAnalytics, userId }) {
   const router = useRouter()
@@ -45,7 +46,7 @@ export default function AnalyticsTable({ rows, userAnalytics, userId }) {
             <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
               {/* Combined sticky # + УЧАСНИК header */}
               <th
-                className={`sticky left-0 z-10 ${stickyBg} text-left px-3 py-3 border-r border-gray-200 dark:border-white/10 whitespace-nowrap`}
+                className={`sticky left-0 z-10 ${stickyBg} text-left px-3 py-3 sticky-col-shadow whitespace-nowrap`}
                 style={{ minWidth: '160px' }}
               >
                 Учасник
@@ -84,7 +85,7 @@ export default function AnalyticsTable({ rows, userAnalytics, userId }) {
                   className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}
                 >
                   {/* Combined sticky # + УЧАСНИК cell */}
-                  <td className={`sticky left-0 z-10 px-3 py-2.5 border-r border-gray-200 dark:border-white/10 ${isMe ? stickyBgIsMe : stickyBg}`}>
+                  <td className={`sticky left-0 z-10 px-3 py-2.5 sticky-col-shadow ${isMe ? stickyBgIsMe : stickyBg}`}>
                     <div className="flex items-center gap-2">
                       <span className="tabular-nums text-xs text-gray-400 dark:text-gray-500 w-4 flex-shrink-0 text-right">{i + 1}</span>
                       <ProfileAvatar profile={p} />

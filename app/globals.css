@@ -25,6 +25,10 @@ body {
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Sticky column separator — shadow instead of border to avoid rendering artefacts */
+.sticky-col-shadow { box-shadow: 2px 0 5px rgba(0,0,0,0.08); }
+html.dark .sticky-col-shadow { box-shadow: 2px 0 5px rgba(0,0,0,0.45); }
+
 /* Remove number input arrows */
 .no-spin::-webkit-outer-spin-button,
 .no-spin::-webkit-inner-spin-button {

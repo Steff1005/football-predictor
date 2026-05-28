@@ -94,14 +94,13 @@ function GroupsPanel({ groupRankings, setGroupRankings, teamsByGroup, onNext }) 
         Розстав команди в кожній групі від 1-го до 4-го місця. Перші два виходять з групи.
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
-        {GROUPS.map(g => (
-          <GroupCard
-            key={g}
-            group={g}
-            teams={groupRankings[g] ?? []}
-            onMove={moveTeam}
-          />
-        ))}
+        {GROUPS.map(g => {
+          const logoMap = Object.fromEntries((teamsByGroup[g] ?? []).map(t => [t.name, t.logo]))
+          const ordered = (groupRankings[g] ?? []).map(name => ({ name, logo: logoMap[name] ?? null }))
+          return (
+            <GroupCard key={g} group={g} teams={ordered} onMove={moveTeam} />
+          )
+        })}
       </div>
       <div className="flex justify-end">
         <button

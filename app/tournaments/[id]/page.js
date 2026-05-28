@@ -272,7 +272,7 @@ export default async function TournamentPage({ params, searchParams }) {
     <div>
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 mb-4">
-        <a href="/" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Турніри</a>
+        <a href="/tournaments" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Турніри</a>
         <span>/</span>
         <span className="text-gray-600 dark:text-gray-300 truncate">{tournament.name}</span>
       </div>

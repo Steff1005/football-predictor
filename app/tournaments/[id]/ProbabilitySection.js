@@ -2,6 +2,10 @@ import Link from 'next/link'
 import { Avatar, displayName } from './TournamentHelpers'
 import { pluralMatches } from './TournamentHelpers'
 
+function placeLabel(p) {
+  return p === 1 ? '🥇' : p === 2 ? '🥈' : p === 3 ? '🥉' : `${p}`
+}
+
 function probCellCls(pct) {
   if (pct === 0) return 'text-gray-300 dark:text-gray-700'
   if (pct < 10)  return 'text-gray-500 dark:text-gray-400'
@@ -11,8 +15,10 @@ function probCellCls(pct) {
   return                 'bg-green-500 text-white font-bold'
 }
 
-function placeLabel(p) {
-  return p === 1 ? '🥇' : p === 2 ? '🥈' : p === 3 ? '🥉' : `${p}`
+function barColor(prob) {
+  if (prob >= 70) return '#16a34a'
+  if (prob >= 30) return '#15803d'
+  return '#166534'
 }
 
 export default function ProbabilitySection({ probMatrix, remainingCount }) {
@@ -32,33 +38,52 @@ export default function ProbabilitySection({ probMatrix, remainingCount }) {
         </p>
       </div>
 
-      {/* Mobile: card per participant */}
-      <div className="sm:hidden divide-y divide-gray-100 dark:divide-gray-800">
-        {probMatrix.map(row => (
-          <div key={row.uid} className="px-4 py-3">
-            <Link href={`/players/${row.uid}`} className="flex items-center gap-2.5 mb-2 hover:opacity-75 transition-opacity">
-              <Avatar profile={row.profile} />
-              <span className="font-medium text-gray-900 dark:text-white text-sm flex-1 min-w-0 truncate">
-                {displayName(row.profile)}
-              </span>
-            </Link>
-            <div className="flex flex-wrap gap-1.5">
-              {activePlaces.map(place => {
-                const pct = row.probs[place] ?? 0
-                if (pct === 0) return null
-                return (
-                  <span key={place} className={`px-2.5 py-1 rounded-lg text-xs tabular-nums ${probCellCls(pct)}`}>
-                    {placeLabel(place)}: {pct}%
-                  </span>
-                )
-              })}
+      {/* Mobile (<lg): progress-bar cards */}
+      <div className="lg:hidden divide-y divide-gray-100 dark:divide-gray-800">
+        {probMatrix.map(row => {
+          const bars = activePlaces
+            .map(place => ({ place, prob: row.probs[place] ?? 0 }))
+            .filter(({ prob }) => prob > 0)
+            .sort((a, b) => b.prob - a.prob)
+
+          return (
+            <div key={row.uid} className="px-4 py-3">
+              <Link href={`/players/${row.uid}`} className="flex items-center gap-2.5 mb-3 hover:opacity-75 transition-opacity">
+                <Avatar profile={row.profile} />
+                <span className="font-medium text-gray-900 dark:text-white text-sm flex-1 min-w-0 truncate">
+                  {displayName(row.profile)}
+                </span>
+              </Link>
+
+              <div className="flex flex-col gap-1.5">
+                {bars.map(({ place, prob }) => (
+                  <div key={place} className="flex items-center gap-2">
+                    <span className="w-6 text-sm text-center flex-shrink-0">
+                      {placeLabel(place)}
+                    </span>
+                    <div className="flex-1 bg-gray-100 dark:bg-white/10 rounded-full h-5 overflow-hidden">
+                      <div
+                        className="h-full rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                        style={{ width: `${prob}%`, backgroundColor: barColor(prob) }}
+                      >
+                        {prob >= 20 && (
+                          <span className="text-white text-xs font-medium">{prob}%</span>
+                        )}
+                      </div>
+                    </div>
+                    {prob < 20 && (
+                      <span className="text-xs text-gray-400 dark:text-gray-500 w-8 flex-shrink-0">{prob}%</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
-      {/* Desktop: table */}
-      <div className="hidden sm:block overflow-x-auto scrollbar-hide">
+      {/* Desktop (>=lg): probability matrix table */}
+      <div className="hidden lg:block overflow-x-auto scrollbar-hide">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800">

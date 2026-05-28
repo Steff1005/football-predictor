@@ -39,8 +39,8 @@ export default function AnalyticsTable({ rows, userAnalytics, userId }) {
   const router = useRouter()
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
-      <div className="overflow-x-auto scrollbar-hide rounded-xl">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <div className="overflow-x-auto scrollbar-hide bg-white dark:bg-gray-900">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">

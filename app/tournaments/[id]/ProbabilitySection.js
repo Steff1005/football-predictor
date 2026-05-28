@@ -58,7 +58,7 @@ export default function ProbabilitySection({ probMatrix, remainingCount }) {
       </div>
 
       {/* Desktop: table */}
-      <div className="hidden sm:block overflow-x-auto">
+      <div className="hidden sm:block overflow-x-auto scrollbar-hide">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800">

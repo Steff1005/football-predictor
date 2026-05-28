@@ -30,19 +30,23 @@ function Th({ children, right = false, className = '' }) {
   )
 }
 
+// bg must exactly match the table background so scrolled content doesn't bleed through
+const stickyBg      = 'bg-white dark:bg-gray-900'
+const stickyBgIsMe  = 'bg-green-50 dark:bg-gray-800'
+
 export default function AnalyticsTable({ rows, userAnalytics, userId }) {
   const router = useRouter()
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
-      <div className="overflow-x-auto rounded-xl">
+      <div className="overflow-x-auto scrollbar-hide rounded-xl">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-              <th className="px-2 py-3 text-right w-8 tabular-nums">#</th>
+              {/* Combined sticky # + УЧАСНИК header */}
               <th
-                className="sticky left-0 z-10 bg-white dark:bg-gray-900 text-left px-3 py-3 border-r border-gray-200 dark:border-white/10 whitespace-nowrap"
-                style={{ minWidth: '130px' }}
+                className={`sticky left-0 z-10 ${stickyBg} text-left px-3 py-3 border-r border-gray-200 dark:border-white/10 whitespace-nowrap`}
+                style={{ minWidth: '160px' }}
               >
                 Учасник
               </th>
@@ -79,9 +83,10 @@ export default function AnalyticsTable({ rows, userAnalytics, userId }) {
                   onClick={() => router.push(`/players/${p.id}`)}
                   className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}
                 >
-                  <td className="px-2 py-2.5 text-right tabular-nums text-gray-400 dark:text-gray-500 text-xs">{i + 1}</td>
-                  <td className={`sticky left-0 z-10 px-3 py-2.5 border-r border-gray-200 dark:border-white/10 ${isMe ? 'bg-green-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'}`}>
+                  {/* Combined sticky # + УЧАСНИК cell */}
+                  <td className={`sticky left-0 z-10 px-3 py-2.5 border-r border-gray-200 dark:border-white/10 ${isMe ? stickyBgIsMe : stickyBg}`}>
                     <div className="flex items-center gap-2">
+                      <span className="tabular-nums text-xs text-gray-400 dark:text-gray-500 w-4 flex-shrink-0 text-right">{i + 1}</span>
                       <ProfileAvatar profile={p} />
                       <span className="font-medium text-gray-900 dark:text-white truncate">
                         {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}

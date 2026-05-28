@@ -21,6 +21,10 @@ body {
   opacity: 0;
 }
 
+/* Hide scrollbar while keeping scroll functionality */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Remove number input arrows */
 .no-spin::-webkit-outer-spin-button,
 .no-spin::-webkit-inner-spin-button {

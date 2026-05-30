@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import MatchesTab from './MatchesTab'
+import LiveTab from './LiveTab'
 import PredsTab from './PredsTab'
 import StandingsTab from './StandingsTab'
 import RoundsTab from './RoundsTab'
@@ -111,6 +112,8 @@ export default async function TournamentPage({ params, searchParams }) {
   const matchIds         = allMatches.map(m => m.id)
   const now              = new Date()
   const finishedMatchIds = allMatches.filter(m => m.status === 'finished').map(m => m.id)
+  const liveMatches      = allMatches.filter(m => m.status === 'live' || (new Date(m.kickoff_at) < now && m.status !== 'finished'))
+  const liveMatchIds     = liveMatches.map(m => m.id)
 
   // Current user's predictions (for matches tab progress bar)
   let userPredictions = {}
@@ -145,6 +148,16 @@ export default async function TournamentPage({ params, searchParams }) {
     )
   }
 
+  // Live match predictions (visible to all while match is ongoing)
+  let livePreds = []
+  if (liveMatchIds.length > 0) {
+    const { data } = await supabase
+      .from('predictions')
+      .select('user_id, match_id, predicted_home, predicted_away')
+      .in('match_id', liveMatchIds)
+    livePreds = data ?? []
+  }
+
   // Upcoming predictions (to surface late joiners)
   const upcomingMatchIds = allMatches.filter(m => new Date(m.kickoff_at) > now).map(m => m.id)
   let upcomingPreds = []
@@ -161,6 +174,7 @@ export default async function TournamentPage({ params, searchParams }) {
     ...calcPreds.map(p => p.user_id),
     ...publicPreds.map(p => p.user_id),
     ...upcomingPreds.map(p => p.user_id),
+    ...livePreds.map(p => p.user_id),
   ])]
   let profileMap = {}
   if (allUserIds.length > 0) {
@@ -210,6 +224,13 @@ export default async function TournamentPage({ params, searchParams }) {
         .sort((a, b) => b.pts - a.pts)
       return { label, rows, maxPts: rows[0]?.pts ?? 0, matchCount: gm.length, matchIds: gm.map(m => m.id) }
     })
+
+  // ── Live tab ──────────────────────────────────────────────────────────────
+  const predsByLiveMatch = {}
+  for (const p of livePreds) {
+    if (!predsByLiveMatch[p.match_id]) predsByLiveMatch[p.match_id] = []
+    predsByLiveMatch[p.match_id].push(p)
+  }
 
   // ── Прогнози tab ──────────────────────────────────────────────────────────
   const predsByMatch = {}
@@ -285,7 +306,7 @@ export default async function TournamentPage({ params, searchParams }) {
       </div>
 
       {/* Tabs */}
-      <TournamentTabs id={id} activeTab={tab} />
+      <TournamentTabs id={id} activeTab={tab} hasLive={liveMatches.length > 0} />
 
       {/* ── Matches ─────────────────────────────────────────────────────── */}
       {tab === 'matches' && (
@@ -306,6 +327,11 @@ export default async function TournamentPage({ params, searchParams }) {
           )}
           <MatchesTab matches={matchesTabMatches} userPredictions={userPredictions} userId={userId} defaultRound={defaultMatchesRound} />
         </>
+      )}
+
+      {/* ── Live ────────────────────────────────────────────────────────── */}
+      {tab === 'live' && (
+        <LiveTab liveMatches={liveMatches} predsByMatch={predsByLiveMatch} profileMap={profileMap} />
       )}
 
       {/* ── Predictions ─────────────────────────────────────────────────── */}

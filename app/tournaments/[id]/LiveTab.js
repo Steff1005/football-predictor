@@ -1,0 +1,144 @@
+'use client'
+import Link from 'next/link'
+
+function displayName(profile) {
+  return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
+}
+
+function PlayerAvatar({ profile }) {
+  const name = displayName(profile)
+  const initials = name === '—' ? '?' : name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
+  return (
+    <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-green-500/20 flex items-center justify-center">
+      {profile?.avatar_url
+        ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+        : <span className="text-xs font-bold text-green-600 dark:text-green-400">{initials}</span>
+      }
+    </div>
+  )
+}
+
+export default function LiveTab({ liveMatches, predsByMatch, profileMap }) {
+  if (!liveMatches.length) {
+    return (
+      <div className="text-center py-20 text-gray-400 dark:text-gray-600">
+        <p className="text-5xl mb-4">🟡</p>
+        <p>Зараз немає матчів, що тривають</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {liveMatches.map(match => {
+        const preds = (predsByMatch[match.id] ?? []).filter(p => profileMap[p.user_id])
+        const kickoff = new Date(match.kickoff_at)
+        const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
+        const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+
+        return (
+          <div key={match.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+
+            {/* Match header */}
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-white/10">
+
+              {/* Mobile */}
+              <div className="sm:hidden">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{dateStr}, {timeStr}</span>
+                  <span className="bg-red-500/10 rounded-full px-2.5 py-0.5 text-xs font-semibold text-red-500 dark:text-red-400">
+                    🔴 Матч триває
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-7 flex-shrink-0 flex flex-col items-center gap-1.5">
+                    {match.home_logo
+                      ? <img src={match.home_logo} alt="" className="w-5 h-5 object-contain" />
+                      : <div className="w-5 h-5" />}
+                    {match.away_logo
+                      ? <img src={match.away_logo} alt="" className="w-5 h-5 object-contain" />
+                      : <div className="w-5 h-5" />}
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.home_team}</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.away_team}</span>
+                  </div>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                    {preds.length} прогноз{preds.length === 1 ? '' : preds.length < 5 ? 'и' : 'ів'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Desktop */}
+              <div className="hidden sm:flex items-center gap-2">
+                <span className="text-xs text-gray-400 dark:text-gray-500 w-24 flex-shrink-0">{dateStr}, {timeStr}</span>
+
+                <div className="flex items-center gap-1.5 w-[35%] justify-end min-w-0">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white truncate text-right">{match.home_team}</span>
+                  {match.home_logo && <img src={match.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
+                </div>
+
+                <div className="w-[80px] flex justify-center flex-shrink-0">
+                  <span className="bg-red-500/10 rounded-md px-2 py-0.5 text-xs font-semibold text-red-500 dark:text-red-400 whitespace-nowrap">
+                    🔴 Live
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 w-[35%] justify-start min-w-0">
+                  {match.away_logo && <img src={match.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.away_team}</span>
+                </div>
+
+                <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
+                  {preds.length} прогноз{preds.length === 1 ? '' : preds.length < 5 ? 'и' : 'ів'}
+                </span>
+              </div>
+            </div>
+
+            {/* Predictions — always expanded */}
+            {preds.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-center text-gray-400 dark:text-gray-600">
+                Прогнозів немає
+              </div>
+            ) : preds.map(pred => {
+              const profile = profileMap[pred.user_id]
+              return (
+                <div key={pred.user_id} className="border-t border-gray-100 dark:border-white/10">
+
+                  {/* Mobile row */}
+                  <div className="sm:hidden flex items-center px-4 py-2 gap-3">
+                    <Link href={`/players/${pred.user_id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-75 transition-opacity">
+                      <PlayerAvatar profile={profile} />
+                      <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
+                        {displayName(profile)}
+                      </span>
+                    </Link>
+                    <div className="w-11 flex-shrink-0 flex flex-col items-center">
+                      <span className="font-mono text-sm font-semibold text-gray-500 dark:text-gray-400 leading-snug">{pred.predicted_home}</span>
+                      <span className="font-mono text-sm font-semibold text-gray-500 dark:text-gray-400 leading-snug">{pred.predicted_away}</span>
+                    </div>
+                    <div className="w-[52px] flex-shrink-0" />
+                  </div>
+
+                  {/* Desktop row */}
+                  <div className="hidden sm:flex items-center px-4 py-2 gap-3">
+                    <Link href={`/players/${pred.user_id}`} className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-75 transition-opacity">
+                      <PlayerAvatar profile={profile} />
+                      <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
+                        {displayName(profile)}
+                      </span>
+                    </Link>
+                    <span className="bg-gray-100 dark:bg-white/10 rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 min-w-[2.75rem] text-center">
+                      {pred.predicted_home}:{pred.predicted_away}
+                    </span>
+                    <div className="w-16 flex-shrink-0" />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })}
+    </div>
+  )
+}

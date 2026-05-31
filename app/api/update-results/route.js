@@ -78,6 +78,14 @@ export async function GET(request) {
 
       affectedTournamentIds.add(match.tournament_id)
       updatedCount++
+
+      // When the Final finishes — close the tournament automatically
+      if (match.round === 'FINAL') {
+        await supabase
+          .from('tournaments')
+          .update({ is_active: false })
+          .eq('id', match.tournament_id)
+      }
     }
 
     // Rebuild probability cache once per tournament (after all matches processed)

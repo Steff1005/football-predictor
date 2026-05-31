@@ -107,6 +107,9 @@ export default function Navbar({ initialUser = null, initialProfile = null, init
             <a href="/tournaments" onClick={e => guardedHref('/tournaments', e)} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-sm px-2 py-1">
               Турніри
             </a>
+            <a href="/hall-of-fame" onClick={e => guardedHref('/hall-of-fame', e)} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-sm px-2 py-1">
+              Зал слави
+            </a>
             <a href="/rules" onClick={e => guardedHref('/rules', e)} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-sm px-2 py-1">
               Правила
             </a>
@@ -196,6 +199,11 @@ export default function Navbar({ initialUser = null, initialProfile = null, init
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                 <span className="text-lg">🏆</span>
                 <span className="font-medium">Турніри</span>
+              </a>
+              <a href="/hall-of-fame" onClick={e => { guardedHref('/hall-of-fame', e); setMenuOpen(false) }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <span className="text-lg">🏛️</span>
+                <span className="font-medium">Зал слави</span>
               </a>
               <a href="/rules" onClick={e => { guardedHref('/rules', e); setMenuOpen(false) }}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">

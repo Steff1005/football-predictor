@@ -23,20 +23,73 @@ export async function GET(request) {
     const now = new Date()
     const cutoff = new Date(now - 120 * 60 * 1000).toISOString()
 
+    // Matches past kickoff that haven't been marked finished yet
     const { data: pendingMatches } = await supabase
       .from('matches')
       .select('*')
       .lte('kickoff_at', cutoff)
       .neq('status', 'finished')
 
-    if (!pendingMatches?.length) {
+    // Matches already marked finished by sync-matches but with uncalculated predictions
+    const { data: uncalcPreds } = await supabase
+      .from('predictions')
+      .select('match_id')
+      .eq('is_calculated', false)
+
+    const uncalcMatchIds = [...new Set((uncalcPreds ?? []).map(p => p.match_id))]
+    let alreadyFinished = []
+    if (uncalcMatchIds.length) {
+      const { data } = await supabase
+        .from('matches')
+        .select('*')
+        .in('id', uncalcMatchIds)
+        .eq('status', 'finished')
+        .not('home_score', 'is', null)
+      alreadyFinished = data ?? []
+    }
+
+    if (!pendingMatches?.length && !alreadyFinished.length) {
       return Response.json({ success: true, message: 'No matches in window' })
     }
 
     let updatedCount = 0
     const affectedTournamentIds = new Set()
 
-    for (const match of pendingMatches) {
+    // Helper: calculate predictions for a finished match with known scores
+    async function calcPredictions(match, homeScore, awayScore) {
+      const { data: predictions } = await supabase
+        .from('predictions')
+        .select('*')
+        .eq('match_id', match.id)
+        .eq('is_calculated', false)
+
+      for (const prediction of predictions ?? []) {
+        const points = calculatePoints(
+          prediction.predicted_home, prediction.predicted_away,
+          homeScore, awayScore
+        )
+        await supabase.from('predictions').update({
+          points, is_calculated: true,
+        }).eq('id', prediction.id)
+
+        await supabase.rpc('increment_profile_stats', {
+          p_user_id: prediction.user_id,
+          p_points: points,
+        })
+      }
+
+      affectedTournamentIds.add(match.tournament_id)
+
+      if (match.round === 'FINAL') {
+        await supabase
+          .from('tournaments')
+          .update({ is_active: false })
+          .eq('id', match.tournament_id)
+      }
+    }
+
+    // Pass 1: pending matches — fetch result from football-data.org
+    for (const match of pendingMatches ?? []) {
       const response = await fetch(
         `https://api.football-data.org/v4/matches/${match.external_id}`,
         { headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_KEY || process.env.API_FOOTBALL_KEY } }
@@ -55,37 +108,14 @@ export async function GET(request) {
         away_score: awayScore,
       }).eq('id', match.id)
 
-      const { data: predictions } = await supabase
-        .from('predictions')
-        .select('*')
-        .eq('match_id', match.id)
-        .eq('is_calculated', false)
-
-      for (const prediction of predictions) {
-        const points = calculatePoints(
-          prediction.predicted_home, prediction.predicted_away,
-          homeScore, awayScore
-        )
-        await supabase.from('predictions').update({
-          points, is_calculated: true,
-        }).eq('id', prediction.id)
-
-        await supabase.rpc('increment_profile_stats', {
-          p_user_id: prediction.user_id,
-          p_points: points,
-        })
-      }
-
-      affectedTournamentIds.add(match.tournament_id)
+      await calcPredictions(match, homeScore, awayScore)
       updatedCount++
+    }
 
-      // When the Final finishes — close the tournament automatically
-      if (match.round === 'FINAL') {
-        await supabase
-          .from('tournaments')
-          .update({ is_active: false })
-          .eq('id', match.tournament_id)
-      }
+    // Pass 2: already-finished matches (set by sync) with uncalculated predictions
+    for (const match of alreadyFinished) {
+      await calcPredictions(match, match.home_score, match.away_score)
+      updatedCount++
     }
 
     // Rebuild probability cache once per tournament (after all matches processed)

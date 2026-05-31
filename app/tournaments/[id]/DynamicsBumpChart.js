@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useLayoutEffect } from 'react'
 
 const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899']
 
@@ -16,17 +16,31 @@ function pdn(p) {
 
 export default function DynamicsBumpChart({ rounds, rows }) {
   const [hov, setHov] = useState(null)
+  const [containerW, setContainerW] = useState(0)
+  const ref = useRef(null)
+
+  useLayoutEffect(() => {
+    if (!ref.current) return
+    const ro = new ResizeObserver(([e]) => setContainerW(e.contentRect.width))
+    ro.observe(ref.current)
+    return () => ro.disconnect()
+  }, [])
 
   if (!rounds?.length || !rows?.length) return null
 
-  const n    = rows.length
-  const r    = rounds.length
-  const ROW  = 44
-  const COL  = 68
-  const ML   = 22   // left margin (rank numbers)
-  const MR   = 12
-  const MT   = 26   // top margin (column headers)
-  const MB   = 10
+  const n      = rows.length
+  const r      = rounds.length
+  const ROW    = 44
+  const MIN_COL = 52          // minimum column width (triggers scroll on mobile)
+  const ML     = 22
+  const MR     = 12
+  const MT     = 26
+  const MB     = 10
+
+  // Stretch columns to fill container on desktop; scroll on mobile
+  const COL = containerW > 0
+    ? Math.max(MIN_COL, Math.floor((containerW - ML - MR) / r))
+    : MIN_COL
 
   const W = ML + r * COL + MR
   const H = MT + n * ROW + MB
@@ -35,12 +49,11 @@ export default function DynamicsBumpChart({ rounds, rows }) {
   const yOf = rank => MT + (rank - 1) * ROW + ROW / 2
 
   return (
-    <div>
-      {/* Chart */}
+    <div ref={ref}>
       <div className="overflow-x-auto scrollbar-hide">
         <svg width={W} height={H} style={{ minWidth: W, display: 'block' }}>
 
-          {/* Horizontal guide lines per rank */}
+          {/* Horizontal guide lines */}
           {Array.from({ length: n }, (_, i) => (
             <line key={i}
               x1={ML} y1={yOf(i + 1)} x2={W - MR} y2={yOf(i + 1)}
@@ -67,7 +80,7 @@ export default function DynamicsBumpChart({ rounds, rows }) {
             >{roundShort(rk)}</text>
           ))}
 
-          {/* Lines — drawn first (below dots) */}
+          {/* Lines */}
           {rows.map((row, ui) => {
             const color  = COLORS[ui % COLORS.length]
             const isDim  = hov !== null && hov !== row.uid
@@ -85,11 +98,11 @@ export default function DynamicsBumpChart({ rounds, rows }) {
             )
           })}
 
-          {/* Dots + hit areas */}
+          {/* Dots + invisible wide hit area */}
           {rows.map((row, ui) => {
-            const color  = COLORS[ui % COLORS.length]
-            const isDim  = hov !== null && hov !== row.uid
-            const isHov  = hov === row.uid
+            const color = COLORS[ui % COLORS.length]
+            const isDim = hov !== null && hov !== row.uid
+            const isHov = hov === row.uid
             return (
               <g key={ui}
                 opacity={isDim ? 0.12 : 1}
@@ -108,7 +121,6 @@ export default function DynamicsBumpChart({ rounds, rows }) {
                     <title>{pdn(row.profile)} — {roundShort(rounds[ri])}: #{cell.rank}, {cell.cumPoints} б</title>
                   </circle>
                 ))}
-                {/* Wide invisible stroke for easier hover */}
                 <polyline
                   points={row.rounds.map((c, ri) => `${xOf(ri)},${yOf(c.rank)}`).join(' ')}
                   fill="none" stroke="transparent" strokeWidth={18}
@@ -126,10 +138,7 @@ export default function DynamicsBumpChart({ rounds, rows }) {
         {rows.map((row, ui) => (
           <button key={row.uid}
             className="flex items-center gap-1.5 text-xs"
-            style={{
-              opacity: hov !== null && hov !== row.uid ? 0.3 : 1,
-              transition: 'opacity .15s',
-            }}
+            style={{ opacity: hov !== null && hov !== row.uid ? 0.3 : 1, transition: 'opacity .15s' }}
             onMouseEnter={() => setHov(row.uid)}
             onMouseLeave={() => setHov(null)}
           >

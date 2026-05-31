@@ -82,7 +82,7 @@ export default function DynamicsTab({ rounds, rows }) {
 
         {/* Scrollable: round columns */}
         <div className="overflow-x-auto scrollbar-hide flex-1 min-w-0">
-          <table className="text-sm">
+          <table className="text-sm w-full">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
                 {rounds.map(rk => {

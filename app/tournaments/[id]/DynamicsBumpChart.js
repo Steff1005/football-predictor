@@ -106,8 +106,8 @@ export default function DynamicsBumpChart({ rounds, rows }) {
           })}
         </div>
 
-        {/* SVG — no ML/MR, guide lines span full width, dots at same x as HTML headers */}
-        <svg width={W} height={H} style={{ minWidth: W, display: 'block' }}>
+        {/* SVG hidden until chartW is measured — prevents SSR layout jump */}
+        <svg width={W} height={H} style={{ minWidth: W, display: 'block', visibility: chartW > 0 ? 'visible' : 'hidden' }}>
 
           {/* Horizontal guide lines at row centres */}
           {Array.from({ length: n }, (_, i) => (

@@ -58,8 +58,8 @@ export default function DynamicsTab({ rounds, rows }) {
                 const p = row.profile
                 return (
                   <tr key={row.uid}
-                    className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 ${i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/30'}`}>
-                    <td className="px-3 py-2.5">
+                    className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 h-[52px] ${i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/30'}`}>
+                    <td className="px-3 py-0">
                       <div className="flex items-center gap-2">
                         <span className="tabular-nums text-xs text-gray-400 dark:text-gray-500 w-4 flex-shrink-0 text-right">{i + 1}</span>
                         <a href={`/players/${row.uid}`} className="flex items-center gap-1.5 hover:opacity-75 transition-opacity">
@@ -97,9 +97,9 @@ export default function DynamicsTab({ rounds, rows }) {
             <tbody>
               {rows.map((row, i) => (
                 <tr key={row.uid}
-                  className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 ${i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/30'}`}>
+                  className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 h-[52px] ${i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/30'}`}>
                   {row.rounds.map((cell, ri) => (
-                    <td key={ri} className="px-1 py-1.5 text-center min-w-[52px]">
+                    <td key={ri} className="px-1 py-0 text-center min-w-[52px]">
                       <div className={`inline-flex items-center justify-center gap-0.5 rounded-md px-2 py-0.5 tabular-nums text-sm leading-5 ${cellCls(cell.rank)}`}>
                         <span>{cell.rank}</span>
                         {cell.delta !== null && cell.delta !== 0 && (

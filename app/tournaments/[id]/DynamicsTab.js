@@ -104,11 +104,13 @@ export default function DynamicsTab({ rounds, rows }) {
                     <td key={ri} className="px-1 py-0 text-center min-w-[52px]">
                       <div className={`inline-flex items-center justify-center gap-0.5 rounded-md px-2 py-0.5 tabular-nums text-sm leading-5 ${cellCls(cell.rank)}`}>
                         <span>{cell.rank}</span>
-                        {cell.delta !== null && cell.delta !== 0 && (
-                          <span className={`text-[9px] font-bold leading-none mt-px ${cell.delta > 0 ? 'text-green-500' : 'text-red-400'}`}>
-                            {cell.delta > 0 ? '↑' : '↓'}
-                          </span>
-                        )}
+                        <span className={`text-[9px] font-bold leading-none mt-px ${
+                          cell.delta !== null && cell.delta !== 0
+                            ? cell.delta > 0 ? 'text-green-500' : 'text-red-400'
+                            : 'invisible'
+                        }`}>
+                          {(cell.delta ?? 1) > 0 ? '↑' : '↓'}
+                        </span>
                       </div>
                       <div className="text-[9px] text-gray-300 dark:text-gray-600 tabular-nums mt-0.5">
                         {cell.cumPoints}б

@@ -28,14 +28,18 @@ export default function DynamicsBumpChart({ rounds, rows }) {
 
   if (!rounds?.length || !rows?.length) return null
 
+  // Sort by round-1 rank so left column row i+1 = rank i+1 in the first tour
+  const byStart = [...rows].sort((a, b) => a.rounds[0].rank - b.rounds[0].rank)
+  // Colors follow starting rank, not final rank
+  const colorOf = Object.fromEntries(byStart.map((row, i) => [row.uid, COLORS[i % COLORS.length]]))
+
   const n       = rows.length
   const r       = rounds.length
   const ROW     = 44
   const MIN_COL = 52
   const ML      = 4
   const MR      = 12
-  // MT matches the <th> height of the number table above (py-2.5 + text-xs ≈ 37px)
-  const MT      = 37
+  const MT      = 37   // matches <th py-2.5> height in the number table above
   const MB      = 10
 
   const COL = chartW > 0
@@ -51,24 +55,22 @@ export default function DynamicsBumpChart({ rounds, rows }) {
   return (
     <div className="flex">
 
-      {/* Fixed left — same structure as the number table above for column alignment */}
+      {/* Fixed left — sorted by starting rank, no rank number */}
       <div className="flex-shrink-0 border-r border-gray-200 dark:border-gray-800">
         <div className="px-3 py-2.5 border-b border-gray-200 dark:border-gray-800">
           <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap">Учасник</span>
         </div>
-        {rows.map((row, ui) => {
-          const color = COLORS[ui % COLORS.length]
+        {byStart.map((row, i) => {
+          const color = colorOf[row.uid]
           const isDim = hov !== null && hov !== row.uid
           return (
             <div
               key={row.uid}
-              className={`flex items-center gap-2 px-3 border-b border-gray-100 dark:border-gray-800/50 last:border-0 cursor-pointer select-none ${ui % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/30'}`}
+              className={`flex items-center gap-2 px-3 border-b border-gray-100 dark:border-gray-800/50 last:border-0 cursor-pointer select-none ${i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/30'}`}
               style={{ height: ROW, opacity: isDim ? 0.35 : 1, transition: 'opacity .15s' }}
               onMouseEnter={() => setHov(row.uid)}
               onMouseLeave={() => setHov(null)}
             >
-              <span className="tabular-nums text-xs text-gray-400 dark:text-gray-500 w-4 flex-shrink-0 text-right">{ui + 1}</span>
-              {/* Same size as avatar in the number table (w-6 h-6) */}
               <span className="w-6 h-6 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
               <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap text-sm">{pdn(row.profile)}</span>
             </div>
@@ -89,7 +91,7 @@ export default function DynamicsBumpChart({ rounds, rows }) {
             />
           ))}
 
-          {/* Column headers — vertically centred in MT */}
+          {/* Column headers centred in MT */}
           {rounds.map((rk, ri) => (
             <text key={ri}
               x={xOf(ri)} y={MT / 2}
@@ -99,13 +101,13 @@ export default function DynamicsBumpChart({ rounds, rows }) {
           ))}
 
           {/* Lines */}
-          {rows.map((row, ui) => {
-            const color  = COLORS[ui % COLORS.length]
+          {rows.map(row => {
+            const color  = colorOf[row.uid]
             const isDim  = hov !== null && hov !== row.uid
             const isHov  = hov === row.uid
             const points = row.rounds.map((c, ri) => `${xOf(ri)},${yOf(c.rank)}`).join(' ')
             return (
-              <polyline key={ui}
+              <polyline key={row.uid}
                 points={points}
                 fill="none" stroke={color}
                 strokeWidth={isHov ? 3.5 : 2}
@@ -117,12 +119,12 @@ export default function DynamicsBumpChart({ rounds, rows }) {
           })}
 
           {/* Dots + invisible wide hit area */}
-          {rows.map((row, ui) => {
-            const color = COLORS[ui % COLORS.length]
+          {rows.map(row => {
+            const color = colorOf[row.uid]
             const isDim = hov !== null && hov !== row.uid
             const isHov = hov === row.uid
             return (
-              <g key={ui}
+              <g key={row.uid}
                 opacity={isDim ? 0.12 : 1}
                 style={{ transition: 'opacity .15s', cursor: 'pointer' }}
                 onMouseEnter={() => setHov(row.uid)}

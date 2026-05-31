@@ -29,6 +29,8 @@ export default function DynamicsBumpChart({ rounds, rows }) {
 
   useLayoutEffect(() => {
     if (!chartRef.current) return
+    // Measure immediately so first paint already has the correct width (no jump)
+    setChartW(chartRef.current.getBoundingClientRect().width)
     const ro = new ResizeObserver(([e]) => setChartW(e.contentRect.width))
     ro.observe(chartRef.current)
     return () => ro.disconnect()
@@ -163,7 +165,7 @@ export default function DynamicsBumpChart({ rounds, rows }) {
                       <text
                         x={cx} y={cy}
                         textAnchor="middle" dominantBaseline="central"
-                        fontSize={9} fontWeight={700} fill="white"
+                        fontSize={10} fontWeight={700} fill="white"
                         style={{ pointerEvents: 'none', userSelect: 'none' }}
                       >{cell.rank}</text>
                     </g>

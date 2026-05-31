@@ -191,6 +191,55 @@ export async function syncAllProfileStats() {
   }
 }
 
+export async function syncMatches() {
+  try {
+    const db = await getAdminDb()
+
+    const { data: tournaments } = await db
+      .from('tournaments')
+      .select('*')
+      .eq('is_active', true)
+
+    let totalSynced = 0
+    const errors = []
+
+    for (const tournament of tournaments ?? []) {
+      const res = await fetch(
+        `https://api.football-data.org/v4/competitions/${tournament.league_id}/matches?season=${tournament.season}`,
+        { headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_KEY || process.env.API_FOOTBALL_KEY } }
+      )
+      const data = await res.json()
+      if (!data.matches?.length) continue
+
+      const matchesData = data.matches
+        .filter(m => m.homeTeam?.name && m.awayTeam?.name)
+        .map(m => ({
+          tournament_id: tournament.id,
+          external_id:   m.id,
+          home_team:     m.homeTeam.name,
+          away_team:     m.awayTeam.name,
+          home_logo:     m.homeTeam.crest || null,
+          away_logo:     m.awayTeam.crest || null,
+          kickoff_at:    new Date(m.utcDate).toISOString(),
+          status:        m.status === 'FINISHED' ? 'finished' : m.status === 'IN_PLAY' ? 'live' : 'scheduled',
+          home_score:    m.score?.fullTime?.home ?? null,
+          away_score:    m.score?.fullTime?.away ?? null,
+          round:         m.group || m.stage || 'Round',
+        }))
+
+      if (!matchesData.length) continue
+
+      const { error } = await db.from('matches').upsert(matchesData, { onConflict: 'external_id' })
+      if (error) errors.push(`${tournament.name}: ${error.message}`)
+      else totalSynced += matchesData.length
+    }
+
+    return { synced: totalSynced, errors }
+  } catch (e) {
+    return { error: e.message }
+  }
+}
+
 export async function mergeProfiles(sourceId, targetId) {
   try {
     const db = await getAdminDb()

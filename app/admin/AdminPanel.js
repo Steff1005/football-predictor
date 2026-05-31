@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { updateMatch, updateProfile, mergeProfiles, fetchTournamentStats, syncAllProfileStats, fetchPredictionRegistry, fetchActivityData } from './actions'
+import { updateMatch, updateProfile, mergeProfiles, fetchTournamentStats, syncAllProfileStats, fetchPredictionRegistry, fetchActivityData, syncMatches } from './actions'
 
 const INPUT  = 'w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm'
 const BTN_SM = 'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors'
@@ -34,8 +34,19 @@ function MatchesTab({ matches, setMatches, tournaments }) {
   const [statusFilter,     setStatusFilter]     = useState('all')
   const [tournamentFilter, setTournamentFilter] = useState('all')
   const [msg,              setMsg]              = useState('')
+  const [syncing,          setSyncing]          = useState(false)
 
-  function flash(text) { setMsg(text); setTimeout(() => setMsg(''), 4000) }
+  function flash(text) { setMsg(text); setTimeout(() => setMsg(''), 5000) }
+
+  async function handleSyncMatches() {
+    setSyncing(true)
+    const result = await syncMatches()
+    setSyncing(false)
+    if (result.error) { flash('Помилка: ' + result.error); return }
+    const errTxt = result.errors?.length ? ` (помилки: ${result.errors.join(', ')})` : ''
+    flash(`✅ Синхронізовано ${result.synced} матчів${errTxt}`)
+    setTimeout(() => window.location.reload(), 1500)
+  }
 
   function startEdit(m) {
     setEditing({ id: m.id, home_score: m.home_score ?? '', away_score: m.away_score ?? '', status: m.status })
@@ -117,6 +128,13 @@ function MatchesTab({ matches, setMatches, tournaments }) {
         <span className="text-sm text-gray-400 dark:text-gray-500 self-center">
           {visible.length} / {matches.length} матчів
         </span>
+        <button
+          onClick={handleSyncMatches}
+          disabled={syncing}
+          className={`${BTN_SM} ml-auto bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 disabled:opacity-50 transition-colors whitespace-nowrap`}
+        >
+          {syncing ? '⏳ Синхронізація…' : '🔄 Оновити матчі'}
+        </button>
       </div>
 
       <div className="space-y-2">

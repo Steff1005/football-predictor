@@ -191,6 +191,8 @@ export async function syncAllProfileStats() {
   }
 }
 
+const BLOCKED_EXTERNAL_IDS = new Set([554770, 554771, 554775])
+
 export async function syncMatches() {
   try {
     const db = await getAdminDb()
@@ -212,7 +214,7 @@ export async function syncMatches() {
       if (!data.matches?.length) continue
 
       const matchesData = data.matches
-        .filter(m => m.homeTeam?.name && m.awayTeam?.name)
+        .filter(m => m.homeTeam?.name && m.awayTeam?.name && !BLOCKED_EXTERNAL_IDS.has(m.id))
         .map(m => ({
           tournament_id: tournament.id,
           external_id:   m.id,

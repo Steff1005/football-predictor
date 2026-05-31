@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
+// Postponed/cancelled matches that football-data.org never marks as FINISHED
+const BLOCKED_EXTERNAL_IDS = new Set([554770, 554771, 554775])
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -28,9 +31,9 @@ export async function GET(request) {
       const data = await response.json()
       if (!data.matches?.length) continue
 
-      // Беремо тільки матчі з відомими командами
+      // Беремо тільки матчі з відомими командами, пропускаємо заблоковані
       const matchesData = data.matches
-        .filter(m => m.homeTeam?.name && m.awayTeam?.name)
+        .filter(m => m.homeTeam?.name && m.awayTeam?.name && !BLOCKED_EXTERNAL_IDS.has(m.id))
         .map(m => ({
           tournament_id: tournament.id,
           external_id: m.id,

@@ -16,30 +16,29 @@ function pdn(p) {
 
 export default function DynamicsBumpChart({ rounds, rows }) {
   const [hov, setHov] = useState(null)
-  const [containerW, setContainerW] = useState(0)
-  const ref = useRef(null)
+  const [chartW, setChartW] = useState(0)
+  const chartRef = useRef(null)
 
   useLayoutEffect(() => {
-    if (!ref.current) return
-    const ro = new ResizeObserver(([e]) => setContainerW(e.contentRect.width))
-    ro.observe(ref.current)
+    if (!chartRef.current) return
+    const ro = new ResizeObserver(([e]) => setChartW(e.contentRect.width))
+    ro.observe(chartRef.current)
     return () => ro.disconnect()
   }, [])
 
   if (!rounds?.length || !rows?.length) return null
 
-  const n      = rows.length
-  const r      = rounds.length
-  const ROW    = 44
-  const MIN_COL = 52          // minimum column width (triggers scroll on mobile)
-  const ML     = 22
-  const MR     = 12
-  const MT     = 26
-  const MB     = 10
+  const n       = rows.length
+  const r       = rounds.length
+  const ROW     = 44
+  const MIN_COL = 52
+  const ML      = 4
+  const MR      = 12
+  const MT      = 26
+  const MB      = 10
 
-  // Stretch columns to fill container on desktop; scroll on mobile
-  const COL = containerW > 0
-    ? Math.max(MIN_COL, Math.floor((containerW - ML - MR) / r))
+  const COL = chartW > 0
+    ? Math.max(MIN_COL, Math.floor((chartW - ML - MR) / r))
     : MIN_COL
 
   const W = ML + r * COL + MR
@@ -49,8 +48,35 @@ export default function DynamicsBumpChart({ rounds, rows }) {
   const yOf = rank => MT + (rank - 1) * ROW + ROW / 2
 
   return (
-    <div ref={ref}>
-      <div className="overflow-x-auto scrollbar-hide">
+    <div className="flex">
+
+      {/* Fixed left: participant names — mirrors the top table's fixed column */}
+      <div className="flex-shrink-0 border-r border-gray-200 dark:border-gray-800">
+        <div style={{ height: MT }}
+          className="flex items-center px-3 border-b border-gray-200 dark:border-gray-800">
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Учасник</span>
+        </div>
+        {rows.map((row, ui) => {
+          const color = COLORS[ui % COLORS.length]
+          const isDim = hov !== null && hov !== row.uid
+          return (
+            <div
+              key={row.uid}
+              className={`flex items-center gap-2 px-3 border-b border-gray-100 dark:border-gray-800/50 last:border-0 cursor-pointer select-none ${ui % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/30'}`}
+              style={{ height: ROW, opacity: isDim ? 0.35 : 1, transition: 'opacity .15s' }}
+              onMouseEnter={() => setHov(row.uid)}
+              onMouseLeave={() => setHov(null)}
+            >
+              <span className="tabular-nums text-xs text-gray-400 dark:text-gray-500 w-4 flex-shrink-0 text-right">{ui + 1}</span>
+              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+              <span className="text-xs font-medium text-gray-900 dark:text-white whitespace-nowrap">{pdn(row.profile)}</span>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Scrollable: SVG chart (no rank labels — replaced by fixed left column) */}
+      <div ref={chartRef} className="overflow-x-auto scrollbar-hide flex-1 min-w-0">
         <svg width={W} height={H} style={{ minWidth: W, display: 'block' }}>
 
           {/* Horizontal guide lines */}
@@ -60,15 +86,6 @@ export default function DynamicsBumpChart({ rounds, rows }) {
               stroke="#e5e7eb" strokeWidth={1}
               className="dark:[stroke:#374151]"
             />
-          ))}
-
-          {/* Rank axis labels */}
-          {Array.from({ length: n }, (_, i) => (
-            <text key={i}
-              x={ML - 5} y={yOf(i + 1)}
-              textAnchor="end" dominantBaseline="middle"
-              fontSize={10} fill="#d1d5db"
-            >{i + 1}</text>
           ))}
 
           {/* Column headers */}
@@ -133,21 +150,6 @@ export default function DynamicsBumpChart({ rounds, rows }) {
         </svg>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-x-5 gap-y-1.5 mt-3">
-        {rows.map((row, ui) => (
-          <button key={row.uid}
-            className="flex items-center gap-1.5 text-xs"
-            style={{ opacity: hov !== null && hov !== row.uid ? 0.3 : 1, transition: 'opacity .15s' }}
-            onMouseEnter={() => setHov(row.uid)}
-            onMouseLeave={() => setHov(null)}
-          >
-            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-              style={{ backgroundColor: COLORS[ui % COLORS.length] }} />
-            <span className="text-gray-600 dark:text-gray-300 font-medium">{pdn(row.profile)}</span>
-          </button>
-        ))}
-      </div>
     </div>
   )
 }

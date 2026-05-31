@@ -554,10 +554,35 @@ function AnalyticsTab({ matches, profiles: initProfiles, tournaments, setProfile
 
       {/* Tournament breakdown */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">По турнірах</h3>
+        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">По турнірах</h3>
+
+        {/* Mobile cards */}
+        <div className="sm:hidden space-y-2">
+          {(tournaments ?? []).map(t => {
+            const ms  = matchesByTournament[t.id] ?? { total: 0, finished: 0 }
+            const pct = ms.total > 0 ? Math.round(ms.finished / ms.total * 100) : 0
+            return (
+              <div key={t.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{t.name}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                    t.is_active
+                      ? 'bg-green-500/20 text-green-600 dark:text-green-400'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                  }`}>
+                    {t.is_active ? 'Активний' : 'Завершено'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {ms.finished} / {ms.total} матчів зіграно ({pct}%)
+                </p>
+              </div>
+            )
+          })}
         </div>
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+
+        {/* Desktop table */}
+        <div className="hidden sm:block bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
@@ -569,7 +594,7 @@ function AnalyticsTab({ matches, profiles: initProfiles, tournaments, setProfile
             </thead>
             <tbody>
               {(tournaments ?? []).map(t => {
-                const ms = matchesByTournament[t.id] ?? { total: 0, finished: 0 }
+                const ms  = matchesByTournament[t.id] ?? { total: 0, finished: 0 }
                 const pct = ms.total > 0 ? Math.round(ms.finished / ms.total * 100) : 0
                 return (
                   <tr key={t.id} className="border-b border-gray-100 dark:border-gray-800/50 last:border-0">
@@ -958,8 +983,48 @@ function RegistryTab({ profiles, tournaments }) {
         </p>
       )}
 
+      {/* Mobile cards — one card per match */}
       {!loading && data && visibleMatches.length > 0 && activeProfiles.length > 0 && (
-        <div className="overflow-auto rounded-xl border border-gray-200 dark:border-gray-800" style={{ maxHeight: '65vh' }}>
+        <div className="sm:hidden space-y-2">
+          {visibleMatches.map(m => {
+            const rowTotal = activeProfiles.filter(p => presence.has(`${p.id}|${m.id}`)).length
+            const allDone  = rowTotal === activeProfiles.length
+            const noneDone = rowTotal === 0
+            return (
+              <div key={m.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <span className={`text-sm font-medium leading-tight ${m.status === 'finished' ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+                    {m.home_team} — {m.away_team}
+                  </span>
+                  <span className={`text-xs font-bold flex-shrink-0 ${
+                    allDone ? 'text-green-500 dark:text-green-400' : noneDone ? 'text-gray-400 dark:text-gray-600' : 'text-amber-500 dark:text-amber-400'
+                  }`}>{rowTotal}/{activeProfiles.length}</span>
+                </div>
+                <div className="flex items-center gap-1 flex-wrap mb-1.5">
+                  {activeProfiles.map(p => {
+                    const has = presence.has(`${p.id}|${m.id}`)
+                    return (
+                      <span key={p.id} className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                        has ? 'bg-green-500/15 text-green-600 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                      }`}>
+                        {shortName(p)}
+                      </span>
+                    )
+                  })}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                  <span>{matchDate(m)}</span>
+                  <span className={REG_STATUS_COLOR[m.status] ?? 'text-gray-400'}>{REG_STATUS_LABEL[m.status] ?? m.status}</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Desktop matrix table */}
+      {!loading && data && visibleMatches.length > 0 && activeProfiles.length > 0 && (
+        <div className="hidden sm:block overflow-auto rounded-xl border border-gray-200 dark:border-gray-800" style={{ maxHeight: '65vh' }}>
           <table className="text-sm border-collapse min-w-full">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
@@ -1059,7 +1124,7 @@ function RegistryTab({ profiles, tournaments }) {
   )
 }
 
-// ── Root panel ──────────────────────────────────────────────────────────────
+// ── Root panel ───────────────────────────────────────────────────────────────
 
 const TABS = [
   { id: 'matches',   label: 'Матчі' },

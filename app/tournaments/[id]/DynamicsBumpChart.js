@@ -3,10 +3,18 @@ import { useState, useRef, useLayoutEffect } from 'react'
 
 const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899']
 
-function roundShort(key) {
+function roundLabel(key) {
   const m = key.match(/GROUP_STAGE_(\d+)/)
-  if (m) return `Т${m[1]}`
-  return { LAST_32: 'R32', LAST_16: 'R16', QUARTER_FINALS: '¼', SEMI_FINALS: '½', THIRD_PLACE: '3/4', FINAL: 'Фін' }[key] ?? key.slice(0, 4)
+  if (m) return { long: `Тур ${m[1]}`, short: `Т${m[1]}` }
+  const map = {
+    LAST_32:        { long: 'R32',         short: 'R32' },
+    LAST_16:        { long: 'R16',         short: 'R16' },
+    QUARTER_FINALS: { long: '¼ фін.',      short: '¼'   },
+    SEMI_FINALS:    { long: '½ фін.',      short: '½'   },
+    THIRD_PLACE:    { long: 'За 3 місце',  short: '3/4' },
+    FINAL:          { long: 'Фінал',       short: 'Фін' },
+  }
+  return map[key] ?? { long: key, short: key.slice(0, 4) }
 }
 
 function pdn(p) {
@@ -15,11 +23,9 @@ function pdn(p) {
 }
 
 export default function DynamicsBumpChart({ rounds, rows }) {
-  const [hov, setHov]     = useState(null)
+  const [hov, setHov]       = useState(null)
   const [chartW, setChartW] = useState(0)
-  const [MT, setMT]       = useState(37)   // updated to real rendered height after mount
-  const chartRef  = useRef(null)
-  const headerRef = useRef(null)
+  const chartRef = useRef(null)
 
   useLayoutEffect(() => {
     if (!chartRef.current) return
@@ -28,16 +34,9 @@ export default function DynamicsBumpChart({ rounds, rows }) {
     return () => ro.disconnect()
   }, [])
 
-  // Measure the actual header height so guide lines align with row centres
-  useLayoutEffect(() => {
-    if (headerRef.current) {
-      setMT(Math.round(headerRef.current.getBoundingClientRect().height))
-    }
-  }, [])
-
   if (!rounds?.length || !rows?.length) return null
 
-  // Sort by round-1 rank: left column row i = participant at rank i in the first tour
+  // Sort by round-1 rank so left column row i = rank i in the first tour
   const byStart = [...rows].sort((a, b) => a.rounds[0].rank - b.rounds[0].rank)
   const colorOf = Object.fromEntries(byStart.map((row, i) => [row.uid, COLORS[i % COLORS.length]]))
 
@@ -53,19 +52,19 @@ export default function DynamicsBumpChart({ rounds, rows }) {
     ? Math.max(MIN_COL, Math.floor((chartW - ML - MR) / r))
     : MIN_COL
 
-  const W = ML + r * COL + MR
-  const H = MT + n * ROW + MB
-
+  const W   = ML + r * COL + MR
+  const H   = n * ROW + MB                          // no MT — header is HTML now
   const xOf = ri   => ML + ri * COL + COL / 2
-  const yOf = rank => MT + (rank - 1) * ROW + ROW / 2
+  const yOf = rank => (rank - 1) * ROW + ROW / 2   // no MT offset
 
   return (
     <div className="flex">
 
       {/* Fixed left column */}
       <div className="flex-shrink-0 border-r border-gray-200 dark:border-gray-800">
-        <div ref={headerRef} className="px-3 py-2.5 border-b border-gray-200 dark:border-gray-800">
-          <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap">Учасник</span>
+        {/* Header — identical classes to <th> in the number table above */}
+        <div className="px-3 py-2.5 border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap">
+          Учасник
         </div>
         {byStart.map(row => {
           const color = colorOf[row.uid]
@@ -78,7 +77,7 @@ export default function DynamicsBumpChart({ rounds, rows }) {
               onMouseEnter={() => setHov(row.uid)}
               onMouseLeave={() => setHov(null)}
             >
-              {/* w-4 spacer — matches rank# width in the number table above for column alignment */}
+              {/* Invisible w-4 spacer — keeps this column's width = number table's fixed column */}
               <span className="w-4 flex-shrink-0" />
               <div className="flex items-center gap-1.5">
                 <span className="w-6 h-6 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
@@ -89,26 +88,36 @@ export default function DynamicsBumpChart({ rounds, rows }) {
         })}
       </div>
 
-      {/* Scrollable SVG chart */}
+      {/* Scrollable: HTML header + SVG — both inside same div so they scroll together */}
       <div ref={chartRef} className="overflow-x-auto scrollbar-hide flex-1 min-w-0">
+
+        {/* Round-label header row — same style as <thead> in the number table */}
+        <div className="flex border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide"
+          style={{ minWidth: W }}>
+          <div style={{ width: ML, flexShrink: 0 }} />
+          {rounds.map(rk => {
+            const { long, short } = roundLabel(rk)
+            return (
+              <div key={rk} className="py-2.5 text-center whitespace-nowrap"
+                style={{ width: COL, minWidth: COL }}>
+                <span className="hidden sm:inline">{long}</span>
+                <span className="sm:hidden">{short}</span>
+              </div>
+            )
+          })}
+          <div style={{ width: MR, flexShrink: 0 }} />
+        </div>
+
+        {/* SVG chart — MT removed, guide lines start at y=0 (top of SVG = bottom of header) */}
         <svg width={W} height={H} style={{ minWidth: W, display: 'block' }}>
 
-          {/* Horizontal guide lines at row centres — y aligns with vertically-centred names in left column */}
+          {/* Horizontal guide lines at row centres */}
           {Array.from({ length: n }, (_, i) => (
             <line key={i}
               x1={ML} y1={yOf(i + 1)} x2={W - MR} y2={yOf(i + 1)}
               stroke="#e5e7eb" strokeWidth={1}
               className="dark:[stroke:#374151]"
             />
-          ))}
-
-          {/* Column headers centred in header area */}
-          {rounds.map((rk, ri) => (
-            <text key={ri}
-              x={xOf(ri)} y={MT / 2}
-              textAnchor="middle" dominantBaseline="middle"
-              fontSize={10} fill="#9ca3af"
-            >{roundShort(rk)}</text>
           ))}
 
           {/* Lines */}
@@ -149,7 +158,7 @@ export default function DynamicsBumpChart({ rounds, rows }) {
                     fill={color} stroke="white" strokeWidth={isHov ? 2 : 1.5}
                     style={{ transition: 'r .1s' }}
                   >
-                    <title>{pdn(row.profile)} — {roundShort(rounds[ri])}: #{cell.rank}, {cell.cumPoints} б</title>
+                    <title>{pdn(row.profile)} — {roundLabel(rounds[ri]).short}: #{cell.rank}, {cell.cumPoints} б</title>
                   </circle>
                 ))}
                 <polyline

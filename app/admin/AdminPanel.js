@@ -931,7 +931,8 @@ function RegistryTab({ profiles, tournaments }) {
     .sort((a, b) => {
       const sd = (REG_STATUS_SORT[a.status] ?? 3) - (REG_STATUS_SORT[b.status] ?? 3)
       if (sd !== 0) return sd
-      return new Date(a.kickoff_at) - new Date(b.kickoff_at)
+      const diff = new Date(a.kickoff_at) - new Date(b.kickoff_at)
+      return a.status === 'finished' ? -diff : diff
     })
 
   const presence       = new Set(predictions.map(p => `${p.user_id}|${p.match_id}`))

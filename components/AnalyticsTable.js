@@ -72,8 +72,8 @@ export default function AnalyticsTable({ rows, userAnalytics, userId }) {
               <th title="Кількість правильно вгаданих результатів" className="px-2 py-2.5 text-right whitespace-nowrap min-w-[60px] w-[60px]">Рез.</th>
               <th title="Відсоток точно вгаданих рахунків" className="px-2 py-2.5 text-right whitespace-nowrap min-w-[60px] w-[60px]">% точн.</th>
               <th title="Кількість точно вгаданих рахунків" className="px-2 py-2.5 text-right whitespace-nowrap min-w-[60px] w-[60px]">Точних</th>
-              <th className="px-2 py-2.5 text-right whitespace-nowrap min-w-[60px] w-[60px]">Прогн.</th>
-              <th className="px-2 py-2.5 text-right whitespace-nowrap min-w-[60px] w-[60px] font-semibold text-green-500 dark:text-green-400">Бали</th>
+              <th title="Кількість зіграних прогнозів" className="px-2 py-2.5 text-right whitespace-nowrap min-w-[60px] w-[60px]">Прогн.</th>
+              <th title="Загальна сума балів" className="px-2 py-2.5 text-right whitespace-nowrap min-w-[60px] w-[60px] font-semibold text-green-500 dark:text-green-400">Бали</th>
             </tr>
           </thead>
           <tbody>

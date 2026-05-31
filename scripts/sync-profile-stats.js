@@ -19,12 +19,12 @@ async function main() {
   for (const { id, username } of profiles) {
     const { data: preds } = await supabase
       .from('predictions')
-      .select('points, is_calculated')
+      .select('points')
       .eq('user_id', id)
 
-    const scored = (preds ?? []).filter(p => p.is_calculated)
-    const totalPoints = scored.reduce((s, p) => s + (p.points ?? 0), 0)
-    const totalPredictions = (preds ?? []).length
+    const withPoints = (preds ?? []).filter(p => p.points !== null)
+    const totalPoints = withPoints.reduce((s, p) => s + (p.points ?? 0), 0)
+    const totalPredictions = withPoints.length
 
     const { error: upErr } = await supabase
       .from('profiles')

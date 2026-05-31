@@ -334,10 +334,10 @@ export default async function HomePage() {
                 <table className="w-full text-sm hidden sm:table">
                   <thead>
                     <tr className="border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
-                      <th className="w-10 px-3 py-2.5 text-center">#</th>
+                      <th className="w-10 px-3 py-2.5 text-center" title="Місце в рейтингу">#</th>
                       <th className="px-3 py-2.5 text-left">Учасник</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap">Форма</th>
-                      <th className="px-3 py-2.5 text-right whitespace-nowrap">PPP</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap" title="8 останніх результатів у хронологічному порядку">Форма</th>
+                      <th className="px-3 py-2.5 text-right whitespace-nowrap" title="Балів на прогноз = загальні бали ÷ кількість прогнозів">PPP</th>
                     </tr>
                   </thead>
                   <tbody>

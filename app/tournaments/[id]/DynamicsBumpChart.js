@@ -28,9 +28,8 @@ export default function DynamicsBumpChart({ rounds, rows }) {
 
   if (!rounds?.length || !rows?.length) return null
 
-  // Sort by round-1 rank so left column row i+1 = rank i+1 in the first tour
+  // Sort by round-1 rank: left column row i = participant at rank i in the first tour
   const byStart = [...rows].sort((a, b) => a.rounds[0].rank - b.rounds[0].rank)
-  // Colors follow starting rank, not final rank
   const colorOf = Object.fromEntries(byStart.map((row, i) => [row.uid, COLORS[i % COLORS.length]]))
 
   const n       = rows.length
@@ -39,7 +38,8 @@ export default function DynamicsBumpChart({ rounds, rows }) {
   const MIN_COL = 52
   const ML      = 4
   const MR      = 12
-  const MT      = 37   // matches <th py-2.5> height in the number table above
+  // MT must match the rendered height of the fixed-column header (px-3 py-2.5 + text-xs = 10+16+10+1border = 37px)
+  const MT      = 37
   const MB      = 10
 
   const COL = chartW > 0
@@ -55,24 +55,34 @@ export default function DynamicsBumpChart({ rounds, rows }) {
   return (
     <div className="flex">
 
-      {/* Fixed left — sorted by starting rank, no rank number */}
+      {/*
+        Fixed left column.
+        Structure mirrors the number table above exactly so column widths match:
+          px-3 | w-4 spacer | gap-2 | [gap-1.5 | w-6 circle | gap-1.5 | name] | px-3
+        No rank number shown (w-4 is invisible), no border-b, no alternating bg.
+      */}
       <div className="flex-shrink-0 border-r border-gray-200 dark:border-gray-800">
+        {/* Header — py-2.5 matches the <th py-2.5> in the number table */}
         <div className="px-3 py-2.5 border-b border-gray-200 dark:border-gray-800">
           <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap">Учасник</span>
         </div>
-        {byStart.map((row, i) => {
+        {byStart.map(row => {
           const color = colorOf[row.uid]
           const isDim = hov !== null && hov !== row.uid
           return (
             <div
               key={row.uid}
-              className={`flex items-center gap-2 px-3 border-b border-gray-100 dark:border-gray-800/50 last:border-0 cursor-pointer select-none ${i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/30'}`}
+              className="flex items-center gap-2 px-3 cursor-pointer select-none"
               style={{ height: ROW, opacity: isDim ? 0.35 : 1, transition: 'opacity .15s' }}
               onMouseEnter={() => setHov(row.uid)}
               onMouseLeave={() => setHov(null)}
             >
-              <span className="w-6 h-6 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-              <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap text-sm">{pdn(row.profile)}</span>
+              {/* Invisible w-4 spacer — keeps column width identical to number table's rank# cell */}
+              <span className="w-4 flex-shrink-0" />
+              <div className="flex items-center gap-1.5">
+                <span className="w-6 h-6 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap text-sm">{pdn(row.profile)}</span>
+              </div>
             </div>
           )
         })}
@@ -82,7 +92,7 @@ export default function DynamicsBumpChart({ rounds, rows }) {
       <div ref={chartRef} className="overflow-x-auto scrollbar-hide flex-1 min-w-0">
         <svg width={W} height={H} style={{ minWidth: W, display: 'block' }}>
 
-          {/* Horizontal guide lines */}
+          {/* Horizontal guide lines at rank-row centres */}
           {Array.from({ length: n }, (_, i) => (
             <line key={i}
               x1={ML} y1={yOf(i + 1)} x2={W - MR} y2={yOf(i + 1)}

@@ -15,15 +15,24 @@ function pdn(p) {
 }
 
 export default function DynamicsBumpChart({ rounds, rows }) {
-  const [hov, setHov] = useState(null)
+  const [hov, setHov]     = useState(null)
   const [chartW, setChartW] = useState(0)
-  const chartRef = useRef(null)
+  const [MT, setMT]       = useState(37)   // updated to real rendered height after mount
+  const chartRef  = useRef(null)
+  const headerRef = useRef(null)
 
   useLayoutEffect(() => {
     if (!chartRef.current) return
     const ro = new ResizeObserver(([e]) => setChartW(e.contentRect.width))
     ro.observe(chartRef.current)
     return () => ro.disconnect()
+  }, [])
+
+  // Measure the actual header height so guide lines align with row centres
+  useLayoutEffect(() => {
+    if (headerRef.current) {
+      setMT(Math.round(headerRef.current.getBoundingClientRect().height))
+    }
   }, [])
 
   if (!rounds?.length || !rows?.length) return null
@@ -38,8 +47,6 @@ export default function DynamicsBumpChart({ rounds, rows }) {
   const MIN_COL = 52
   const ML      = 4
   const MR      = 12
-  // MT must match the rendered height of the fixed-column header (px-3 py-2.5 + text-xs = 10+16+10+1border = 37px)
-  const MT      = 37
   const MB      = 10
 
   const COL = chartW > 0
@@ -55,15 +62,9 @@ export default function DynamicsBumpChart({ rounds, rows }) {
   return (
     <div className="flex">
 
-      {/*
-        Fixed left column.
-        Structure mirrors the number table above exactly so column widths match:
-          px-3 | w-4 spacer | gap-2 | [gap-1.5 | w-6 circle | gap-1.5 | name] | px-3
-        No rank number shown (w-4 is invisible), no border-b, no alternating bg.
-      */}
+      {/* Fixed left column */}
       <div className="flex-shrink-0 border-r border-gray-200 dark:border-gray-800">
-        {/* Header — py-2.5 matches the <th py-2.5> in the number table */}
-        <div className="px-3 py-2.5 border-b border-gray-200 dark:border-gray-800">
+        <div ref={headerRef} className="px-3 py-2.5 border-b border-gray-200 dark:border-gray-800">
           <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide whitespace-nowrap">Учасник</span>
         </div>
         {byStart.map(row => {
@@ -77,7 +78,7 @@ export default function DynamicsBumpChart({ rounds, rows }) {
               onMouseEnter={() => setHov(row.uid)}
               onMouseLeave={() => setHov(null)}
             >
-              {/* Invisible w-4 spacer — keeps column width identical to number table's rank# cell */}
+              {/* w-4 spacer — matches rank# width in the number table above for column alignment */}
               <span className="w-4 flex-shrink-0" />
               <div className="flex items-center gap-1.5">
                 <span className="w-6 h-6 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
@@ -92,7 +93,7 @@ export default function DynamicsBumpChart({ rounds, rows }) {
       <div ref={chartRef} className="overflow-x-auto scrollbar-hide flex-1 min-w-0">
         <svg width={W} height={H} style={{ minWidth: W, display: 'block' }}>
 
-          {/* Horizontal guide lines at rank-row centres */}
+          {/* Horizontal guide lines at row centres — y aligns with vertically-centred names in left column */}
           {Array.from({ length: n }, (_, i) => (
             <line key={i}
               x1={ML} y1={yOf(i + 1)} x2={W - MR} y2={yOf(i + 1)}
@@ -101,7 +102,7 @@ export default function DynamicsBumpChart({ rounds, rows }) {
             />
           ))}
 
-          {/* Column headers centred in MT */}
+          {/* Column headers centred in header area */}
           {rounds.map((rk, ri) => (
             <text key={ri}
               x={xOf(ri)} y={MT / 2}

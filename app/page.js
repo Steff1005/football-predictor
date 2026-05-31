@@ -131,10 +131,21 @@ export default async function HomePage() {
     matchDateMap[m.id] = m.kickoff_at
     matchTidMap[m.id]  = m.tournament_id
   }
+
+  // Compute last match date per finished tournament for sorting
+  const finishedLastDate = {}
   for (const m of finishedTourneyMatches) {
+    if (!finishedLastDate[m.tournament_id] || m.kickoff_at > finishedLastDate[m.tournament_id]) {
+      finishedLastDate[m.tournament_id] = m.kickoff_at
+    }
     matchDateMap[m.id] = m.kickoff_at
     matchTidMap[m.id]  = m.tournament_id
   }
+
+  // Sort finished tournaments by last match date descending
+  finishedTournaments.sort((a, b) =>
+    (finishedLastDate[b.id] ?? '').localeCompare(finishedLastDate[a.id] ?? '')
+  )
 
   // Active tournament stats
   const activeMatchStats = {}

@@ -9,11 +9,11 @@ function displayName(profile) {
   return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
 }
 
-function PlayerAvatar({ profile, size = 'w-9 h-9', text = 'text-xs' }) {
+function Avatar({ profile, cls = 'w-9 h-9', text = 'text-xs' }) {
   const name = displayName(profile)
   const initials = name === '—' ? '?' : name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
   return (
-    <div className={`${size} rounded-full flex-shrink-0 overflow-hidden bg-green-500/20 flex items-center justify-center`}>
+    <div className={`${cls} rounded-full flex-shrink-0 overflow-hidden bg-green-500/20 flex items-center justify-center`}>
       {profile?.avatar_url
         ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
         : <span className={`font-bold text-green-600 dark:text-green-400 ${text}`}>{initials}</span>
@@ -21,8 +21,6 @@ function PlayerAvatar({ profile, size = 'w-9 h-9', text = 'text-xs' }) {
     </div>
   )
 }
-
-const MEDALS = ['🥇', '🥈', '🥉']
 
 async function fetchStandings(supabase, tournamentId) {
   const { data: matches } = await supabase
@@ -32,8 +30,6 @@ async function fetchStandings(supabase, tournamentId) {
   if (!matches?.length) return []
 
   const matchIds = matches.map(m => m.id)
-
-  // Paginate predictions
   const PAGE = 1000
   let preds = [], from = 0
   while (true) {
@@ -74,6 +70,30 @@ async function fetchStandings(supabase, tournamentId) {
     .sort(compareTournamentStandings)
 }
 
+const RANK_STYLE = [
+  {
+    medal: '🥇',
+    row: 'bg-yellow-500/5 border-l-[3px] border-l-yellow-400',
+    pts: 'text-yellow-500 dark:text-yellow-400',
+    avatarCls: 'w-10 h-10',
+    nameCls: 'text-base font-bold text-gray-900 dark:text-white',
+  },
+  {
+    medal: '🥈',
+    row: 'border-l-[3px] border-l-gray-400',
+    pts: 'text-gray-500 dark:text-gray-300',
+    avatarCls: 'w-8 h-8',
+    nameCls: 'text-sm font-medium text-gray-800 dark:text-gray-200',
+  },
+  {
+    medal: '🥉',
+    row: 'border-l-[3px] border-l-orange-400/70',
+    pts: 'text-orange-600 dark:text-orange-400',
+    avatarCls: 'w-8 h-8',
+    nameCls: 'text-sm font-medium text-gray-800 dark:text-gray-200',
+  },
+]
+
 export default async function HallOfFamePage() {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -85,16 +105,51 @@ export default async function HallOfFamePage() {
     .from('tournaments')
     .select('*')
     .eq('is_active', false)
-    .order('created_at', { ascending: false })
+
+  if (!tournaments?.length) {
+    return (
+      <div>
+        <div className="flex items-center gap-3 mb-8">
+          <span className="text-4xl">🏛️</span>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Зал слави</h1>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Переможці завершених турнірів</p>
+          </div>
+        </div>
+        <div className="text-center py-20 text-gray-400 dark:text-gray-600">
+          <p className="text-5xl mb-4">🏛️</p>
+          <p>Завершених турнірів ще немає</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Fetch last match date per tournament for sorting
+  const { data: matchDates } = await supabase
+    .from('matches')
+    .select('tournament_id, kickoff_at')
+    .in('tournament_id', tournaments.map(t => t.id))
+
+  const lastMatchDate = {}
+  for (const m of matchDates ?? []) {
+    if (!lastMatchDate[m.tournament_id] || m.kickoff_at > lastMatchDate[m.tournament_id]) {
+      lastMatchDate[m.tournament_id] = m.kickoff_at
+    }
+  }
+
+  // Sort by last match date descending
+  const sorted = [...tournaments].sort((a, b) =>
+    (lastMatchDate[b.id] ?? '').localeCompare(lastMatchDate[a.id] ?? '')
+  )
 
   const enriched = await Promise.all(
-    (tournaments ?? []).map(async t => ({
+    sorted.map(async t => ({
       tournament: t,
+      lastDate: lastMatchDate[t.id] ?? null,
       standings: await fetchStandings(supabase, t.id),
     }))
   )
 
-  // Only show tournaments that actually have results
   const withResults = enriched.filter(e => e.standings.length > 0)
 
   return (
@@ -114,23 +169,29 @@ export default async function HallOfFamePage() {
         </div>
       )}
 
-      <div className="space-y-6">
-        {withResults.map(({ tournament, standings }) => {
+      <div className="space-y-5">
+        {withResults.map(({ tournament, lastDate, standings }) => {
           const top3 = standings.slice(0, 3)
-          const winner = standings[0]
+          const rest = standings.length - top3.length
+
+          const dateLabel = lastDate
+            ? new Date(lastDate).toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' })
+            : null
 
           return (
             <div key={tournament.id}
               className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
 
-              {/* Tournament header */}
-              <div className="flex items-center gap-4 px-5 py-4 border-b border-gray-100 dark:border-white/10 bg-gradient-to-r from-yellow-500/5 to-transparent">
+              {/* Header */}
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10">
                 {TOURNAMENT_LOGOS[tournament.league_id] && (
-                  <img src={TOURNAMENT_LOGOS[tournament.league_id]} alt="" className="w-12 h-12 object-contain flex-shrink-0" />
+                  <img src={TOURNAMENT_LOGOS[tournament.league_id]} alt="" className="w-10 h-10 object-contain flex-shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <h2 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg leading-tight">{tournament.name}</h2>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Завершений турнір · {standings.length} учасник{standings.length === 1 ? '' : standings.length < 5 ? 'и' : 'ів'}</p>
+                  <h2 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg leading-tight truncate">{tournament.name}</h2>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    {[dateLabel, `${standings.length} учасник${standings.length === 1 ? '' : standings.length < 5 ? 'и' : 'ів'}`].filter(Boolean).join(' · ')}
+                  </p>
                 </div>
                 <a href={`/tournaments/${tournament.id}?tab=standings`}
                   className="text-xs text-green-500 hover:text-green-400 font-medium whitespace-nowrap flex-shrink-0 transition-colors">
@@ -138,48 +199,35 @@ export default async function HallOfFamePage() {
                 </a>
               </div>
 
-              {/* Winner spotlight */}
-              {winner && (
-                <div className="px-5 py-4 flex items-center gap-4 border-b border-gray-100 dark:border-white/10">
-                  <span className="text-3xl">🥇</span>
-                  <PlayerAvatar profile={winner.profile} size="w-10 h-10" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 dark:text-white truncate">{displayName(winner.profile)}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">Переможець</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-xl font-bold text-yellow-500">{winner.total}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">очок</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Top 3 */}
-              <div className="divide-y divide-gray-100 dark:divide-white/5">
-                {top3.map((row, i) => (
-                  <a key={row.uid} href={`/players/${row.uid}`}
-                    className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                    <span className="text-lg w-6 text-center flex-shrink-0">{MEDALS[i]}</span>
-                    <PlayerAvatar profile={row.profile} size="w-8 h-8" text="text-xs" />
-                    <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200 truncate min-w-0">
-                      {displayName(row.profile)}
-                    </span>
-                    <div className="flex items-center gap-3 flex-shrink-0 text-right">
-                      <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">
-                        🎯 {row.exact} · ✅ {row.results}
+              {/* Top 3 — unified list, each rank styled differently */}
+              <div>
+                {top3.map((row, i) => {
+                  const s = RANK_STYLE[i]
+                  return (
+                    <a key={row.uid} href={`/players/${row.uid}`}
+                      className={`flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-white/5 last:border-0 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${s.row}`}>
+                      <span className="text-xl w-6 text-center flex-shrink-0 leading-none">{s.medal}</span>
+                      <Avatar profile={row.profile} cls={s.avatarCls} text="text-xs" />
+                      <span className={`flex-1 min-w-0 truncate ${s.nameCls}`}>
+                        {displayName(row.profile)}
                       </span>
-                      <span className="font-bold text-gray-900 dark:text-white text-sm w-8 text-right">{row.total}</span>
-                    </div>
-                  </a>
-                ))}
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">
+                          🎯 {row.exact} &nbsp;✅ {row.results}
+                        </span>
+                        <span className={`font-bold text-base tabular-nums ${s.pts}`}>{row.total}</span>
+                      </div>
+                    </a>
+                  )
+                })}
               </div>
 
-              {/* Show remaining count if more than 3 */}
-              {standings.length > 3 && (
-                <div className="px-5 py-3 border-t border-gray-100 dark:border-white/10">
+              {/* Footer: remaining count */}
+              {rest > 0 && (
+                <div className="px-5 py-2.5 bg-gray-50 dark:bg-white/[0.02] border-t border-gray-100 dark:border-white/5">
                   <a href={`/tournaments/${tournament.id}?tab=standings`}
                     className="text-xs text-gray-400 dark:text-gray-500 hover:text-green-500 dark:hover:text-green-400 transition-colors">
-                    + ще {standings.length - 3} учасник{standings.length - 3 === 1 ? '' : standings.length - 3 < 5 ? 'и' : 'ів'} →
+                    + ще {rest} учасник{rest === 1 ? '' : rest < 5 ? 'и' : 'ів'} →
                   </a>
                 </div>
               )}

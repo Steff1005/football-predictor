@@ -128,7 +128,7 @@ export default function DynamicsTab({ rounds, rows }) {
         <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
           Графік зміни позицій (наведіть на лінію для деталей)
         </p>
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden py-4">
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
           <DynamicsBumpChart rounds={rounds} rows={rows} />
         </div>
       </div>

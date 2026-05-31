@@ -1,3 +1,5 @@
+import DynamicsBumpChart from './DynamicsBumpChart'
+
 function roundLabel(key) {
   const m = key.match(/GROUP_STAGE_(\d+)/)
   if (m) return { long: `Тур ${m[1]}`, short: `Т${m[1]}` }
@@ -120,6 +122,17 @@ export default function DynamicsTab({ rounds, rows }) {
         </div>
 
       </div>
+
+      {/* Bump chart */}
+      <div className="mt-6">
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+          Графік зміни позицій (наведіть на лінію для деталей)
+        </p>
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+          <DynamicsBumpChart rounds={rounds} rows={rows} />
+        </div>
+      </div>
+
     </div>
   )
 }

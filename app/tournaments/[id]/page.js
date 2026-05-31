@@ -14,6 +14,7 @@ import { simulateProbabilities } from '../../../lib/probability'
 import { isAdminEmail } from '../../../lib/admin'
 import { compareTournamentStandings } from '../../../lib/rankings'
 import TournamentTabs from './TournamentTabs'
+import DynamicsTab from './DynamicsTab'
 
 export const revalidate = 60
 
@@ -256,6 +257,68 @@ export default async function TournamentPage({ params, searchParams }) {
     ? Math.round((predictedCount / matchesTabMatches.length) * 100)
     : 100
 
+  // ── Dynamics: position changes per round ─────────────────────────────────
+  const finishedByRound = {}
+  for (const m of allMatches.filter(m => m.status === 'finished')) {
+    if (!finishedByRound[m.round]) finishedByRound[m.round] = { first: m.kickoff_at, matchIds: [] }
+    if (m.kickoff_at < finishedByRound[m.round].first) finishedByRound[m.round].first = m.kickoff_at
+    finishedByRound[m.round].matchIds.push(m.id)
+  }
+
+  const dynRounds = Object.keys(finishedByRound)
+    .sort((a, b) => finishedByRound[a].first.localeCompare(finishedByRound[b].first))
+
+  const hasDynamics = dynRounds.length >= 2
+
+  let dynamicsRows = []
+  if (hasDynamics) {
+    const matchToRoundIdx = {}
+    dynRounds.forEach((rk, ri) => {
+      for (const mid of finishedByRound[rk].matchIds) matchToRoundIdx[mid] = ri
+    })
+
+    // Points earned per user per round
+    const ppr = {}
+    for (const p of calcPreds) {
+      const ri = matchToRoundIdx[p.match_id]
+      if (ri === undefined) continue
+      if (!ppr[p.user_id]) ppr[p.user_id] = {}
+      ppr[p.user_id][ri] = (ppr[p.user_id][ri] ?? 0) + (p.points ?? 0)
+    }
+
+    const dynUserIds = Object.keys(ppr)
+
+    // Cumulative points after each round
+    const cum = {}
+    for (const uid of dynUserIds) {
+      let total = 0
+      cum[uid] = dynRounds.map((_, ri) => { total += ppr[uid][ri] ?? 0; return total })
+    }
+
+    // Rank at each round (ties broken by uid for stability)
+    const ranksByRound = dynRounds.map((_, ri) => {
+      const sorted = [...dynUserIds]
+        .map(uid => ({ uid, pts: cum[uid][ri] }))
+        .sort((a, b) => b.pts - a.pts || a.uid.localeCompare(b.uid))
+      return sorted.reduce((acc, u, i) => { acc[u.uid] = i + 1; return acc }, {})
+    })
+
+    const finalRanks = ranksByRound[dynRounds.length - 1]
+
+    dynamicsRows = [...dynUserIds]
+      .sort((a, b) => (finalRanks[a] ?? 99) - (finalRanks[b] ?? 99))
+      .map(uid => ({
+        uid,
+        profile: profileMap[uid] ?? null,
+        rounds: dynRounds.map((_, ri) => {
+          const rank     = ranksByRound[ri][uid]
+          const prevRank = ri > 0 ? ranksByRound[ri - 1][uid] : null
+          return { rank, cumPoints: cum[uid][ri], delta: prevRank !== null ? prevRank - rank : null }
+        }),
+      }))
+      .filter(r => r.profile)
+  }
+
   // ── Probability matrix — read from cache, fallback to live simulation ─────
   let probMatrix = null
   if (matchesTabMatches.length > 0 && standings.length > 0) {
@@ -306,7 +369,7 @@ export default async function TournamentPage({ params, searchParams }) {
       </div>
 
       {/* Tabs */}
-      <TournamentTabs id={id} activeTab={tab} hasLive={liveMatches.length > 0} />
+      <TournamentTabs id={id} activeTab={tab} hasLive={liveMatches.length > 0} hasDynamics={hasDynamics} />
 
       {/* ── Matches ─────────────────────────────────────────────────────── */}
       {tab === 'matches' && (
@@ -358,6 +421,11 @@ export default async function TournamentPage({ params, searchParams }) {
           analysisMap={analysisMap}
           isAdmin={isAdmin}
         />
+      )}
+
+      {/* ── Dynamics ────────────────────────────────────────────────────── */}
+      {tab === 'dynamics' && (
+        <DynamicsTab rounds={dynRounds} rows={dynamicsRows} />
       )}
     </div>
   )

@@ -8,12 +8,13 @@ const BASE_TABS = [
   { id: 'rounds',    label: 'По турах',         short: 'Тури' },
 ]
 
-const LIVE_TAB = { id: 'live', label: '🔴 Live', short: '🔴 Live' }
+const LIVE_TAB     = { id: 'live',     label: '🔴 Live',   short: '🔴 Live' }
+const DYNAMICS_TAB = { id: 'dynamics', label: '📈 Динаміка', short: '📈' }
 
-export default function TournamentTabs({ id, activeTab, hasLive = false }) {
-  const tabs = hasLive
-    ? [BASE_TABS[0], LIVE_TAB, ...BASE_TABS.slice(1)]
-    : BASE_TABS
+export default function TournamentTabs({ id, activeTab, hasLive = false, hasDynamics = false }) {
+  const tabs = [...BASE_TABS]
+  if (hasLive)     tabs.splice(1, 0, LIVE_TAB)
+  if (hasDynamics) tabs.push(DYNAMICS_TAB)
 
   return (
     <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-900 p-1 rounded-xl border border-gray-200 dark:border-gray-800 overflow-x-auto scrollbar-none">

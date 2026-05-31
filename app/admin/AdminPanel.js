@@ -757,8 +757,50 @@ function ActivityTab() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+      {/* Mobile cards */}
+      <div className="sm:hidden space-y-2">
+        {rows.map(r => (
+          <div key={r.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3">
+            {/* Row 1: name + status */}
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="min-w-0">
+                <div className="font-medium text-gray-900 dark:text-white text-sm truncate">{pName(r)}</div>
+                {r.username && <div className="text-xs text-gray-400 dark:text-gray-500">@{r.username}</div>}
+              </div>
+              {r.isOnline ? (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-green-500/15 text-green-600 dark:text-green-400 rounded-full text-xs font-medium flex-shrink-0">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full inline-block" />
+                  онлайн
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 rounded-full text-xs flex-shrink-0">
+                  <span className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-600 rounded-full inline-block" />
+                  офлайн
+                </span>
+              )}
+            </div>
+            {/* Row 2: last seen + visits + devices */}
+            <div className="flex items-center justify-between gap-2 text-xs text-gray-400 dark:text-gray-500">
+              <span>{timeAgo(r.lastSeen)}</span>
+              <div className="flex items-center gap-2">
+                {r.visits30d > 0 && (
+                  <span className="text-gray-600 dark:text-gray-300 font-medium">{r.visits30d} відвід.</span>
+                )}
+                {(r.desktop + r.mobile + r.tablet) > 0 && (
+                  <div className="flex items-center gap-1">
+                    {r.desktop > 0 && <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded font-medium">Д {r.desktop}</span>}
+                    {r.mobile  > 0 && <span className="px-1.5 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded font-medium">М {r.mobile}</span>}
+                    {r.tablet  > 0 && <span className="px-1.5 py-0.5 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded font-medium">П {r.tablet}</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">

@@ -11,20 +11,21 @@ import ActivityTracker from '@/components/ActivityTracker'
 
 export const metadata = {
   title: 'Kickoff',
-  description: 'Прогнозуй матчі та змагайся з друзями',
+  description: 'Футбольний предиктор — змагайся з друзями',
+  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    title: 'Kickoff',
     statusBarStyle: 'black-translucent',
+    title: 'Kickoff',
   },
   icons: {
-    icon: '/favicon.svg',
-    apple: '/favicon.svg',
+    icon: '/icons/icon-96x96.png',
+    apple: '/apple-touch-icon.png',
   },
 }
 
 export const viewport = {
-  themeColor: '#111827',
+  themeColor: '#16a34a',
 }
 
 export default async function RootLayout({ children }) {
@@ -68,6 +69,11 @@ export default async function RootLayout({ children }) {
           2. Writes cookie so next SSR request renders the right class from the start.
         */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme'),d=document.documentElement,c=t==='light'?'light':'dark';d.className=c;d.style.backgroundColor=c==='light'?'#f9fafb':'#030712';document.cookie='theme='+c+';path=/;max-age=31536000;SameSite=Lax'}catch(e){}})();` }} />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Kickoff" />
+        <meta name="theme-color" content="#16a34a" />
       </head>
       <body className="dark:bg-gray-950 text-gray-900 dark:text-white min-h-screen">
         <ThemeProvider>

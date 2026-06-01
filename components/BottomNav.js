@@ -15,6 +15,17 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: '/live',
+    label: 'Live',
+    liveAccent: true,
+    icon: (active) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="w-6 h-6">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5.636 5.636a9 9 0 1 0 12.728 0M12 21V12" />
+        <circle cx="12" cy="9" r="2" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.75} />
+      </svg>
+    ),
+  },
+  {
     href: '/hall-of-fame',
     label: 'Зал слави',
     icon: (active) => (
@@ -65,12 +76,15 @@ export default function BottomNav({ userId }) {
             onClick={e => { if (!confirmLeave('Є незбережений прогноз. Перейти?')) e.preventDefault() }}
             className={`flex-1 flex flex-col items-center gap-1 pt-2 pb-5 transition-colors ${
               active
-                ? 'text-green-500 dark:text-green-400'
+                ? item.liveAccent ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
             {item.icon(active)}
-            <span className="text-[11px] font-medium">{item.label}</span>
+            <span className={`text-[11px] font-medium flex items-center gap-1 ${active && item.liveAccent ? '' : ''}`}>
+              {item.liveAccent && <span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" /></span>}
+              {item.label}
+            </span>
           </Link>
         )
       })}

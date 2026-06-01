@@ -9,17 +9,23 @@ const supabase = createClient(
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
   const tournamentId = searchParams.get('tournamentId')
-  if (!tournamentId) return Response.json({ error: 'tournamentId required' }, { status: 400 })
+  const all          = searchParams.get('all') === 'true'
+
+  if (!tournamentId && !all) {
+    return Response.json({ error: 'tournamentId or all=true required' }, { status: 400 })
+  }
 
   const now = new Date().toISOString()
 
-  const { data: matches, error } = await supabase
+  let query = supabase
     .from('matches')
-    .select('id, home_score, away_score, status')
-    .eq('tournament_id', tournamentId)
+    .select('id, tournament_id, home_score, away_score, status')
     .lte('kickoff_at', now)
     .neq('status', 'finished')
 
+  if (!all) query = query.eq('tournament_id', tournamentId)
+
+  const { data: matches, error } = await query
   if (error) return Response.json({ error: error.message }, { status: 500 })
 
   return Response.json({ matches: matches ?? [] }, {

@@ -54,7 +54,7 @@ export default function BottomNav({ userId }) {
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-gray-200 dark:border-gray-800 flex"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
     >
       {items.map(item => {
         const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
@@ -63,14 +63,14 @@ export default function BottomNav({ userId }) {
             key={item.href}
             href={item.href}
             onClick={e => { if (!confirmLeave('Є незбережений прогноз. Перейти?')) e.preventDefault() }}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-1 pt-3 pb-1 transition-colors ${
               active
                 ? 'text-green-500 dark:text-green-400'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
             {item.icon(active)}
-            <span className="text-[10px] font-medium">{item.label}</span>
+            <span className="text-[11px] font-medium">{item.label}</span>
           </Link>
         )
       })}

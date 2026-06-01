@@ -8,6 +8,8 @@ import Navbar from '@/components/Navbar'
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
 import ToastProvider from '@/components/ToastProvider'
 import ActivityTracker from '@/components/ActivityTracker'
+import InstallPrompt from '@/components/InstallPrompt'
+import BottomNav from '@/components/BottomNav'
 
 export const metadata = {
   title: 'Kickoff',
@@ -79,12 +81,14 @@ export default async function RootLayout({ children }) {
         <ThemeProvider>
           <ToastProvider>
             <Navbar initialUser={session?.user ?? null} initialProfile={initialProfile} initialTheme={themeCookie === 'light' ? 'light' : 'dark'} />
-            <main className="max-w-6xl mx-auto px-4 py-6">
+            <main className="max-w-6xl mx-auto px-4 py-6 standalone-main">
               {children}
             </main>
+            <BottomNav userId={session?.user?.id ?? null} />
           </ToastProvider>
         </ThemeProvider>
         <ActivityTracker userId={session?.user?.id ?? null} />
+        <InstallPrompt userId={session?.user?.id ?? null} />
         <ServiceWorkerRegister />
         <Analytics />
         <SpeedInsights />

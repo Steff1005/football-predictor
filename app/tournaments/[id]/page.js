@@ -394,7 +394,7 @@ export default async function TournamentPage({ params, searchParams }) {
 
       {/* ── Live ────────────────────────────────────────────────────────── */}
       {tab === 'live' && (
-        <LiveTab liveMatches={liveMatches} predsByMatch={predsByLiveMatch} profileMap={profileMap} />
+        <LiveTab liveMatches={liveMatches} predsByMatch={predsByLiveMatch} profileMap={profileMap} tournamentId={id} />
       )}
 
       {/* ── Predictions ─────────────────────────────────────────────────── */}

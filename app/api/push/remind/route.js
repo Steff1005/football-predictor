@@ -15,9 +15,9 @@ export async function GET(request) {
   }
 
   const now = new Date()
-  // Matches starting in 50–70 min from now
-  const from = new Date(now.getTime() + 50 * 60 * 1000).toISOString()
-  const to   = new Date(now.getTime() + 70 * 60 * 1000).toISOString()
+  // Matches starting in 20–40 min from now
+  const from = new Date(now.getTime() + 20 * 60 * 1000).toISOString()
+  const to   = new Date(now.getTime() + 40 * 60 * 1000).toISOString()
 
   const { data: matches } = await supabase
     .from('matches')
@@ -69,7 +69,7 @@ export async function GET(request) {
 
     for (const userId of targets) {
       await sendPushToUser(supabase, userId, {
-        title: '⏰ Матч за годину!',
+        title: '⏰ Матч за 30 хвилин!',
         body: `${home} — ${away} о ${time}. Прогноз ще не зроблено.`,
         url: '/tournaments',
       })

@@ -96,11 +96,26 @@ export async function GET(request) {
     }
 
     // Pass 1: pending matches — fetch result from football-data.org
+    // Delay 7 s between calls to stay within the free-tier limit of 10 req/min.
+    let pass1Count = 0
     for (const match of pendingMatches ?? []) {
-      const response = await fetch(
-        `https://api.football-data.org/v4/matches/${match.external_id}`,
-        { headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_KEY || process.env.API_FOOTBALL_KEY } }
-      )
+      if (pass1Count > 0) await new Promise(r => setTimeout(r, 7000))
+      pass1Count++
+
+      let response
+      try {
+        response = await fetch(
+          `https://api.football-data.org/v4/matches/${match.external_id}`,
+          { headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_KEY || process.env.API_FOOTBALL_KEY } }
+        )
+      } catch { continue }
+
+      if (response.status === 429) {
+        // Rate limited — skip remaining, will be caught on next cron run
+        console.warn('football-data.org rate limit hit, stopping Pass 1 early')
+        break
+      }
+      if (!response.ok) continue
 
       const data = await response.json()
       if (!data.status || data.status !== 'FINISHED') continue

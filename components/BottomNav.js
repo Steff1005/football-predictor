@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { confirmLeave } from '@/lib/unsaved-guard'
 
 const NAV_ITEMS = [
@@ -58,7 +59,7 @@ export default function BottomNav({ userId }) {
       {items.map(item => {
         const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
         return (
-          <a
+          <Link
             key={item.href}
             href={item.href}
             onClick={e => { if (!confirmLeave('Є незбережений прогноз. Перейти?')) e.preventDefault() }}
@@ -70,7 +71,7 @@ export default function BottomNav({ userId }) {
           >
             {item.icon(active)}
             <span className="text-[10px] font-medium">{item.label}</span>
-          </a>
+          </Link>
         )
       })}
     </nav>

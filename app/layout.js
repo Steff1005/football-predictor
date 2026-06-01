@@ -71,6 +71,8 @@ export default async function RootLayout({ children }) {
           2. Writes cookie so next SSR request renders the right class from the start.
         */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme'),d=document.documentElement,c=t==='light'?'light':'dark';d.className=c;d.style.backgroundColor=c==='light'?'#f9fafb':'#030712';document.cookie='theme='+c+';path=/;max-age=31536000;SameSite=Lax'}catch(e){}})();` }} />
+        {/* Capture beforeinstallprompt before React hydrates — the event fires early and is lost otherwise */}
+        <script dangerouslySetInnerHTML={{ __html: `window.__installPrompt=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__installPrompt=e;});` }} />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

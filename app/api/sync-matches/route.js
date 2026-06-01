@@ -46,7 +46,9 @@ export async function GET(request) {
                   m.status === 'IN_PLAY' ? 'live' : 'scheduled',
           home_score: m.score?.fullTime?.home ?? null,
           away_score: m.score?.fullTime?.away ?? null,
-          round: m.group || m.stage || 'Round',
+          round: m.matchday != null
+                    ? `Regular Season - ${String(m.matchday).padStart(2, '0')}`
+                    : m.group || m.stage || 'Round',
         }))
 
       if (!matchesData.length) continue

@@ -87,7 +87,9 @@ async function main() {
             :                           'scheduled',
       home_score: m.score?.fullTime?.home ?? null,
       away_score: m.score?.fullTime?.away ?? null,
-      round:      m.group || m.stage || m.matchday?.toString() || 'Round',
+      round:      m.matchday != null
+                    ? `Regular Season - ${String(m.matchday).padStart(2, '0')}`
+                    : m.group || m.stage || 'Round',
     }))
 
   console.log(`Upserting ${rows.length} valid rows…`)

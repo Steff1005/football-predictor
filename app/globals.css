@@ -4,8 +4,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Prevent FOUC: applied by inline <style> in <head> with !important; these are fallbacks */
-html { color-scheme: dark; }
-html.light { color-scheme: light; }
+html { color-scheme: dark; scrollbar-gutter: stable; }
+html.light { color-scheme: light; scrollbar-gutter: stable; }
 
 body {
   font-family: Arial, Helvetica, sans-serif;

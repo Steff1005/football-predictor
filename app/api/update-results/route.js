@@ -88,6 +88,13 @@ export async function GET(request) {
       }
     }
 
+    // Pass 2 first: already-finished matches (set by sync) with uncalculated predictions.
+    // Runs before Pass 1 so an API-heavy Pass 1 timeout doesn't block these.
+    for (const match of alreadyFinished) {
+      await calcPredictions(match, match.home_score, match.away_score)
+      updatedCount++
+    }
+
     // Pass 1: pending matches — fetch result from football-data.org
     for (const match of pendingMatches ?? []) {
       const response = await fetch(
@@ -109,12 +116,6 @@ export async function GET(request) {
       }).eq('id', match.id)
 
       await calcPredictions(match, homeScore, awayScore)
-      updatedCount++
-    }
-
-    // Pass 2: already-finished matches (set by sync) with uncalculated predictions
-    for (const match of alreadyFinished) {
-      await calcPredictions(match, match.home_score, match.away_score)
       updatedCount++
     }
 

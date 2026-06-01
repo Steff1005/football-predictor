@@ -1,4 +1,4 @@
-const CACHE_STATIC = 'kickoff-static-v3'
+const CACHE_STATIC = 'kickoff-static-v4'
 const CACHE_PAGES  = 'kickoff-pages-v1'
 const KNOWN_CACHES = new Set([CACHE_STATIC, CACHE_PAGES])
 
@@ -82,4 +82,33 @@ self.addEventListener('fetch', event => {
     )
     return
   }
+})
+
+// Push notifications
+self.addEventListener('push', event => {
+  if (!event.data) return
+  let data = {}
+  try { data = event.data.json() } catch { return }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title ?? 'Kickoff', {
+      body: data.body ?? '',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-96x96.png',
+      data: { url: data.url ?? '/tournaments' },
+      vibrate: [200, 100, 200],
+    })
+  )
+})
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const url = event.notification.data?.url ?? '/tournaments'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cls => {
+      const existing = cls.find(c => c.url.includes(url) && 'focus' in c)
+      if (existing) return existing.focus()
+      return self.clients.openWindow(url)
+    })
+  )
 })

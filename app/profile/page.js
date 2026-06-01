@@ -5,6 +5,7 @@ import TournamentFilter from './TournamentFilter'
 import AvatarUpload from './AvatarUpload'
 import ProfileSettings from './ProfileSettings'
 import ProfilePredictions from './ProfilePredictions'
+import NotificationSettings from './NotificationSettings'
 import { translateTeam } from '../../lib/team-translations'
 import CLUB_CRESTS from '../../lib/club-crests'
 import { computeTourneyRanks } from '../../lib/rankings'
@@ -31,7 +32,7 @@ export default async function ProfilePage({ searchParams }) {
     { data: rawPredictions },
     { data: tournaments },
   ] = await Promise.all([
-    supabase.from('profiles').select('username, first_name, last_name, total_points, total_predictions, avatar_url').eq('id', userId).single(),
+    supabase.from('profiles').select('username, first_name, last_name, total_points, total_predictions, avatar_url, notify_results, notify_reminder').eq('id', userId).single(),
     supabase.from('predictions').select('*').eq('user_id', userId),
     supabase.from('tournaments').select('id, name').order('name'),
   ])
@@ -137,6 +138,12 @@ export default async function ProfilePage({ searchParams }) {
             initialFirst={profile?.first_name ?? ''}
             initialLast={profile?.last_name ?? ''}
             initialUsername={profile?.username ?? ''}
+          />
+          <NotificationSettings
+            initialPrefs={{
+              notify_results: profile?.notify_results ?? true,
+              notify_reminder: profile?.notify_reminder ?? true,
+            }}
           />
         </div>
       </div>

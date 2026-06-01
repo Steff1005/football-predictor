@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { rebuildProbabilityCache } from '../../../lib/probability'
+import { sendPushToUser } from '../../../lib/push-send'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -63,6 +64,17 @@ export async function GET(request) {
         .eq('match_id', match.id)
         .eq('is_calculated', false)
 
+      // Fetch user notification prefs once per match
+      const userIds = [...new Set((predictions ?? []).map(p => p.user_id))]
+      let notifyResultsSet = new Set()
+      if (userIds.length) {
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('id, notify_results')
+          .in('id', userIds)
+        notifyResultsSet = new Set((profs ?? []).filter(p => p.notify_results !== false).map(p => p.id))
+      }
+
       for (const prediction of predictions ?? []) {
         const points = calculatePoints(
           prediction.predicted_home, prediction.predicted_away,
@@ -76,6 +88,16 @@ export async function GET(request) {
           p_user_id: prediction.user_id,
           p_points: points,
         })
+
+        if (notifyResultsSet.has(prediction.user_id)) {
+          const label = points === 4 ? '🎯 Точний рахунок!' : points === 1 ? '✅ Правильний результат' : '❌ Промах'
+          const score = `${homeScore}:${awayScore}`
+          sendPushToUser(supabase, prediction.user_id, {
+            title: `${label} +${points} балів`,
+            body: `${match.home_team} ${score} ${match.away_team}`,
+            url: `/tournaments/${match.tournament_id}`,
+          }).catch(() => {})
+        }
       }
 
       affectedTournamentIds.add(match.tournament_id)

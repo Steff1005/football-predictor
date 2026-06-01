@@ -46,23 +46,13 @@ function PlayerAvatar({ profile }) {
   )
 }
 
-function ProbBadge({ prob }) {
+function ProbBadge({ prob, isWinning }) {
   if (prob === null) return <div className="w-[58px] flex-shrink-0" />
 
-  const pct     = Math.round(prob * 100)
-  const winning = prob >= 0.99  // current score = prediction exactly (remaining ≈ 0 handled separately)
-  const isExact = prob > 0.3    // high chance — currently on track
+  const pct = Math.round(prob * 100)
 
-  if (prob === 0) {
-    return (
-      <div className="w-[58px] flex-shrink-0 flex justify-end">
-        <span className="text-[11px] text-gray-300 dark:text-gray-700 font-medium tabular-nums select-none">✕ 0%</span>
-      </div>
-    )
-  }
-
-  // 🎯 Currently winning: score matches prediction right now
-  if (isExact && pct >= 35) {
+  // 🎯 Score currently matches prediction — always show glow regardless of %
+  if (isWinning) {
     return (
       <div className="w-[58px] flex-shrink-0 flex justify-end">
         <span
@@ -76,10 +66,17 @@ function ProbBadge({ prob }) {
     )
   }
 
-  // Color by probability
-  const color = pct >= 20
+  if (prob === 0) {
+    return (
+      <div className="w-[58px] flex-shrink-0 flex justify-end">
+        <span className="text-[11px] text-gray-300 dark:text-gray-700 font-medium tabular-nums select-none">✕ 0%</span>
+      </div>
+    )
+  }
+
+  const color = pct >= 10
     ? 'text-green-500 dark:text-green-400'
-    : pct >= 8
+    : pct >= 3
       ? 'text-amber-500 dark:text-amber-400'
       : 'text-red-400 dark:text-red-500'
 
@@ -92,7 +89,8 @@ function ProbBadge({ prob }) {
   )
 }
 
-function MatchCard({ match, preds, profileMap, now }) {
+function MatchCard({ match, preds, profileMap }) {
+  const now = Date.now()
   const kickoff  = new Date(match.kickoff_at)
   const dateStr  = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
   const timeStr  = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
@@ -188,7 +186,7 @@ function MatchCard({ match, preds, profileMap, now }) {
                   {pred.predicted_away}
                 </span>
               </div>
-              <ProbBadge prob={prob} />
+              <ProbBadge prob={prob} isWinning={isWinning} />
             </div>
 
             {/* Desktop */}
@@ -204,7 +202,7 @@ function MatchCard({ match, preds, profileMap, now }) {
               }`}>
                 {pred.predicted_home}:{pred.predicted_away}
               </span>
-              <ProbBadge prob={prob} />
+              <ProbBadge prob={prob} isWinning={isWinning} />
             </div>
           </div>
         )
@@ -218,7 +216,6 @@ function MatchCard({ match, preds, profileMap, now }) {
 export default function LiveAllClient({ groups: initialGroups }) {
   const [groups, setGroups]         = useState(initialGroups)
   const [lastUpdated, setUpdated]   = useState(Date.now())
-  const [now, setNow]               = useState(Date.now())
   const [secAgo, setSecAgo]         = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const timerRef                    = useRef(null)
@@ -253,12 +250,6 @@ export default function LiveAllClient({ groups: initialGroups }) {
     document.addEventListener('visibilitychange', onVis)
     return () => { stop(); document.removeEventListener('visibilitychange', onVis) }
   }, [fetchAll])
-
-  // Update `now` every 10s so probabilities stay fresh
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 10_000)
-    return () => clearInterval(id)
-  }, [])
 
   // "N с тому" counter
   useEffect(() => {
@@ -317,7 +308,6 @@ export default function LiveAllClient({ groups: initialGroups }) {
                   match={match}
                   preds={predsByMatch[match.id]}
                   profileMap={profileMap}
-                  now={now}
                 />
               ))}
             </div>

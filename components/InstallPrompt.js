@@ -1,8 +1,9 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 
-const DISMISS_KEY = 'kickoff_install_dismissed'
-const DISMISS_TTL = 7 * 24 * 60 * 60 * 1000
+const DISMISS_KEY   = 'kickoff_install_dismissed'
+const DISMISS_TTL   = 7 * 24 * 60 * 60 * 1000
+const NEVER_KEY     = 'kickoff_install_never'
 
 function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream
@@ -18,6 +19,7 @@ export default function InstallPrompt({ userId }) {
     if (window.matchMedia('(display-mode: standalone)').matches) return
     if (window.navigator.standalone) return   // iOS already installed
 
+    if (localStorage.getItem(NEVER_KEY)) return
     const dismissed = localStorage.getItem(DISMISS_KEY)
     if (dismissed && Date.now() - Number(dismissed) < DISMISS_TTL) return
 
@@ -50,6 +52,11 @@ export default function InstallPrompt({ userId }) {
 
   function dismiss() {
     localStorage.setItem(DISMISS_KEY, String(Date.now()))
+    setShow(false)
+  }
+
+  function neverShow() {
+    localStorage.setItem(NEVER_KEY, '1')
     setShow(false)
   }
 
@@ -116,6 +123,18 @@ export default function InstallPrompt({ userId }) {
               Встановити
             </button>
           )}
+        </div>
+
+        <div className="mt-3 flex items-start gap-2">
+          <button
+            onClick={neverShow}
+            className="text-xs text-gray-400 dark:text-gray-600 hover:text-red-400 dark:hover:text-red-400 transition-colors whitespace-nowrap underline underline-offset-2"
+          >
+            Не цікаво
+          </button>
+          <span className="text-xs text-gray-300 dark:text-gray-700 leading-tight">
+            — більше не показуватимемо це повідомлення
+          </span>
         </div>
       </div>
     </div>

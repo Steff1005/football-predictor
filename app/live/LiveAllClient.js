@@ -74,9 +74,9 @@ function ProbBadge({ prob, isWinning }) {
     )
   }
 
-  const color = pct >= 10
+  const color = pct >= 20
     ? 'text-green-500 dark:text-green-400'
-    : pct >= 3
+    : pct >= 8
       ? 'text-amber-500 dark:text-amber-400'
       : 'text-red-400 dark:text-red-500'
 

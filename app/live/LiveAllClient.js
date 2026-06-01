@@ -3,13 +3,38 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 
 const POLL_INTERVAL = 30_000
+const LAMBDA_HOME   = 1.4   // avg home goals per 90 min
+const LAMBDA_AWAY   = 1.1   // avg away goals per 90 min
+
+// ── Math ─────────────────────────────────────────────────────────────────────
+
+function poisson(k, lambda) {
+  if (k < 0 || lambda <= 0) return k === 0 ? 1 : 0
+  // log-space to avoid overflow
+  let logP = -lambda + k * Math.log(lambda)
+  for (let i = 1; i <= k; i++) logP -= Math.log(i)
+  return Math.exp(logP)
+}
+
+function calcProb(ph, pa, ch, ca, kickoffAt, now) {
+  if (ch == null || ca == null) return null       // no score yet
+  if (ph < ch || pa < ca)       return 0          // impossible
+  const elapsed   = (now - new Date(kickoffAt)) / 60000
+  const remaining = Math.max(0, Math.min(90, 90 - elapsed))
+  if (remaining === 0) return ph === ch && pa === ca ? 1 : 0
+  const muH = LAMBDA_HOME * remaining / 90
+  const muA = LAMBDA_AWAY * remaining / 90
+  return poisson(ph - ch, muH) * poisson(pa - ca, muA)
+}
+
+// ── Components ────────────────────────────────────────────────────────────────
 
 function displayName(profile) {
   return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
 }
 
 function PlayerAvatar({ profile }) {
-  const name = displayName(profile)
+  const name     = displayName(profile)
   const initials = name === '—' ? '?' : name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
   return (
     <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-green-500/20 flex items-center justify-center">
@@ -21,10 +46,56 @@ function PlayerAvatar({ profile }) {
   )
 }
 
-function MatchCard({ match, preds, profileMap }) {
-  const kickoff = new Date(match.kickoff_at)
-  const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
-  const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+function ProbBadge({ prob }) {
+  if (prob === null) return <div className="w-[58px] flex-shrink-0" />
+
+  const pct     = Math.round(prob * 100)
+  const winning = prob >= 0.99  // current score = prediction exactly (remaining ≈ 0 handled separately)
+  const isExact = prob > 0.3    // high chance — currently on track
+
+  if (prob === 0) {
+    return (
+      <div className="w-[58px] flex-shrink-0 flex justify-end">
+        <span className="text-[11px] text-gray-300 dark:text-gray-700 font-medium tabular-nums select-none">✕ 0%</span>
+      </div>
+    )
+  }
+
+  // 🎯 Currently winning: score matches prediction right now
+  if (isExact && pct >= 35) {
+    return (
+      <div className="w-[58px] flex-shrink-0 flex justify-end">
+        <span
+          className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums animate-prob-glow"
+          style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)' }}
+        >
+          <span className="text-[10px]">🎯</span>
+          <span className="animate-prob-shimmer">{pct}%</span>
+        </span>
+      </div>
+    )
+  }
+
+  // Color by probability
+  const color = pct >= 20
+    ? 'text-green-500 dark:text-green-400'
+    : pct >= 8
+      ? 'text-amber-500 dark:text-amber-400'
+      : 'text-red-400 dark:text-red-500'
+
+  return (
+    <div className="w-[58px] flex-shrink-0 flex justify-end">
+      <span className={`text-[11px] font-semibold tabular-nums select-none ${color}`}>
+        {pct}%
+      </span>
+    </div>
+  )
+}
+
+function MatchCard({ match, preds, profileMap, now }) {
+  const kickoff  = new Date(match.kickoff_at)
+  const dateStr  = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
+  const timeStr  = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
   const filtered = (preds ?? []).filter(p => profileMap[p.user_id])
 
   return (
@@ -89,28 +160,51 @@ function MatchCard({ match, preds, profileMap }) {
         <div className="px-4 py-3 text-sm text-center text-gray-400 dark:text-gray-600">Прогнозів немає</div>
       ) : filtered.map(pred => {
         const profile = profileMap[pred.user_id]
+        const prob    = calcProb(
+          pred.predicted_home, pred.predicted_away,
+          match.home_score,    match.away_score,
+          match.kickoff_at,    now
+        )
+        const isWinning = match.home_score === pred.predicted_home && match.away_score === pred.predicted_away
+
         return (
-          <div key={pred.user_id} className="border-t border-gray-100 dark:border-white/10">
+          <div
+            key={pred.user_id}
+            className={`border-t border-gray-100 dark:border-white/10 transition-colors ${
+              isWinning ? 'bg-green-500/5 dark:bg-green-500/8' : ''
+            }`}
+          >
+            {/* Mobile */}
             <div className="sm:hidden flex items-center px-4 py-2 gap-3">
               <Link href={`/players/${pred.user_id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-75 transition-opacity">
                 <PlayerAvatar profile={profile} />
                 <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">{displayName(profile)}</span>
               </Link>
-              <div className="w-11 flex-shrink-0 flex flex-col items-center">
-                <span className="font-mono text-sm font-semibold text-gray-500 dark:text-gray-400 leading-snug">{pred.predicted_home}</span>
-                <span className="font-mono text-sm font-semibold text-gray-500 dark:text-gray-400 leading-snug">{pred.predicted_away}</span>
+              <div className="flex-shrink-0 flex flex-col items-center w-9">
+                <span className={`font-mono text-sm font-semibold leading-snug ${isWinning ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                  {pred.predicted_home}
+                </span>
+                <span className={`font-mono text-sm font-semibold leading-snug ${isWinning ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                  {pred.predicted_away}
+                </span>
               </div>
-              <div className="w-[52px] flex-shrink-0" />
+              <ProbBadge prob={prob} />
             </div>
+
+            {/* Desktop */}
             <div className="hidden sm:flex items-center px-4 py-2 gap-3">
               <Link href={`/players/${pred.user_id}`} className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-75 transition-opacity">
                 <PlayerAvatar profile={profile} />
                 <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">{displayName(profile)}</span>
               </Link>
-              <span className="bg-gray-100 dark:bg-white/10 rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 min-w-[2.75rem] text-center">
+              <span className={`rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold flex-shrink-0 min-w-[2.75rem] text-center transition-colors ${
+                isWinning
+                  ? 'bg-green-500/15 text-green-600 dark:text-green-400 ring-1 ring-green-500/30'
+                  : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200'
+              }`}>
                 {pred.predicted_home}:{pred.predicted_away}
               </span>
-              <div className="w-16 flex-shrink-0" />
+              <ProbBadge prob={prob} />
             </div>
           </div>
         )
@@ -119,9 +213,12 @@ function MatchCard({ match, preds, profileMap }) {
   )
 }
 
+// ── Main component ────────────────────────────────────────────────────────────
+
 export default function LiveAllClient({ groups: initialGroups }) {
   const [groups, setGroups]         = useState(initialGroups)
   const [lastUpdated, setUpdated]   = useState(Date.now())
+  const [now, setNow]               = useState(Date.now())
   const [secAgo, setSecAgo]         = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const timerRef                    = useRef(null)
@@ -147,6 +244,7 @@ export default function LiveAllClient({ groups: initialGroups }) {
     finally { setRefreshing(false) }
   }, [])
 
+  // Poll scores every 30s
   useEffect(() => {
     function start() { timerRef.current = setInterval(fetchAll, POLL_INTERVAL) }
     function stop()  { clearInterval(timerRef.current) }
@@ -156,6 +254,13 @@ export default function LiveAllClient({ groups: initialGroups }) {
     return () => { stop(); document.removeEventListener('visibilitychange', onVis) }
   }, [fetchAll])
 
+  // Update `now` every 10s so probabilities stay fresh
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 10_000)
+    return () => clearInterval(id)
+  }, [])
+
+  // "N с тому" counter
   useEffect(() => {
     const id = setInterval(() => setSecAgo(Math.round((Date.now() - lastUpdated) / 1000)), 1000)
     return () => clearInterval(id)
@@ -190,7 +295,6 @@ export default function LiveAllClient({ groups: initialGroups }) {
       <div className="space-y-6">
         {groups.map(({ tournament, matches, predsByMatch, profileMap }) => (
           <div key={tournament.id}>
-            {/* Tournament header */}
             <div className="flex items-center gap-2 mb-3">
               {tournament.logo && (
                 <img src={tournament.logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />
@@ -213,6 +317,7 @@ export default function LiveAllClient({ groups: initialGroups }) {
                   match={match}
                   preds={predsByMatch[match.id]}
                   profileMap={profileMap}
+                  now={now}
                 />
               ))}
             </div>

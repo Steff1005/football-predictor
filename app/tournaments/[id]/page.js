@@ -15,6 +15,7 @@ import { isAdminEmail } from '../../../lib/admin'
 import { compareTournamentStandings } from '../../../lib/rankings'
 import TournamentTabs from './TournamentTabs'
 import DynamicsTab from './DynamicsTab'
+import RealtimeRefresher from '../../../components/RealtimeRefresher'
 
 export const revalidate = 60
 
@@ -354,6 +355,7 @@ export default async function TournamentPage({ params, searchParams }) {
 
   return (
     <div>
+      <RealtimeRefresher />
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 mb-4">
         <a href="/tournaments" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Турніри</a>

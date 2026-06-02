@@ -102,6 +102,12 @@ export default async function PlayerProfilePage({ params }) {
     .map(p => ({ ...p, match: finishedMatchMap[p.match_id] }))
     .filter(p => p.match && p.match.status === 'finished')
 
+  // Last 10 predictions sorted by match date desc → then reversed for left-to-right display
+  const recentForm = [...allPredictions]
+    .sort((a, b) => b.match.kickoff_at.localeCompare(a.match.kickoff_at))
+    .slice(0, 10)
+    .reverse()
+
 
   const totalPoints     = allPredictions.reduce((s, p) => s + (p.points ?? 0), 0)
   const exactScores     = allPredictions.filter(p => p.points === 4).length
@@ -134,6 +140,8 @@ export default async function PlayerProfilePage({ params }) {
     }))
     .filter(r => r.predictions > 0)
     .sort((a, b) => b.predictions - a.predictions)
+
+  const maxTourneyPts = Math.max(1, ...historyRows.map(r => r.total))
 
   function rankBadge(rank) {
     if (!rank) return <span className="text-gray-400">—</span>
@@ -181,9 +189,35 @@ export default async function PlayerProfilePage({ params }) {
       </div>
 
       {allPredictions.length > 0 && (
-        <div className="flex gap-4 mb-8 text-xs text-gray-400 dark:text-gray-500 px-1">
-          <span>Точність рахунків: <span className="font-medium text-gray-600 dark:text-gray-300">{exactPct}%</span></span>
-          <span>Точність результатів: <span className="font-medium text-gray-600 dark:text-gray-300">{correctPct}%</span></span>
+        <div className="mb-6 px-1">
+          <div className="flex gap-4 mb-3 text-xs text-gray-400 dark:text-gray-500">
+            <span>Точність рахунків: <span className="font-medium text-gray-600 dark:text-gray-300">{exactPct}%</span></span>
+            <span>Точність результатів: <span className="font-medium text-gray-600 dark:text-gray-300">{correctPct}%</span></span>
+          </div>
+          {recentForm.length > 0 && (
+            <div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 mb-2">Остання форма ({recentForm.length} прогнозів)</div>
+              <div className="flex gap-1.5 items-center">
+                {recentForm.map((p, i) => {
+                  const color = p.points === 4
+                    ? 'bg-yellow-400 title="4 бали — точний рахунок"'
+                    : p.points === 1
+                      ? 'bg-green-500'
+                      : 'bg-red-400'
+                  const title = p.points === 4 ? '4 бали — точний рахунок' : p.points === 1 ? '1 бал — правильний результат' : '0 балів'
+                  return (
+                    <div
+                      key={i}
+                      title={title}
+                      className={`w-5 h-5 rounded-md flex-shrink-0 ${
+                        p.points === 4 ? 'bg-yellow-400' : p.points === 1 ? 'bg-green-500' : 'bg-red-400'
+                      }`}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -230,7 +264,14 @@ export default async function PlayerProfilePage({ params }) {
                 <tbody>
                   {historyRows.map((r, i) => (
                     <tr key={r.id} className={`border-b border-gray-100 dark:border-gray-800/50 last:border-0 ${i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-800/30'}`}>
-                      <td className="text-right px-3 py-2.5 font-bold text-green-500 dark:text-green-400">{r.total}</td>
+                      <td className="px-3 py-2.5 min-w-[80px]">
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="w-16 bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                            <div className="h-full bg-green-500/70 rounded-full" style={{ width: `${Math.round(r.total / maxTourneyPts * 100)}%` }} />
+                          </div>
+                          <span className="font-bold text-green-500 dark:text-green-400 tabular-nums w-6 text-right">{r.total}</span>
+                        </div>
+                      </td>
                       <td className="text-right px-3 py-2.5 text-gray-600 dark:text-gray-300">{r.predictions}</td>
                       <td className="text-right px-3 py-2.5 text-yellow-500 dark:text-yellow-400">{r.exact}</td>
                       <td className="text-right px-3 py-2.5 pr-4 text-blue-500 dark:text-blue-400">{r.correct}</td>

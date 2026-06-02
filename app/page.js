@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import TOURNAMENT_LOGOS from '../lib/tournament-logos'
 import { formatBaly, formatPrognazy } from '../lib/formatters'
 import AnalyticsTable from '../components/AnalyticsTable'
+import RealtimeRefresher from '../components/RealtimeRefresher'
 
 export const revalidate = 60
 
@@ -263,6 +264,7 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-6">
+      <RealtimeRefresher />
 
       {/* Personal welcome card */}
       {myProfile && (

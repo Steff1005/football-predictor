@@ -1,5 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
+import Avatar from './Avatar'
 
 function pct(a, b) { return b > 0 ? Math.round(a / b * 100) : 0 }
 function fmtNum(n) { return n == null ? '0' : new Intl.NumberFormat('uk-UA').format(n) }
@@ -9,17 +10,6 @@ function pdn(p) {
 }
 function pini(p) {
   return pdn(p).split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?'
-}
-
-function ProfileAvatar({ profile, sizeCls = 'w-6 h-6', textCls = 'text-[10px]' }) {
-  if (profile?.avatar_url) {
-    return <img src={profile.avatar_url} alt="" className={`${sizeCls} rounded-full object-cover flex-shrink-0`} />
-  }
-  return (
-    <div className={`${sizeCls} rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0`}>
-      <span className={`font-bold text-green-600 dark:text-green-400 ${textCls}`}>{pini(profile)}</span>
-    </div>
-  )
 }
 
 export default function AnalyticsTable({ rows, userAnalytics, userId }) {
@@ -48,7 +38,7 @@ export default function AnalyticsTable({ rows, userAnalytics, userId }) {
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <span className="tabular-nums text-xs text-gray-400 dark:text-gray-500 w-4 flex-shrink-0 text-right">{i + 1}</span>
-                      <ProfileAvatar profile={p} />
+                      <Avatar url={p.avatar_url} initials={pini(p)} sizeCls="w-6 h-6" textCls="text-[10px]" />
                       <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">
                         {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
                       </span>

@@ -4,6 +4,7 @@ import TOURNAMENT_LOGOS from '../lib/tournament-logos'
 import { formatBaly, formatPrognazy } from '../lib/formatters'
 import AnalyticsTable from '../components/AnalyticsTable'
 import RealtimeRefresher from '../components/RealtimeRefresher'
+import Avatar from '../components/Avatar'
 
 export const revalidate = 60
 
@@ -39,18 +40,6 @@ function pct(a, b) {
   return b > 0 ? Math.round(a / b * 100) : 0
 }
 
-function ProfileAvatar({ profile, sizeCls = 'w-8 h-8', textCls = 'text-xs' }) {
-  const ini = pini(profile)
-  if (profile?.avatar_url) {
-    return <img src={profile.avatar_url} alt="" className={`${sizeCls} rounded-full object-cover flex-shrink-0`} />
-  }
-  return (
-    <div className={`${sizeCls} rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0`}>
-      <span className={`font-bold text-green-600 dark:text-green-400 ${textCls}`}>{ini}</span>
-    </div>
-  )
-}
-
 function RankBadge({ rank }) {
   if (rank === 1) return <span className="text-xl leading-none">🥇</span>
   if (rank === 2) return <span className="text-xl leading-none">🥈</span>
@@ -68,7 +57,8 @@ function FormDot({ pts }) {
 
 // ── Data helpers ──────────────────────────────────────────────────────────────
 
-async function fetchPagedPreds(supabase) {
+async function fetchPagedPreds(supabase, matchIds) {
+  if (!matchIds?.length) return []
   const PAGE = 1000
   let all = [], from = 0
   while (true) {
@@ -76,6 +66,7 @@ async function fetchPagedPreds(supabase) {
       .from('predictions')
       .select('user_id, match_id, points')
       .not('points', 'is', null)
+      .in('match_id', matchIds)
       .range(from, from + PAGE - 1)
     if (error || !data?.length) break
     all = all.concat(data)
@@ -161,8 +152,13 @@ export default async function HomePage() {
   const allUpcomingIds = activeTournaments.flatMap(t => activeMatchStats[t.id]?.upcomingIds ?? [])
 
   // ── Phase 3: predictions ──────────────────────────────────────────────────────
+  const allMatchIds = [
+    ...allActiveMatches.map(m => m.id),
+    ...finishedTourneyMatches.map(m => m.id),
+  ]
+
   const [allScoredPreds, userUpcomingPredsResult] = await Promise.all([
-    fetchPagedPreds(supabase),
+    fetchPagedPreds(supabase, allMatchIds),
     userId && allUpcomingIds.length > 0
       ? supabase.from('predictions').select('match_id').eq('user_id', userId).in('match_id', allUpcomingIds)
       : Promise.resolve({ data: [] }),
@@ -270,7 +266,7 @@ export default async function HomePage() {
       {myProfile && (
         <div className="bg-gradient-to-r from-green-500/10 to-transparent dark:from-green-500/15 dark:to-transparent rounded-2xl p-5 border border-green-500/20">
           <div className="flex items-center gap-4">
-            <ProfileAvatar profile={myProfile} sizeCls="w-12 h-12" textCls="text-sm" />
+            <Avatar url={myProfile.avatar_url} initials={pini(myProfile)} sizeCls="w-12 h-12" textCls="text-sm" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 min-w-0">
                 {myRank && (
@@ -359,7 +355,7 @@ export default async function HomePage() {
                           <td className="px-3 py-3 text-center"><RankBadge rank={rank} /></td>
                           <td className="px-3 py-3">
                             <a href={`/players/${p.id}`} className="flex items-center gap-2.5 hover:opacity-75 transition-opacity">
-                              <ProfileAvatar profile={p} sizeCls="w-8 h-8" textCls="text-xs" />
+                              <Avatar url={p.avatar_url} initials={pini(p)} sizeCls="w-8 h-8" textCls="text-xs" />
                               <span className="font-medium text-gray-900 dark:text-white truncate">
                                 {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
                               </span>
@@ -415,7 +411,7 @@ export default async function HomePage() {
                         <div className="w-7 flex-shrink-0 text-center"><RankBadge rank={rank} /></div>
                         <a href={`/players/${p.id}`}
                           className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-75 transition-opacity">
-                          <ProfileAvatar profile={p} sizeCls="w-8 h-8" textCls="text-xs" />
+                          <Avatar url={p.avatar_url} initials={pini(p)} sizeCls="w-8 h-8" textCls="text-xs" />
                           <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
                             {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
                           </span>

@@ -1,5 +1,4 @@
 'use client'
-import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { confirmLeave } from '@/lib/unsaved-guard'
@@ -47,24 +46,13 @@ const NAV_ITEMS = [
 ]
 
 export default function BottomNav({ userId }) {
-  const [isStandalone, setIsStandalone] = useState(false)
   const pathname = usePathname()
-
-  useEffect(() => {
-    const mq = window.matchMedia('(display-mode: standalone)')
-    setIsStandalone(mq.matches || window.navigator.standalone === true)
-    const handler = e => setIsStandalone(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
-
-  if (!isStandalone) return null
 
   const items = NAV_ITEMS.filter(i => !i.requiresAuth || userId)
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-gray-200 dark:border-gray-800 flex"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-gray-200 dark:border-gray-800 flex"
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
     >
       {items.map(item => {

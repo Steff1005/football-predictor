@@ -155,7 +155,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
               {match.home_logo && <img src={match.home_logo} alt="" className="w-6 h-6 object-contain flex-shrink-0" />}
               <span className="font-semibold text-sm text-gray-900 dark:text-white flex-1 min-w-0">{match.home_team}</span>
               <input
-                type="number" min="0" max="9" value={home}
+                type="number" inputMode="numeric" min="0" max="9" value={home}
                 onChange={e => {
                   const c = getClean(e.target.value)
                   setHome(c); setSaved(false)
@@ -175,7 +175,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
               <span className="font-semibold text-sm text-gray-900 dark:text-white flex-1 min-w-0">{match.away_team}</span>
               <input
                 ref={mobileAwayRef}
-                type="number" min="0" max="9" value={away}
+                type="number" inputMode="numeric" min="0" max="9" value={away}
                 onChange={e => { setAway(getClean(e.target.value)); setSaved(false) }}
                 onKeyDown={blockKeys}
                 disabled={isPast}
@@ -215,7 +215,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
             ) : (
               <>
                 <input
-                  type="number" min="0" max="9" value={home}
+                  type="number" inputMode="numeric" min="0" max="9" value={home}
                   onChange={e => {
                     const c = getClean(e.target.value)
                     setHome(c); setSaved(false)
@@ -229,7 +229,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
                 <span className="text-gray-400 dark:text-gray-500 font-bold">:</span>
                 <input
                   ref={awayRef}
-                  type="number" min="0" max="9" value={away}
+                  type="number" inputMode="numeric" min="0" max="9" value={away}
                   onChange={e => { setAway(getClean(e.target.value)); setSaved(false) }}
                   onKeyDown={blockKeys}
                   disabled={isPast}

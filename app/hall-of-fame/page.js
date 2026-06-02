@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import TOURNAMENT_LOGOS from '../../lib/tournament-logos'
 import { compareTournamentStandings } from '../../lib/rankings'
+import Avatar from '../../components/Avatar'
 
 export const revalidate = 300
 export const metadata = { title: 'Зал слави — Kickoff' }
@@ -9,17 +10,9 @@ function displayName(profile) {
   return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
 }
 
-function Avatar({ profile, cls = 'w-9 h-9', text = 'text-xs' }) {
+function getInitials(profile) {
   const name = displayName(profile)
-  const initials = name === '—' ? '?' : name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
-  return (
-    <div className={`${cls} rounded-full flex-shrink-0 overflow-hidden bg-green-500/20 flex items-center justify-center`}>
-      {profile?.avatar_url
-        ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-        : <span className={`font-bold text-green-600 dark:text-green-400 ${text}`}>{initials}</span>
-      }
-    </div>
-  )
+  return name === '—' ? '?' : name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
 }
 
 async function fetchStandings(supabase, tournamentId) {
@@ -207,7 +200,7 @@ export default async function HallOfFamePage() {
                     <a key={row.uid} href={`/players/${row.uid}`}
                       className={`flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-white/5 last:border-0 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${s.row}`}>
                       <span className="text-xl w-6 text-center flex-shrink-0 leading-none">{s.medal}</span>
-                      <Avatar profile={row.profile} cls={s.avatarCls} text="text-xs" />
+                      <Avatar url={row.profile?.avatar_url} initials={getInitials(row.profile)} sizeCls={s.avatarCls} textCls="text-xs" />
                       <span className={`flex-1 min-w-0 truncate ${s.nameCls}`}>
                         {displayName(row.profile)}
                       </span>

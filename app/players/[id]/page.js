@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { translateTeam } from '../../../lib/team-translations'
 import CLUB_CRESTS from '../../../lib/club-crests'
 import { computeTourneyRanks } from '../../../lib/rankings'
+import Avatar from '../../../components/Avatar'
 
 const PAGE = 1000
 async function fetchAll(supabase, buildQuery) {
@@ -16,17 +17,6 @@ async function fetchAll(supabase, buildQuery) {
     from += PAGE
   }
   return all
-}
-
-function StaticAvatar({ avatarUrl, initials }) {
-  if (avatarUrl) return (
-    <img src={avatarUrl} alt="" className="w-20 h-20 rounded-full object-cover flex-shrink-0" />
-  )
-  return (
-    <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-      <span className="text-2xl font-bold text-green-600 dark:text-green-400">{initials}</span>
-    </div>
-  )
 }
 
 export async function generateMetadata({ params }) {
@@ -156,7 +146,7 @@ export default async function PlayerProfilePage({ params }) {
 
       {/* ── Header ── */}
       <div className="flex items-center gap-4 mb-8">
-        <StaticAvatar avatarUrl={profile.avatar_url} initials={initials} />
+        <Avatar url={profile.avatar_url} initials={initials} sizeCls="w-20 h-20" textCls="text-2xl" />
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{displayName}</h1>
           {isOwn && (

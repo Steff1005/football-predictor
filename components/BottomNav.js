@@ -62,7 +62,7 @@ export default function BottomNav({ userId }) {
             key={item.href}
             href={item.href}
             onClick={e => { if (!confirmLeave('Є незбережений прогноз. Перейти?')) e.preventDefault() }}
-            className={`flex-1 flex flex-col items-center gap-1 pt-2 pb-5 transition-colors ${
+            className={`bottom-nav-item flex-1 flex flex-col items-center gap-1 pt-2 pb-2 transition-colors ${
               active
                 ? item.liveAccent ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'

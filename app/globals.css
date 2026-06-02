@@ -47,6 +47,7 @@ html.dark .table-inset-ring { box-shadow: inset 0 0 0 1px rgb(31 41 55); }
 /* Extra padding in PWA standalone for safe-area (iPhone home indicator) */
 @media (display-mode: standalone) {
   .standalone-main { padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px)); }
+  .bottom-nav-item { padding-bottom: 1.25rem; } /* pb-5 — restore full height in PWA */
 }
 
 /* Live probability badge — pulsing glow when currently winning */

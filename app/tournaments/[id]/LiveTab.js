@@ -47,16 +47,17 @@ function calcProb(predH, predA, curH, curA, kickoffAt) {
 
 function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
   const r = calcProb(predH, predA, curH, curA, kickoffAt)
-  if (r.impossible) return <span className="text-xs text-gray-300 dark:text-gray-700 w-10 text-right inline-block">✕</span>
-  if (r.exact)      return <span className="text-xs font-bold text-green-500 dark:text-green-400 w-10 text-right inline-block">🎯</span>
-  if (r.noTime)     return <span className="text-xs text-gray-400 dark:text-gray-600 w-10 text-right inline-block">—</span>
+  const base = 'text-xs font-semibold rounded px-1.5 py-0.5 w-10 text-center inline-block flex-shrink-0'
+  if (r.impossible) return <span className={`${base} bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-600`}>✕</span>
+  if (r.exact)      return <span className={`${base} bg-green-500/20 text-green-600 dark:text-green-400`}>🎯</span>
+  if (r.noTime)     return <span className={`${base} bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500`}>—</span>
   const cls = r.pct >= 30
     ? 'bg-green-500/15 text-green-600 dark:text-green-400'
     : r.pct >= 10
       ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400'
       : 'bg-red-500/10 text-red-500 dark:text-red-400'
   return (
-    <span className={`text-xs font-semibold tabular-nums rounded px-1.5 py-0.5 w-10 text-right inline-block ${cls}`}>
+    <span className={`${base} tabular-nums ${cls}`}>
       {r.pct}%
     </span>
   )

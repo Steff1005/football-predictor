@@ -18,15 +18,11 @@ const TABS = [
   { key: 'medals',  label: 'Медальний залік' },
 ]
 
-function MedalBadge({ count, emoji }) {
-  if (!count) return <span className="w-6 text-center text-xs text-gray-300 dark:text-gray-700">—</span>
-  return (
-    <span className="flex items-center gap-0.5">
-      <span className="text-sm leading-none">{emoji}</span>
-      <span className="text-xs font-bold tabular-nums text-gray-700 dark:text-gray-200">{count}</span>
-    </span>
-  )
-}
+const MEDAL_CLS = [
+  'text-yellow-500 dark:text-yellow-400', // gold
+  'text-gray-400 dark:text-gray-300',     // silver
+  'text-orange-500 dark:text-orange-400', // bronze
+]
 
 export default function HallOfFame({ finishedTournaments, hofRankings, medalRows, tournamentLogos, leagueEmoji }) {
   const [tab, setTab] = useState('winners')
@@ -101,37 +97,35 @@ export default function HallOfFame({ finishedTournaments, hofRankings, medalRows
           ) : (
             <>
               {/* Header */}
-              <div className="flex items-center px-4 py-2 border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
+              <div className="flex items-center px-3 py-2 border-b-2 border-gray-100 dark:border-gray-800 text-xs font-semibold text-gray-400 dark:text-gray-500">
                 <div className="flex-1">Учасник</div>
-                <div className="flex gap-3 items-center">
-                  <span className="w-8 text-center">🥇</span>
-                  <span className="w-8 text-center">🥈</span>
-                  <span className="w-8 text-center">🥉</span>
-                  <span className="w-6 text-right">∑</span>
+                <div className="flex items-center border-l border-gray-200 dark:border-gray-700 pl-2 gap-0">
+                  <span className="w-7 text-center text-base leading-none">🥇</span>
+                  <span className="w-7 text-center text-base leading-none">🥈</span>
+                  <span className="w-7 text-center text-base leading-none">🥉</span>
+                  <span className="w-6 text-center text-gray-300 dark:text-gray-600">∑</span>
                 </div>
               </div>
-              {medalRows.map((r, i) => (
-                <a key={r.uid} href={`/players/${r.uid}`}
-                  className="flex items-center px-4 py-2.5 border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors gap-2">
-                  {/* Rank + avatar + name */}
-                  <span className="text-sm w-4 flex-shrink-0 text-center text-gray-400 dark:text-gray-500 font-medium">{i + 1}</span>
-                  <Avatar url={r.profile?.avatar_url} initials={pini(r.profile)} sizeCls="w-6 h-6" textCls="text-[10px]" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 min-w-0 truncate">{pdn(r.profile)}</span>
-                  {/* Medals */}
-                  <div className="flex gap-3 items-center flex-shrink-0">
-                    <span className="w-8 text-center">
-                      <MedalBadge count={r.gold}   emoji="🥇" />
-                    </span>
-                    <span className="w-8 text-center">
-                      <MedalBadge count={r.silver} emoji="🥈" />
-                    </span>
-                    <span className="w-8 text-center">
-                      <MedalBadge count={r.bronze} emoji="🥉" />
-                    </span>
-                    <span className="w-6 text-right text-xs font-bold text-gray-500 dark:text-gray-400 tabular-nums">{r.total}</span>
-                  </div>
-                </a>
-              ))}
+              {medalRows.map((r, i) => {
+                const counts = [r.gold, r.silver, r.bronze]
+                return (
+                  <a key={r.uid} href={`/players/${r.uid}`}
+                    className="flex items-center px-3 py-2 border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors gap-1.5">
+                    <span className="text-xs w-4 flex-shrink-0 text-center text-gray-400 dark:text-gray-500 font-medium">{i + 1}</span>
+                    <Avatar url={r.profile?.avatar_url} initials={pini(r.profile)} sizeCls="w-5 h-5" textCls="text-[9px]" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 min-w-0 truncate">{pdn(r.profile)}</span>
+                    {/* Medals — separated by a vertical line */}
+                    <div className="flex items-center border-l border-gray-200 dark:border-gray-700 pl-2 gap-0 flex-shrink-0">
+                      {counts.map((count, mi) => (
+                        <span key={mi} className={`w-7 text-center text-xs font-bold tabular-nums ${count ? MEDAL_CLS[mi] : 'text-gray-200 dark:text-gray-800'}`}>
+                          {count || '—'}
+                        </span>
+                      ))}
+                      <span className="w-6 text-center text-xs font-bold text-gray-500 dark:text-gray-400 tabular-nums">{r.total}</span>
+                    </div>
+                  </a>
+                )
+              })}
             </>
           )}
         </div>

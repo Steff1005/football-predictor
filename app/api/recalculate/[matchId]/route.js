@@ -3,19 +3,13 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { rebuildProbabilityCache } from '../../../../lib/probability'
 import { isAdminEmail } from '../../../../lib/admin'
+import { calculatePoints } from '../../../../lib/scoring'
 
 const adminDb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
   { auth: { persistSession: false } }
 )
-
-function calculatePoints(predH, predA, realH, realA) {
-  if (predH === realH && predA === realA) return 4
-  const pr = predH > predA ? 'H' : predH < predA ? 'A' : 'D'
-  const rr = realH  > realA  ? 'H' : realH  < realA  ? 'A' : 'D'
-  return pr === rr ? 1 : 0
-}
 
 export async function GET(request, { params }) {
   const { matchId } = await params

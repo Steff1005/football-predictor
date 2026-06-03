@@ -1,18 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { rebuildProbabilityCache } from '../../../lib/probability'
 import { sendPushToUser } from '../../../lib/push-send'
+import { calculatePoints } from '../../../lib/scoring'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
-
-function calculatePoints(predH, predA, realH, realA) {
-  if (predH === realH && predA === realA) return 4
-  const predResult = predH > predA ? 'H' : predH < predA ? 'A' : 'D'
-  const realResult = realH > realA ? 'H' : realH < realA ? 'A' : 'D'
-  return predResult === realResult ? 1 : 0
-}
 
 export async function GET(request) {
   const authHeader = request.headers.get('authorization')

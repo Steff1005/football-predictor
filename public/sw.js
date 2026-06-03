@@ -1,6 +1,7 @@
 const CACHE_STATIC = 'kickoff-static-v4'
 const CACHE_PAGES  = 'kickoff-pages-v1'
-const KNOWN_CACHES = new Set([CACHE_STATIC, CACHE_PAGES])
+const CACHE_API    = 'kickoff-api-v1'
+const KNOWN_CACHES = new Set([CACHE_STATIC, CACHE_PAGES, CACHE_API])
 
 // Pre-cache at install: offline fallback + app icons
 const PRECACHE = [
@@ -29,8 +30,29 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return
   const url = new URL(event.request.url)
 
-  // Never intercept cross-origin or API routes
+  // Never intercept cross-origin
   if (url.origin !== self.location.origin) return
+
+  // /api/live-scores — stale-while-revalidate (serve cached, refresh in background)
+  if (url.pathname.startsWith('/api/live-scores')) {
+    event.respondWith(
+      caches.open(CACHE_API).then(async cache => {
+        const cached = await cache.match(event.request)
+        const networkFetch = fetch(event.request).then(res => {
+          if (res.ok) cache.put(event.request, res.clone())
+          return res
+        }).catch(() => null)
+        if (cached) {
+          event.waitUntil(networkFetch)
+          return cached
+        }
+        return await networkFetch || Response.error()
+      })
+    )
+    return
+  }
+
+  // Skip all other API routes
   if (url.pathname.startsWith('/api/')) return
 
   // _next/static: cache-first forever (content-hashed filenames, safe to cache indefinitely)

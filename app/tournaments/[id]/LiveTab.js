@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { supabase } from '../../../lib/supabase'
 
 const POLL_INTERVAL = 30_000
 
@@ -65,6 +66,29 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
     document.addEventListener('visibilitychange', onVisibility)
     return () => { stop(); document.removeEventListener('visibilitychange', onVisibility) }
   }, [fetchScores])
+
+  // Realtime: react instantly to DB score updates (fallback: 30s polling keeps working)
+  useEffect(() => {
+    if (!tournamentId || !liveMatches.length) return
+    const channel = supabase
+      .channel(`live-tab-${tournamentId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'matches',
+        filter: `tournament_id=eq.${tournamentId}`,
+      }, ({ new: m }) => {
+        setMatches(prev =>
+          prev.map(p => p.id === m.id
+            ? { ...p, home_score: m.home_score, away_score: m.away_score, status: m.status }
+            : p
+          )
+        )
+        setUpdated(Date.now())
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [tournamentId, liveMatches.length])
 
   // "Updated N sec ago" ticker
   useEffect(() => {

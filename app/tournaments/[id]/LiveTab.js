@@ -22,6 +22,41 @@ function PlayerAvatar({ profile }) {
   )
 }
 
+// Poisson P(X = k) using log to avoid overflow for large k
+function poissonP(k, lambda) {
+  if (k < 0 || lambda <= 0) return k === 0 ? 1 : 0
+  let log = -lambda + k * Math.log(lambda)
+  for (let i = 1; i <= k; i++) log -= Math.log(i)
+  return Math.exp(log)
+}
+
+// Probability that pred is an exact score (4 pts) given current score + time
+function exactProb(predH, predA, curH, curA, kickoffAt) {
+  const needH = predH - curH
+  const needA = predA - curA
+  if (needH < 0 || needA < 0) return 0
+  const elapsed   = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
+  const remaining = Math.max(0, 90 - elapsed)
+  const muH = 1.4 * remaining / 90
+  const muA = 1.1 * remaining / 90
+  return poissonP(needH, muH) * poissonP(needA, muA)
+}
+
+function ProbBadge({ prob }) {
+  const pct = Math.round(prob * 100)
+  if (pct === 0) return <span className="text-xs text-gray-400 dark:text-gray-600 tabular-nums w-10 text-right">0%</span>
+  const cls = pct >= 30
+    ? 'bg-green-500/15 text-green-600 dark:text-green-400'
+    : pct >= 10
+      ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400'
+      : 'bg-red-500/10 text-red-500 dark:text-red-400'
+  return (
+    <span className={`text-xs font-semibold tabular-nums rounded px-1.5 py-0.5 w-10 text-right inline-block ${cls}`}>
+      {pct}%
+    </span>
+  )
+}
+
 export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournamentId }) {
   const [matches, setMatches]     = useState(liveMatches)
   const [lastUpdated, setUpdated] = useState(Date.now())
@@ -198,6 +233,9 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                 <div className="px-4 py-3 text-sm text-center text-gray-400 dark:text-gray-600">Прогнозів немає</div>
               ) : preds.map(pred => {
                 const profile = profileMap[pred.user_id]
+                const prob = (match.home_score != null && match.away_score != null)
+                  ? exactProb(pred.predicted_home, pred.predicted_away, match.home_score, match.away_score, match.kickoff_at)
+                  : null
                 return (
                   <div key={pred.user_id} className="border-t border-gray-100 dark:border-white/10">
                     {/* Mobile row */}
@@ -210,7 +248,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                         <span className="font-mono text-sm font-semibold text-gray-500 dark:text-gray-400 leading-snug">{pred.predicted_home}</span>
                         <span className="font-mono text-sm font-semibold text-gray-500 dark:text-gray-400 leading-snug">{pred.predicted_away}</span>
                       </div>
-                      <div className="w-[52px] flex-shrink-0" />
+                      {prob !== null ? <ProbBadge prob={prob} /> : <div className="w-10 flex-shrink-0" />}
                     </div>
 
                     {/* Desktop row */}
@@ -222,7 +260,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                       <span className="bg-gray-100 dark:bg-white/10 rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 min-w-[2.75rem] text-center">
                         {pred.predicted_home}:{pred.predicted_away}
                       </span>
-                      <div className="w-16 flex-shrink-0" />
+                      {prob !== null ? <ProbBadge prob={prob} /> : <div className="w-16 flex-shrink-0" />}
                     </div>
                   </div>
                 )

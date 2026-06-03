@@ -536,7 +536,7 @@ export default async function HomePage() {
                               <span className="text-base leading-none w-5 text-center flex-shrink-0">
                                 {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
                               </span>
-                              <ProfileAvatar profile={r.profile} sizeCls="w-6 h-6" textCls="text-[10px]" />
+                              <Avatar url={r.profile?.avatar_url} initials={pini(r.profile)} sizeCls="w-6 h-6" textCls="text-[10px]" />
                               <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 min-w-0 truncate">{pdn(r.profile)}</span>
                               <span className="text-sm font-bold text-green-500 dark:text-green-400 flex-shrink-0">{fmtNum(r.pts)}</span>
                             </a>

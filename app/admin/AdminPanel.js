@@ -48,8 +48,15 @@ function MatchesTab({ matches, setMatches, tournaments }) {
     setTimeout(() => window.location.reload(), 1500)
   }
 
+  function toLocalDatetimeInput(isoStr) {
+    if (!isoStr) return ''
+    const d = new Date(isoStr)
+    const pad = n => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
   function startEdit(m) {
-    setEditing({ id: m.id, home_score: m.home_score ?? '', away_score: m.away_score ?? '', status: m.status })
+    setEditing({ id: m.id, home_score: m.home_score ?? '', away_score: m.away_score ?? '', status: m.status, kickoff_at: toLocalDatetimeInput(m.kickoff_at) })
   }
 
   async function saveMatch() {
@@ -58,6 +65,7 @@ function MatchesTab({ matches, setMatches, tournaments }) {
       home_score: editing.home_score !== '' ? parseInt(editing.home_score) : null,
       away_score: editing.away_score !== '' ? parseInt(editing.away_score) : null,
       status: editing.status,
+      kickoff_at: editing.kickoff_at ? new Date(editing.kickoff_at).toISOString() : undefined,
     })
     setSaving(false)
     if (result.error) { flash('Помилка: ' + result.error); return }
@@ -173,6 +181,12 @@ function MatchesTab({ matches, setMatches, tournaments }) {
                         <option value="live">Live</option>
                         <option value="finished">Завершено</option>
                       </select>
+                    </div>
+                    <div className="col-span-2 sm:col-span-4">
+                      <label className="text-xs text-gray-400 mb-1 block">Дата та час (місцевий час)</label>
+                      <input type="datetime-local" value={editing.kickoff_at}
+                        onChange={e => setEditing(p => ({ ...p, kickoff_at: e.target.value }))}
+                        className={INPUT} />
                     </div>
                   </div>
                   <div className="flex gap-2">

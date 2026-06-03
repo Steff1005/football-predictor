@@ -69,12 +69,14 @@ async function getAdminDb() {
   )
 }
 
-export async function updateMatch(matchId, { home_score, away_score, status }) {
+export async function updateMatch(matchId, { home_score, away_score, status, kickoff_at }) {
   try {
     const db = await getAdminDb()
+    const updateData = { home_score, away_score, status }
+    if (kickoff_at) updateData.kickoff_at = kickoff_at
     const { data, error } = await db
       .from('matches')
-      .update({ home_score, away_score, status })
+      .update(updateData)
       .eq('id', matchId)
       .select()
       .single()

@@ -5,7 +5,6 @@ import { formatBaly, formatPrognazy } from '../lib/formatters'
 import AnalyticsTable from '../components/AnalyticsTable'
 import RealtimeRefresher from '../components/RealtimeRefresher'
 import Avatar from '../components/Avatar'
-import LeaderboardTable from '../components/LeaderboardTable'
 
 export const revalidate = 60
 
@@ -48,10 +47,17 @@ function RankBadge({ rank }) {
   return <span className="text-sm font-bold text-gray-400 dark:text-gray-500">{rank}</span>
 }
 
+// pts: undefined = no prediction shown, null = unscored, 0/1/4 = scored
+function FormDot({ pts }) {
+  if (pts == null)  return <span className="w-2.5 h-2.5 rounded-full bg-gray-200 dark:bg-gray-700 inline-block flex-shrink-0" />
+  if (pts === 4)    return <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block flex-shrink-0" title="4 бали — точний рахунок" />
+  if (pts === 1)    return <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block flex-shrink-0" title="1 бал — правильний результат" />
+  return              <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block flex-shrink-0" title="0 балів" />
+}
+
 // ── Data helpers ──────────────────────────────────────────────────────────────
 
-async function fetchPagedPreds(supabase, matchIds) {
-  if (!matchIds?.length) return []
+async function fetchPagedPreds(supabase) {
   const PAGE = 1000
   let all = [], from = 0
   while (true) {
@@ -59,7 +65,6 @@ async function fetchPagedPreds(supabase, matchIds) {
       .from('predictions')
       .select('user_id, match_id, points')
       .not('points', 'is', null)
-      .in('match_id', matchIds)
       .range(from, from + PAGE - 1)
     if (error || !data?.length) break
     all = all.concat(data)
@@ -145,13 +150,8 @@ export default async function HomePage() {
   const allUpcomingIds = activeTournaments.flatMap(t => activeMatchStats[t.id]?.upcomingIds ?? [])
 
   // ── Phase 3: predictions ──────────────────────────────────────────────────────
-  const allMatchIds = [
-    ...allActiveMatches.map(m => m.id),
-    ...finishedTourneyMatches.map(m => m.id),
-  ]
-
   const [allScoredPreds, userUpcomingPredsResult] = await Promise.all([
-    fetchPagedPreds(supabase, allMatchIds),
+    fetchPagedPreds(supabase),
     userId && allUpcomingIds.length > 0
       ? supabase.from('predictions').select('match_id').eq('user_id', userId).in('match_id', allUpcomingIds)
       : Promise.resolve({ data: [] }),
@@ -218,6 +218,8 @@ export default async function HomePage() {
     .filter(p => p.first_name !== 'Адмін')
     .map(p => ({ ...p, efficiency: p.total_points / p.total_predictions }))
     .sort((a, b) => b.efficiency - a.efficiency)
+
+  const maxEfficiency = leaderboard[0]?.efficiency ?? 1
 
   // Analytics rows sorted by % correct results desc, then by total points
   const analyticsRows = [...leaderboard].sort((a, b) => {
@@ -291,6 +293,7 @@ export default async function HomePage() {
           <div>
             <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Загальний рейтинг</h2>
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+
               <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
                 <div className="sm:hidden space-y-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -310,13 +313,125 @@ export default async function HomePage() {
                   <span><span className="font-medium">PPP</span> = бали &divide; прогнози &nbsp;·&nbsp; <span className="text-green-500">↑</span> зростає &nbsp;·&nbsp; <span className="text-red-400">↓</span> падає</span>
                 </div>
               </div>
-              <LeaderboardTable
-                rows={leaderboard}
-                formData={userFormData}
-                trend={userTrend}
-                analytics={userAnalytics}
-                userId={userId}
-              />
+
+              {leaderboard.length === 0 && (
+                <div className="text-center py-12 text-gray-400 dark:text-gray-600 text-sm">Ще немає учасників</div>
+              )}
+
+              {leaderboard.length > 0 && (
+                <table className="w-full text-sm hidden sm:table">
+                  <thead>
+                    <tr className="border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
+                      <th className="w-10 px-3 py-2.5 text-center">#</th>
+                      <th className="px-3 py-2.5 text-left">Учасник</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap">Форма</th>
+                      <th className="px-3 py-2.5 text-right whitespace-nowrap">PPP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaderboard.map((p, idx) => {
+                      const rank      = idx + 1
+                      const isMe      = p.id === userId
+                      const form      = userFormData[p.id] ?? []
+                      const recentEff = userTrend[p.id]
+                      const trend     = recentEff !== undefined
+                        ? (recentEff > p.efficiency + 0.05 ? 1 : recentEff < p.efficiency - 0.05 ? -1 : 0)
+                        : null
+                      const barWidth  = Math.round(p.efficiency / maxEfficiency * 100)
+                      return (
+                        <tr key={p.id}
+                          className={`border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 animate-fade-in ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}
+                          style={{ animationDelay: `${idx * 50}ms` }}>
+                          <td className="px-3 py-3 text-center"><RankBadge rank={rank} /></td>
+                          <td className="px-3 py-3">
+                            <a href={`/players/${p.id}`} className="flex items-center gap-2.5 hover:opacity-75 transition-opacity">
+                              <Avatar url={p.avatar_url} initials={pini(p)} sizeCls="w-8 h-8" textCls="text-xs" />
+                              <span className="font-medium text-gray-900 dark:text-white truncate">
+                                {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
+                              </span>
+                            </a>
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex gap-1">
+                              {form.length > 0
+                                ? form.map((entry, i) => <FormDot key={i} pts={entry.pts} />)
+                                : <span className="text-xs text-gray-300 dark:text-gray-600 italic">—</span>
+                              }
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center justify-end gap-1.5 mb-0.5">
+                              {trend !== null && (
+                                <span className={`text-xs font-semibold ${trend > 0 ? 'text-green-500' : trend < 0 ? 'text-red-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                                  {trend > 0 ? '↑' : trend < 0 ? '↓' : '—'}
+                                </span>
+                              )}
+                              <span className="font-bold text-green-500 dark:text-green-400 tabular-nums">{p.efficiency.toFixed(2)}</span>
+                            </div>
+                            <div className="text-[10px] text-gray-400 dark:text-gray-500 text-right whitespace-nowrap mb-1.5">
+                              {fmtNum(p.total_points)} б. · {fmtNum(p.total_predictions)} прогн.
+                            </div>
+                            <div className="h-0.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div className="h-full bg-green-500/70 rounded-full" style={{width:`${barWidth}%`}} />
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+
+              <div className="sm:hidden">
+                {leaderboard.map((p, idx) => {
+                  const rank      = idx + 1
+                  const isMe      = p.id === userId
+                  const form      = userFormData[p.id] ?? []
+                  const recentEff = userTrend[p.id]
+                  const trend     = recentEff !== undefined
+                    ? (recentEff > p.efficiency + 0.05 ? 1 : recentEff < p.efficiency - 0.05 ? -1 : 0)
+                    : null
+                  const barWidth  = Math.round(p.efficiency / maxEfficiency * 100)
+                  return (
+                    <div key={p.id}
+                      className={`px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 animate-fade-in ${isMe ? 'bg-green-500/5 dark:bg-green-500/10' : ''}`}
+                      style={{ animationDelay: `${idx * 50}ms` }}>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 flex-shrink-0 text-center"><RankBadge rank={rank} /></div>
+                        <a href={`/players/${p.id}`}
+                          className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-75 transition-opacity">
+                          <Avatar url={p.avatar_url} initials={pini(p)} sizeCls="w-8 h-8" textCls="text-xs" />
+                          <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
+                          </span>
+                        </a>
+                        <div className="flex-shrink-0 text-right ml-1">
+                          <div className="flex items-center justify-end gap-1">
+                            {trend !== null && (
+                              <span className={`text-xs font-semibold ${trend > 0 ? 'text-green-500' : trend < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                                {trend > 0 ? '↑' : trend < 0 ? '↓' : '—'}
+                              </span>
+                            )}
+                            <span className="font-bold text-green-500 dark:text-green-400 text-sm tabular-nums">{p.efficiency.toFixed(2)}</span>
+                          </div>
+                          <div className="text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap">{fmtNum(p.total_points)} б. · {fmtNum(p.total_predictions)} прогн.</div>
+                        </div>
+                      </div>
+                      <div className="pl-9 mt-1.5">
+                        {form.length > 0 && (
+                          <div className="flex gap-1 mb-1.5">
+                            {form.map((entry, i) => <FormDot key={i} pts={entry.pts} />)}
+                          </div>
+                        )}
+                        <div className="h-0.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div className="h-full bg-green-500/70 rounded-full" style={{width:`${barWidth}%`}} />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
             </div>
           </div>
 

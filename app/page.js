@@ -6,6 +6,7 @@ import AnalyticsTable from '../components/AnalyticsTable'
 import RealtimeRefresher from '../components/RealtimeRefresher'
 import Avatar from '../components/Avatar'
 import FormDots from '../components/FormDots'
+import HallOfFame from '../components/HallOfFame'
 
 export const revalidate = 60
 
@@ -225,6 +226,20 @@ export default async function HomePage() {
       .map(([uid, pts]) => ({ uid, pts, profile: profileMap[uid] ?? null }))
       .filter(r => r.profile)
   }
+
+  // ── Medal tally: aggregate gold/silver/bronze per user ───────────────────────
+  const medalMap = {}
+  for (const rankings of Object.values(hofRankings)) {
+    rankings.forEach((r, i) => {
+      if (!medalMap[r.uid]) medalMap[r.uid] = { gold: 0, silver: 0, bronze: 0, profile: r.profile }
+      if (i === 0) medalMap[r.uid].gold++
+      else if (i === 1) medalMap[r.uid].silver++
+      else medalMap[r.uid].bronze++
+    })
+  }
+  const medalRows = Object.entries(medalMap)
+    .map(([uid, d]) => ({ uid, ...d, total: d.gold + d.silver + d.bronze }))
+    .sort((a, b) => b.gold - a.gold || b.silver - a.silver || b.bronze - a.bronze)
 
   // ── Leaderboard — ranked by efficiency (points per prediction) ────────────────
   const leaderboard = (allProfiles ?? [])
@@ -520,47 +535,13 @@ export default async function HomePage() {
           </div>
 
           {/* Hall of fame */}
-          {finishedTournaments.length > 0 && (
-            <div>
-              <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">🏆 Зал слави</h2>
-              <div className="space-y-3">
-                {finishedTournaments.map(t => {
-                  const top = hofRankings[t.id] ?? []
-                  return (
-                    <div key={t.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-                      <a href={`/tournaments/${t.id}`}
-                        className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
-                        {TOURNAMENT_LOGOS[t.league_id]
-                          ? <img src={TOURNAMENT_LOGOS[t.league_id]} alt="" className="w-5 h-5 object-contain flex-shrink-0" />
-                          : <span className="text-base leading-none">{LEAGUE_EMOJI[t.league_id] ?? '🏆'}</span>
-                        }
-                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex-1 group-hover:text-green-500 dark:group-hover:text-green-400 transition-colors truncate">{t.name}</span>
-                        <span className="text-gray-300 dark:text-gray-600 text-xs flex-shrink-0">→</span>
-                      </a>
-                      {top.length > 0 && (
-                        <div className="px-4 py-2.5 space-y-1.5">
-                          {top.map((r, i) => (
-                            <a key={r.uid} href={`/players/${r.uid}`}
-                              className="flex items-center gap-2 hover:opacity-75 transition-opacity">
-                              <span className="text-base leading-none w-5 text-center flex-shrink-0">
-                                {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
-                              </span>
-                              <Avatar url={r.profile?.avatar_url} initials={pini(r.profile)} sizeCls="w-6 h-6" textCls="text-[10px]" />
-                              <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 min-w-0 truncate">{pdn(r.profile)}</span>
-                              <span className="text-sm font-bold text-green-500 dark:text-green-400 flex-shrink-0">{fmtNum(r.pts)}</span>
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                      {top.length === 0 && (
-                        <div className="px-4 py-2 text-xs text-gray-400 dark:text-gray-600">Немає даних</div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+          <HallOfFame
+            finishedTournaments={finishedTournaments}
+            hofRankings={hofRankings}
+            medalRows={medalRows}
+            tournamentLogos={TOURNAMENT_LOGOS}
+            leagueEmoji={LEAGUE_EMOJI}
+          />
 
         </div>
       </div>

@@ -114,39 +114,43 @@ export default function HallOfFamePageClient({ enriched, medalRows, tournamentLo
           ) : (
             <>
               {/* Header */}
-              <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 dark:border-gray-800 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                <span className="w-6 text-center">#</span>
+              <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 border-b-2 border-gray-100 dark:border-gray-800 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                <span className="w-5 sm:w-6 text-center">#</span>
                 <span className="flex-1">Учасник</span>
-                <div className="flex gap-5 items-center pr-1">
-                  <span className="w-8 text-center text-base">🥇</span>
-                  <span className="w-8 text-center text-base">🥈</span>
-                  <span className="w-8 text-center text-base">🥉</span>
-                  <span className="w-8 text-center">Всього</span>
+                <div className="flex items-center border-l border-gray-200 dark:border-gray-700 pl-2 sm:pl-3 gap-0">
+                  <span className="w-8 sm:w-10 text-center text-base leading-none">🥇</span>
+                  <span className="w-8 sm:w-10 text-center text-base leading-none">🥈</span>
+                  <span className="w-8 sm:w-10 text-center text-base leading-none">🥉</span>
+                  <span className="w-8 sm:w-10 text-center">∑</span>
                 </div>
               </div>
 
-              {medalRows.map((r, i) => (
-                <a key={r.uid} href={`/players/${r.uid}`}
-                  className={`flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors ${
-                    i === 0 ? 'bg-yellow-500/5' : ''
-                  }`}>
-                  <span className="w-6 text-center text-sm font-bold text-gray-400 dark:text-gray-500">{i + 1}</span>
-                  <Avatar url={r.profile?.avatar_url} initials={getInitials(r.profile)} sizeCls="w-9 h-9" textCls="text-xs" />
-                  <span className="flex-1 min-w-0 font-medium text-gray-900 dark:text-white truncate">{displayName(r.profile)}</span>
-                  <div className="flex gap-5 items-center flex-shrink-0 pr-1">
-                    {[
-                      { count: r.gold,   cls: r.gold   ? 'text-yellow-500 dark:text-yellow-400 font-bold' : 'text-gray-300 dark:text-gray-700' },
-                      { count: r.silver, cls: r.silver ? 'text-gray-500 dark:text-gray-300 font-bold'     : 'text-gray-300 dark:text-gray-700' },
-                      { count: r.bronze, cls: r.bronze ? 'text-orange-500 dark:text-orange-400 font-bold' : 'text-gray-300 dark:text-gray-700' },
-                    ].map(({ count, cls }, mi) => (
-                      <span key={mi} className={`w-8 text-center text-sm tabular-nums ${cls}`}>
-                        {count || '—'}
-                      </span>
-                    ))}
-                    <span className="w-8 text-center text-sm font-bold text-gray-700 dark:text-gray-200 tabular-nums">{r.total}</span>
-                  </div>
-                </a>
-              ))}
+              {medalRows.map((r, i) => {
+                const counts = [r.gold, r.silver, r.bronze]
+                const cls = [
+                  r.gold   ? 'text-yellow-500 dark:text-yellow-400 font-bold' : 'text-gray-200 dark:text-gray-800',
+                  r.silver ? 'text-gray-500 dark:text-gray-300 font-bold'     : 'text-gray-200 dark:text-gray-800',
+                  r.bronze ? 'text-orange-500 dark:text-orange-400 font-bold' : 'text-gray-200 dark:text-gray-800',
+                ]
+                return (
+                  <a key={r.uid} href={`/players/${r.uid}`}
+                    className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-3.5 border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors ${
+                      i === 0 ? 'bg-yellow-500/5' : ''
+                    }`}>
+                    <span className="w-5 sm:w-6 text-center text-xs font-bold text-gray-400 dark:text-gray-500">{i + 1}</span>
+                    <Avatar url={r.profile?.avatar_url} initials={getInitials(r.profile)} sizeCls="w-7 h-7 sm:w-9 sm:h-9" textCls="text-[10px] sm:text-xs" />
+                    <span className="flex-1 min-w-0 font-medium text-gray-900 dark:text-white truncate">{displayName(r.profile)}</span>
+                    <div className="flex items-center border-l border-gray-200 dark:border-gray-700 pl-2 sm:pl-3 gap-0 flex-shrink-0">
+                      {counts.map((count, mi) => (
+                        <span key={mi} className={`w-8 sm:w-10 text-center text-sm tabular-nums ${cls[mi]}`}>
+                          {count || '—'}
+                        </span>
+                      ))}
+                      <span className="w-8 sm:w-10 text-center text-sm font-bold text-gray-700 dark:text-gray-200 tabular-nums">{r.total}</span>
+                    </div>
+                  </a>
+                )
+              })}
             </>
           )}
         </div>

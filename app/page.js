@@ -5,6 +5,7 @@ import { formatBaly, formatPrognazy } from '../lib/formatters'
 import AnalyticsTable from '../components/AnalyticsTable'
 import RealtimeRefresher from '../components/RealtimeRefresher'
 import Avatar from '../components/Avatar'
+import FormDots from '../components/FormDots'
 
 export const revalidate = 60
 
@@ -63,7 +64,7 @@ async function fetchPagedPreds(supabase) {
   while (true) {
     const { data, error } = await supabase
       .from('predictions')
-      .select('user_id, match_id, points')
+      .select('user_id, match_id, points, predicted_home, predicted_away')
       .not('points', 'is', null)
       .range(from, from + PAGE - 1)
     if (error || !data?.length) break
@@ -104,10 +105,10 @@ export default async function HomePage() {
   // ── Phase 2: match metadata ───────────────────────────────────────────────────
   const [activeMatchesResult, finishedTourneyMatchesResult] = await Promise.all([
     activeTids.length > 0
-      ? supabase.from('matches').select('id, tournament_id, status, kickoff_at').in('tournament_id', activeTids).order('kickoff_at', { ascending: false })
+      ? supabase.from('matches').select('id, tournament_id, status, kickoff_at, home_team, away_team, home_score, away_score').in('tournament_id', activeTids).order('kickoff_at', { ascending: false })
       : { data: [] },
     finishedTids.length > 0
-      ? supabase.from('matches').select('id, tournament_id, kickoff_at').in('tournament_id', finishedTids)
+      ? supabase.from('matches').select('id, tournament_id, kickoff_at, home_team, away_team, home_score, away_score').in('tournament_id', finishedTids)
       : { data: [] },
   ])
 
@@ -116,10 +117,12 @@ export default async function HomePage() {
 
   // Match lookup maps
   const matchDateMap = {}
+  const matchInfoMap = {}
   const matchTidMap  = {}
   for (const m of allActiveMatches) {
     matchDateMap[m.id] = m.kickoff_at
     matchTidMap[m.id]  = m.tournament_id
+    matchInfoMap[m.id] = { home: m.home_team, away: m.away_team, scoreH: m.home_score, scoreA: m.away_score }
   }
 
   // Compute last match date per finished tournament for sorting
@@ -130,6 +133,7 @@ export default async function HomePage() {
     }
     matchDateMap[m.id] = m.kickoff_at
     matchTidMap[m.id]  = m.tournament_id
+    matchInfoMap[m.id] = { home: m.home_team, away: m.away_team, scoreH: m.home_score, scoreA: m.away_score }
   }
 
   // Sort finished tournaments by last match date descending
@@ -175,7 +179,17 @@ export default async function HomePage() {
     const date = matchDateMap[p.match_id]
     if (!date) continue
     if (!userFormRaw[p.user_id]) userFormRaw[p.user_id] = []
-    userFormRaw[p.user_id].push({ pts: p.points, date })
+    const info = matchInfoMap[p.match_id] ?? {}
+    userFormRaw[p.user_id].push({
+      pts: p.points,
+      date,
+      home: info.home ?? '?',
+      away: info.away ?? '?',
+      scoreH: info.scoreH,
+      scoreA: info.scoreA,
+      predH: p.predicted_home,
+      predA: p.predicted_away,
+    })
   }
   const userFormData = {}
   for (const [uid, entries] of Object.entries(userFormRaw)) {
@@ -352,12 +366,7 @@ export default async function HomePage() {
                             </a>
                           </td>
                           <td className="px-3 py-3">
-                            <div className="flex gap-1">
-                              {form.length > 0
-                                ? form.map((entry, i) => <FormDot key={i} pts={entry.pts} />)
-                                : <span className="text-xs text-gray-300 dark:text-gray-600 italic">—</span>
-                              }
-                            </div>
+                            <FormDots form={form} />
                           </td>
                           <td className="px-3 py-2.5">
                             <div className="flex items-center justify-end gap-1.5 mb-0.5">
@@ -419,8 +428,8 @@ export default async function HomePage() {
                       </div>
                       <div className="pl-9 mt-1.5">
                         {form.length > 0 && (
-                          <div className="flex gap-1 mb-1.5">
-                            {form.map((entry, i) => <FormDot key={i} pts={entry.pts} />)}
+                          <div className="mb-1.5">
+                            <FormDots form={form} />
                           </div>
                         )}
                         <div className="h-0.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">

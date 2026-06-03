@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { isAdminEmail } from '../../lib/admin'
+import { calculatePoints } from '../../lib/scoring'
 
 async function getSupabase() {
   const cookieStore = await cookies()
@@ -78,6 +79,38 @@ export async function updateMatch(matchId, { home_score, away_score, status }) {
       .select()
       .single()
     if (error) return { error: error.message }
+
+    // When match is finished with valid scores — recalculate points for all predictions
+    if (status === 'finished' && home_score != null && away_score != null) {
+      const { data: preds } = await db
+        .from('predictions')
+        .select('id, user_id, predicted_home, predicted_away')
+        .eq('match_id', matchId)
+
+      if (preds?.length) {
+        // Update each prediction's points
+        await Promise.all(preds.map(p =>
+          db.from('predictions')
+            .update({ points: calculatePoints(p.predicted_home, p.predicted_away, home_score, away_score) })
+            .eq('id', p.id)
+        ))
+
+        // Recalculate total_points for each affected user
+        const affectedUserIds = [...new Set(preds.map(p => p.user_id))]
+        await Promise.all(affectedUserIds.map(async uid => {
+          const { data: allPreds } = await db
+            .from('predictions')
+            .select('points')
+            .eq('user_id', uid)
+            .not('points', 'is', null)
+          const total = (allPreds ?? []).reduce((s, p) => s + (p.points ?? 0), 0)
+          await db.from('profiles')
+            .update({ total_points: total, total_predictions: allPreds?.length ?? 0 })
+            .eq('id', uid)
+        }))
+      }
+    }
+
     return { match: data }
   } catch (e) {
     return { error: e.message }

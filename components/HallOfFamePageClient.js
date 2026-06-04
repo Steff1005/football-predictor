@@ -118,10 +118,10 @@ export default function HallOfFamePageClient({ enriched, medalRows, tournamentLo
                 <span className="w-5 sm:w-6 text-center">#</span>
                 <span className="flex-1">Учасник</span>
                 <div className="flex items-center border-l border-gray-200 dark:border-gray-700 pl-2 sm:pl-3 gap-0">
-                  <span className="w-8 sm:w-10 text-center text-base leading-none">🥇</span>
-                  <span className="w-8 sm:w-10 text-center text-base leading-none">🥈</span>
-                  <span className="w-8 sm:w-10 text-center text-base leading-none">🥉</span>
-                  <span className="w-8 sm:w-10 text-center">∑</span>
+                  <span className="w-6 sm:w-10 text-center text-base leading-none">🥇</span>
+                  <span className="w-6 sm:w-10 text-center text-base leading-none">🥈</span>
+                  <span className="w-6 sm:w-10 text-center text-base leading-none">🥉</span>
+                  <span className="w-6 sm:w-10 text-center">∑</span>
                 </div>
               </div>
 
@@ -142,11 +142,11 @@ export default function HallOfFamePageClient({ enriched, medalRows, tournamentLo
                     <span className="flex-1 min-w-0 font-medium text-gray-900 dark:text-white truncate">{displayName(r.profile)}</span>
                     <div className="flex items-center border-l border-gray-200 dark:border-gray-700 pl-2 sm:pl-3 gap-0 flex-shrink-0">
                       {counts.map((count, mi) => (
-                        <span key={mi} className={`w-8 sm:w-10 text-center text-sm tabular-nums ${cls[mi]}`}>
+                        <span key={mi} className={`w-6 sm:w-10 text-center text-sm tabular-nums ${cls[mi]}`}>
                           {count || '—'}
                         </span>
                       ))}
-                      <span className="w-8 sm:w-10 text-center text-sm font-bold text-gray-700 dark:text-gray-200 tabular-nums">{r.total}</span>
+                      <span className="w-6 sm:w-10 text-center text-sm font-bold text-gray-700 dark:text-gray-200 tabular-nums">{r.total}</span>
                     </div>
                   </a>
                 )

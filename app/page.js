@@ -286,9 +286,9 @@ export default async function HomePage() {
 
       {/* Personal welcome card */}
       {myProfile && (
-        <div className="bg-gradient-to-r from-green-500/10 to-transparent dark:from-green-500/15 dark:to-transparent rounded-2xl p-5 border border-green-500/20">
-          <div className="flex items-center gap-4">
-            <Avatar url={myProfile.avatar_url} initials={pini(myProfile)} sizeCls="w-12 h-12" textCls="text-sm" />
+        <div className="bg-gradient-to-r from-green-500/10 to-transparent dark:from-green-500/15 dark:to-transparent rounded-2xl p-4 sm:p-5 border border-green-500/20">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Avatar url={myProfile.avatar_url} initials={pini(myProfile)} sizeCls="w-11 h-11 sm:w-12 sm:h-12" textCls="text-sm" />
             <div className="flex-1 min-w-0 overflow-hidden">
               <div className="flex items-center gap-2 mb-1">
                 {myRank && (
@@ -305,8 +305,8 @@ export default async function HomePage() {
                 <span className="text-gray-400 dark:text-gray-500">{formatPrognazy(myProfile.total_predictions)}</span>
               </div>
             </div>
-            <a href="/profile" className="text-xs text-gray-400 dark:text-gray-500 hover:text-green-500 dark:hover:text-green-400 transition-colors whitespace-nowrap flex-shrink-0">
-              Профіль →
+            <a href="/profile" className="text-xs text-gray-400 dark:text-gray-500 hover:text-green-500 dark:hover:text-green-400 transition-colors flex-shrink-0">
+              <span className="hidden sm:inline">Профіль </span>→
             </a>
           </div>
         </div>

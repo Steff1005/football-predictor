@@ -69,6 +69,7 @@ export async function GET(request) {
         notifyResultsSet = new Set((profs ?? []).filter(p => p.notify_results !== false).map(p => p.id))
       }
 
+      const pointsByUser = {}
       for (const prediction of predictions ?? []) {
         const points = calculatePoints(
           prediction.predicted_home, prediction.predicted_away,
@@ -78,10 +79,7 @@ export async function GET(request) {
           points, is_calculated: true,
         }).eq('id', prediction.id)
 
-        await supabase.rpc('increment_profile_stats', {
-          p_user_id: prediction.user_id,
-          p_points: points,
-        })
+        pointsByUser[prediction.user_id] = points
 
         if (notifyResultsSet.has(prediction.user_id)) {
           const label = points === 4 ? '🎯 Точний рахунок!' : points === 1 ? '✅ Правильний результат' : '❌ Промах'
@@ -93,6 +91,16 @@ export async function GET(request) {
           }).catch(() => {})
         }
       }
+
+      // Recalculate total_points for each affected user from scratch
+      await Promise.all(Object.keys(pointsByUser).map(async uid => {
+        const { data: allPreds } = await supabase
+          .from('predictions').select('points').eq('user_id', uid).not('points', 'is', null)
+        const total = (allPreds ?? []).reduce((s, p) => s + (p.points ?? 0), 0)
+        await supabase.from('profiles')
+          .update({ total_points: total, total_predictions: allPreds?.length ?? 0 })
+          .eq('id', uid)
+      }))
 
       affectedTournamentIds.add(match.tournament_id)
 

@@ -305,8 +305,8 @@ export default async function HomePage() {
                 <span className="text-gray-400 dark:text-gray-500">{formatPrognazy(myProfile.total_predictions)}</span>
               </div>
             </div>
-            <a href="/profile" className="text-xs text-gray-400 dark:text-gray-500 hover:text-green-500 dark:hover:text-green-400 transition-colors flex-shrink-0">
-              <span className="hidden sm:inline">Профіль </span>→
+            <a href="/profile" className="text-sm text-gray-400 dark:text-gray-500 hover:text-green-500 dark:hover:text-green-400 transition-colors flex-shrink-0">
+              <span className="hidden sm:inline text-xs">Профіль </span>→
             </a>
           </div>
         </div>

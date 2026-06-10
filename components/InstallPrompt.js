@@ -9,6 +9,14 @@ function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream
 }
 
+function trackEvent(event, platform) {
+  fetch('/api/track-pwa-event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event, platform }),
+  }).catch(() => {})
+}
+
 export default function InstallPrompt({ userId }) {
   const [show, setShow]   = useState(false)
   const [ios, setIos]     = useState(false)
@@ -26,25 +34,22 @@ export default function InstallPrompt({ userId }) {
     const onIOS = isIOS()
 
     if (onIOS) {
-      // iOS Safari has no beforeinstallprompt — show manual instructions after delay
       setIos(true)
-      setTimeout(() => setShow(true), 4000)
+      setTimeout(() => { setShow(true); trackEvent('shown', 'ios') }, 4000)
       return
     }
 
-    // Android/Chrome: event was captured globally before React mounted
     if (window.__installPrompt) {
       promptRef.current = window.__installPrompt
-      setTimeout(() => setShow(true), 3000)
+      setTimeout(() => { setShow(true); trackEvent('shown', 'android') }, 3000)
       return
     }
 
-    // Fallback: event might still fire (rare)
     const handler = e => {
       e.preventDefault()
       promptRef.current = e
       window.__installPrompt = e
-      setTimeout(() => setShow(true), 3000)
+      setTimeout(() => { setShow(true); trackEvent('shown', 'android') }, 3000)
     }
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)
@@ -52,11 +57,13 @@ export default function InstallPrompt({ userId }) {
 
   function dismiss() {
     localStorage.setItem(DISMISS_KEY, String(Date.now()))
+    trackEvent('dismissed', ios ? 'ios' : 'android')
     setShow(false)
   }
 
   function neverShow() {
     localStorage.setItem(NEVER_KEY, '1')
+    trackEvent('never', ios ? 'ios' : 'android')
     setShow(false)
   }
 
@@ -64,8 +71,12 @@ export default function InstallPrompt({ userId }) {
     if (!promptRef.current) return
     promptRef.current.prompt()
     const { outcome } = await promptRef.current.userChoice
-    if (outcome === 'accepted') setShow(false)
-    else dismiss()
+    if (outcome === 'accepted') {
+      trackEvent('installed', 'android')
+      setShow(false)
+    } else {
+      dismiss()
+    }
   }
 
   if (!show) return null

@@ -930,6 +930,139 @@ const REG_STATUS_COLOR = {
 }
 const REG_STATUS_SORT  = { scheduled: 0, live: 1, finished: 2 }
 
+const PWA_SQL = `create table if not exists pwa_events (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid references auth.users(id) on delete cascade,
+  event      text not null,
+  platform   text not null default 'unknown',
+  created_at timestamptz not null default now()
+);
+alter table pwa_events enable row level security;
+create policy "insert_own" on pwa_events for insert with check (auth.uid() = user_id);
+create policy "admin_select" on pwa_events for select using (true);`
+
+const EVENT_LABEL = { shown: 'Побачив', dismissed: 'Відклав', never: 'Ніколи', installed: 'Встановив' }
+const EVENT_CLS   = {
+  shown:     'bg-blue-500/15 text-blue-600 dark:text-blue-400',
+  dismissed: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400',
+  never:     'bg-red-500/15 text-red-600 dark:text-red-400',
+  installed: 'bg-green-500/15 text-green-600 dark:text-green-400',
+}
+
+function PwaTab({ profiles }) {
+  const [events,  setEvents]  = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [copied,  setCopied]  = useState(false)
+  const [tableErr, setTableErr] = useState(false)
+
+  const profileMap = Object.fromEntries((profiles ?? []).map(p => [p.id, p]))
+  function name(uid) {
+    const p = profileMap[uid]
+    return [p?.first_name, p?.last_name].filter(Boolean).join(' ') || p?.username || '—'
+  }
+
+  useEffect(() => {
+    fetch('/api/pwa-events-admin')
+      .then(r => r.json())
+      .then(d => { if (d.tableNotFound) setTableErr(true); else setEvents(d.events ?? []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  function copySQL() {
+    navigator.clipboard.writeText(PWA_SQL).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
+  }
+
+  if (loading) return <div className="flex items-center justify-center py-16"><div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" /></div>
+
+  if (tableErr) {
+    return (
+      <div className="max-w-2xl space-y-4">
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 space-y-3">
+          <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">Потрібна міграція БД</p>
+          <p className="text-sm text-amber-700 dark:text-amber-500">Таблиця <code className="font-mono bg-amber-500/10 px-1 rounded">pwa_events</code> не існує.</p>
+          <pre className="text-xs bg-gray-900 text-green-400 rounded-lg p-4 overflow-x-auto whitespace-pre-wrap">{PWA_SQL}</pre>
+          <button onClick={copySQL} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg text-sm font-medium transition-colors">
+            {copied ? '✅ Скопійовано' : 'Копіювати SQL'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const eventTypes = ['shown', 'dismissed', 'never', 'installed']
+
+  // Funnel counts
+  const counts = Object.fromEntries(eventTypes.map(e => [e, 0]))
+  const byUser = {}
+  for (const ev of events ?? []) {
+    counts[ev.event] = (counts[ev.event] ?? 0) + 1
+    if (!byUser[ev.user_id]) byUser[ev.user_id] = []
+    byUser[ev.user_id].push(ev)
+  }
+  const shown = counts.shown || 1
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      {/* Funnel */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Воронка встановлення PWA</h3>
+        <div className="space-y-3">
+          {eventTypes.map(e => {
+            const pct = Math.round((counts[e] / shown) * 100)
+            return (
+              <div key={e}>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className={`px-2 py-0.5 rounded-full font-medium ${EVENT_CLS[e]}`}>{EVENT_LABEL[e]}</span>
+                  <span className="text-gray-500 dark:text-gray-400 font-mono">{counts[e]} {e !== 'shown' ? `(${pct}%)` : ''}</span>
+                </div>
+                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
+                  <div className={`h-1.5 rounded-full transition-all ${e === 'installed' ? 'bg-green-500' : e === 'never' ? 'bg-red-400' : e === 'dismissed' ? 'bg-yellow-400' : 'bg-blue-400'}`}
+                    style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Per-user */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">По учасникам</h3>
+        </div>
+        {Object.keys(byUser).length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm text-gray-400 dark:text-gray-600">Подій ще немає — таблиця щойно створена</div>
+        ) : (
+          Object.entries(byUser)
+            .sort((a, b) => {
+              const order = ev => ev.some(e => e.event === 'installed') ? 0 : ev.some(e => e.event === 'never') ? 2 : 1
+              return order(a[1]) - order(b[1])
+            })
+            .map(([uid, evs]) => {
+              const last = evs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
+              const installed = evs.some(e => e.event === 'installed')
+              const never     = evs.some(e => e.event === 'never') && !installed
+              const shownN    = evs.filter(e => e.event === 'shown').length
+              return (
+                <div key={uid} className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 dark:border-gray-800/50 last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{name(uid)}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{last.platform} · показано {shownN}×</p>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium flex-shrink-0 ${
+                    installed ? EVENT_CLS.installed : never ? EVENT_CLS.never : EVENT_CLS.dismissed
+                  }`}>
+                    {installed ? '✅ Встановив' : never ? '❌ Ніколи' : '⏸ Відклав'}
+                  </span>
+                </div>
+              )
+            })
+        )}
+      </div>
+    </div>
+  )
+}
+
 function RegistryTab({ profiles, tournaments }) {
   const [tournamentId, setTournamentId] = useState(tournaments[0]?.id ?? '')
   const [statusFilter, setStatusFilter] = useState('scheduled')
@@ -1166,6 +1299,7 @@ const TABS = [
   { id: 'analytics', label: 'Аналітика' },
   { id: 'registry',  label: 'Реєстр' },
   { id: 'activity',  label: 'Активність' },
+  { id: 'pwa',       label: 'PWA' },
 ]
 
 export default function AdminPanel({ matches: initMatches, profiles: initProfiles, tournaments: initTournaments }) {
@@ -1196,6 +1330,7 @@ export default function AdminPanel({ matches: initMatches, profiles: initProfile
       {tab === 'analytics' && <AnalyticsTab matches={matches}   profiles={profiles} tournaments={tournaments} setProfiles={setProfiles} />}
       {tab === 'registry'  && <RegistryTab  profiles={profiles} tournaments={tournaments} />}
       {tab === 'activity'  && <ActivityTab />}
+      {tab === 'pwa'       && <PwaTab profiles={profiles} />}
     </div>
   )
 }

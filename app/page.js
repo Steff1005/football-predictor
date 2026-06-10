@@ -289,14 +289,14 @@ export default async function HomePage() {
         <div className="bg-gradient-to-r from-green-500/10 to-transparent dark:from-green-500/15 dark:to-transparent rounded-2xl p-5 border border-green-500/20">
           <div className="flex items-center gap-4">
             <Avatar url={myProfile.avatar_url} initials={pini(myProfile)} sizeCls="w-12 h-12" textCls="text-sm" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1 min-w-0">
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <div className="flex items-center gap-2 mb-1">
                 {myRank && (
                   myRank <= 3
                     ? <span className="flex-shrink-0"><RankBadge rank={myRank} /></span>
                     : <span className="text-sm text-gray-400 dark:text-gray-500 font-medium flex-shrink-0">#{myRank}</span>
                 )}
-                <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight truncate min-w-0">
+                <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight truncate">
                   {pdn(myProfile)}
                 </h2>
               </div>

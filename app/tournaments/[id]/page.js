@@ -10,7 +10,7 @@ import CLUB_CRESTS from '../../../lib/club-crests'
 import TOURNAMENT_LOGOS from '../../../lib/tournament-logos'
 import { groupAndSortMatches } from '../../../lib/round-sort'
 import { translateTeam } from '../../../lib/team-translations'
-import { simulateProbabilities } from '../../../lib/probability'
+import { simulateProbabilities, SAMPLES_FAST } from '../../../lib/probability'
 import { isAdminEmail } from '../../../lib/admin'
 import { compareTournamentStandings } from '../../../lib/rankings'
 import TournamentTabs from './TournamentTabs'
@@ -341,7 +341,7 @@ export default async function TournamentPage({ params, searchParams }) {
         .map(row => ({ uid: row.uid, profile: profileMap[row.uid] ?? null, probs: row.probs }))
         .filter(row => row.profile)
     } else {
-      probMatrix = simulateProbabilities(standings, matchesTabMatches.length)
+      probMatrix = simulateProbabilities(standings, matchesTabMatches.length, SAMPLES_FAST)
         ?.map(row => ({ ...row, profile: profileMap[row.uid] ?? null }))
         .filter(row => row.profile) ?? null
     }

@@ -44,8 +44,8 @@ export async function GET(request) {
           kickoff_at: new Date(m.utcDate).toISOString(),
           status: m.status === 'FINISHED' ? 'finished' :
                   m.status === 'IN_PLAY' ? 'live' : 'scheduled',
-          home_score: m.score?.fullTime?.home ?? null,
-          away_score: m.score?.fullTime?.away ?? null,
+          home_score: m.score?.fullTime?.home ?? m.score?.regularTime?.home ?? null,
+          away_score: m.score?.fullTime?.away ?? m.score?.regularTime?.away ?? null,
           round: m.matchday != null
                     ? `Regular Season - ${String(m.matchday).padStart(2, '0')}`
                     : m.group || m.stage || 'Round',

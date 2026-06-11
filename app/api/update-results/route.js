@@ -29,7 +29,7 @@ export async function GET(request) {
     const { data: uncalcPreds } = await supabase
       .from('predictions')
       .select('match_id')
-      .eq('is_calculated', false)
+      .or('is_calculated.is.null,is_calculated.eq.false')
 
     const uncalcMatchIds = [...new Set((uncalcPreds ?? []).map(p => p.match_id))]
     let alreadyFinished = []
@@ -56,7 +56,7 @@ export async function GET(request) {
         .from('predictions')
         .select('*')
         .eq('match_id', match.id)
-        .eq('is_calculated', false)
+        .or('is_calculated.is.null,is_calculated.eq.false')
 
       // Fetch user notification prefs once per match
       const userIds = [...new Set((predictions ?? []).map(p => p.user_id))]

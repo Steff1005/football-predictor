@@ -33,9 +33,13 @@ async function fetchEspnScores() {
       if (!homeC || !awayC) continue
       const kickoffMin = comp.date ? comp.date.slice(0, 16) : null // "2026-06-11T19:00"
       if (!kickoffMin) continue
+      const homeScore = homeC.score != null && homeC.score !== '' ? parseInt(homeC.score, 10) : null
+      const awayScore = awayC.score != null && awayC.score !== '' ? parseInt(awayC.score, 10) : null
+      // Skip finished matches with missing scores — ESPN populates them a moment later
+      if (isFinished && (homeScore == null || awayScore == null || isNaN(homeScore) || isNaN(awayScore))) continue
       map[kickoffMin] = {
-        home:     parseInt(homeC.score ?? '0', 10),
-        away:     parseInt(awayC.score ?? '0', 10),
+        home:     homeScore ?? 0,
+        away:     awayScore ?? 0,
         clock:    comp.status?.displayClock ?? '',
         halftime: statusName === 'STATUS_HALFTIME',
         finished: isFinished,

@@ -196,8 +196,9 @@ export default async function TournamentPage({ params, searchParams }) {
     if (p.points === 1) userStats[p.user_id].results++
     if (p.points === 4) userStats[p.user_id].exact++
   }
-  for (const uid of upcomingPreds.map(p => p.user_id)) {
-    if (!userStats[uid]) userStats[uid] = { results: 0, exact: 0, total: 0, predictions: 0 }
+  for (const p of [...upcomingPreds, ...livePreds]) {
+    if (!userStats[p.user_id]) userStats[p.user_id] = { results: 0, exact: 0, total: 0, predictions: 0 }
+    userStats[p.user_id].predictions++
   }
   const standings = Object.entries(userStats)
     .map(([uid, stats]) => ({ uid, ...stats, profile: profileMap[uid] }))

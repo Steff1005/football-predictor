@@ -12,7 +12,12 @@ export default function ActivityTracker({ userId }) {
       const last = parseInt(localStorage.getItem(KEY) ?? '0')
       if (Date.now() - last < TTL) return
       localStorage.setItem(KEY, Date.now().toString())
-      fetch('/api/track-activity', { method: 'POST' }).catch(() => {})
+      const standalone = window.matchMedia('(display-mode: standalone)').matches || !!window.navigator.standalone
+      fetch('/api/track-activity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ standalone }),
+      }).catch(() => {})
     }
 
     track()

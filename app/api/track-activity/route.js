@@ -21,7 +21,8 @@ export async function POST(request) {
   if (!session) return NextResponse.json({ ok: false }, { status: 401 })
 
   const ua     = request.headers.get('user-agent') ?? ''
-  const device = detectDevice(ua)
+  const body   = await request.json().catch(() => ({}))
+  const device = body.standalone ? 'pwa' : detectDevice(ua)
   const today  = new Date().toISOString().slice(0, 10)
 
   const { data: existing } = await supabase

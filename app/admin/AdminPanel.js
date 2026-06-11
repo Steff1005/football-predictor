@@ -765,17 +765,18 @@ function ActivityTab() {
     const lastSeen = a?.last_seen ?? auth?.last_sign_in_at ?? null
     const isOnline = lastSeen && (now - new Date(lastSeen).getTime()) < 6 * 60 * 1000
 
-    let visits30d = 0, desktop = 0, mobile = 0, tablet = 0
+    let visits30d = 0, desktop = 0, mobile = 0, tablet = 0, pwa = 0
     for (const [day, counts] of Object.entries(a?.visit_days ?? {})) {
       if (day >= cutoffStr && typeof counts === 'object') {
         visits30d += Object.values(counts).reduce((s, n) => s + n, 0)
         desktop   += counts.desktop ?? 0
         mobile    += counts.mobile  ?? 0
         tablet    += counts.tablet  ?? 0
+        pwa       += counts.pwa     ?? 0
       }
     }
 
-    return { ...p, lastSeen, isOnline, visits30d, desktop, mobile, tablet, lastDevice: a?.last_device ?? null }
+    return { ...p, lastSeen, isOnline, visits30d, desktop, mobile, tablet, pwa, lastDevice: a?.last_device ?? null }
   }).sort((a, b) => {
     if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1
     if (!a.lastSeen && !b.lastSeen) return 0
@@ -843,8 +844,9 @@ function ActivityTab() {
                 {r.visits30d > 0 && (
                   <span className="text-gray-600 dark:text-gray-300 font-medium">{r.visits30d} відвід.</span>
                 )}
-                {(r.desktop + r.mobile + r.tablet) > 0 && (
+                {(r.desktop + r.mobile + r.tablet + r.pwa) > 0 && (
                   <div className="flex items-center gap-1">
+                    {r.pwa     > 0 && <span className="px-1.5 py-0.5 bg-green-500/10 text-green-600 dark:text-green-400 rounded font-medium">PWA {r.pwa}</span>}
                     {r.desktop > 0 && <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded font-medium">Д {r.desktop}</span>}
                     {r.mobile  > 0 && <span className="px-1.5 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded font-medium">М {r.mobile}</span>}
                     {r.tablet  > 0 && <span className="px-1.5 py-0.5 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded font-medium">П {r.tablet}</span>}
@@ -895,8 +897,11 @@ function ActivityTab() {
                   {r.visits30d > 0 ? r.visits30d : <span className="text-gray-300 dark:text-gray-700">—</span>}
                 </td>
                 <td className="px-4 py-2.5 text-right">
-                  {(r.desktop + r.mobile + r.tablet) > 0 ? (
+                  {(r.desktop + r.mobile + r.tablet + r.pwa) > 0 ? (
                     <div className="flex items-center justify-end gap-1.5 text-xs">
+                      {r.pwa > 0 && (
+                        <span className="px-1.5 py-0.5 bg-green-500/10 text-green-600 dark:text-green-400 rounded font-medium">PWA {r.pwa}</span>
+                      )}
                       {r.desktop > 0 && (
                         <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded font-medium">Д {r.desktop}</span>
                       )}

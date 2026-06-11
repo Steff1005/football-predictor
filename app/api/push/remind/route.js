@@ -65,7 +65,7 @@ export async function GET(request) {
 
     const home = translateTeam(match.home_team)
     const away = translateTeam(match.away_team)
-    const time = new Date(match.kickoff_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+    const time = new Date(match.kickoff_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' })
 
     for (const userId of targets) {
       await sendPushToUser(supabase, userId, {

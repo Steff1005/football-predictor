@@ -118,14 +118,9 @@ function MatchCard({ match, preds, profileMap }) {
               <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.away_team}</span>
             </div>
             {match.home_score != null && match.away_score != null && (
-              <div className="flex flex-col items-end flex-shrink-0">
-                <span className="text-lg font-bold tabular-nums text-red-500 dark:text-red-400">
-                  {match.home_score}:{match.away_score}
-                </span>
-                {match.clock && !match.halftime && (
-                  <span className="text-xs text-red-400 dark:text-red-500 tabular-nums">{match.clock}</span>
-                )}
-              </div>
+              <span className="text-lg font-bold tabular-nums text-red-500 dark:text-red-400 flex-shrink-0">
+                {match.home_score}:{match.away_score}
+              </span>
             )}
           </div>
         </div>

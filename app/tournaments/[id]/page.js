@@ -189,14 +189,17 @@ export default async function TournamentPage({ params, searchParams }) {
 
   // ── Standings ─────────────────────────────────────────────────────────────
   const userStats = {}
+  const countedPairs = new Set()
   for (const p of calcPreds) {
     if (!userStats[p.user_id]) userStats[p.user_id] = { results: 0, exact: 0, total: 0, predictions: 0 }
     userStats[p.user_id].predictions++
     userStats[p.user_id].total += p.points ?? 0
     if (p.points === 1) userStats[p.user_id].results++
     if (p.points === 4) userStats[p.user_id].exact++
+    countedPairs.add(`${p.user_id}|${p.match_id}`)
   }
   for (const p of [...upcomingPreds, ...livePreds]) {
+    if (countedPairs.has(`${p.user_id}|${p.match_id}`)) continue
     if (!userStats[p.user_id]) userStats[p.user_id] = { results: 0, exact: 0, total: 0, predictions: 0 }
     userStats[p.user_id].predictions++
   }

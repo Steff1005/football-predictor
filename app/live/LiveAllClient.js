@@ -3,8 +3,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 
 const POLL_INTERVAL = 30_000
-const LAMBDA_HOME   = 1.4   // avg home goals per 90 min
-const LAMBDA_AWAY   = 1.1   // avg away goals per 90 min
+const LAMBDA_HOME   = 1.7   // WC avg ~2.5 goals/game → ~1.7 home
+const LAMBDA_AWAY   = 1.3   // ~1.3 away
 
 // ── Math ─────────────────────────────────────────────────────────────────────
 

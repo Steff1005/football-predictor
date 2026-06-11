@@ -39,8 +39,8 @@ function calcProb(predH, predA, curH, curA, kickoffAt) {
   const elapsed   = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
   const remaining = Math.max(0, 90 - elapsed)
   if (remaining === 0) return { noTime: true }
-  const muH = 1.4 * remaining / 90
-  const muA = 1.1 * remaining / 90
+  const muH = 1.7 * remaining / 90
+  const muA = 1.3 * remaining / 90
   const p   = poissonP(needH, muH) * poissonP(needA, muA)
   return { pct: Math.round(p * 100) }
 }

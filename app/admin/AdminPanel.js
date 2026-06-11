@@ -996,14 +996,15 @@ function PwaTab({ profiles }) {
 
   const eventTypes = ['shown', 'dismissed', 'never', 'installed']
 
-  // Funnel counts
-  const counts = Object.fromEntries(eventTypes.map(e => [e, 0]))
+  // Funnel counts — унікальні користувачі на кожну подію
+  const uniqueByEvent = Object.fromEntries(eventTypes.map(e => [e, new Set()]))
   const byUser = {}
   for (const ev of events ?? []) {
-    counts[ev.event] = (counts[ev.event] ?? 0) + 1
+    uniqueByEvent[ev.event]?.add(ev.user_id)
     if (!byUser[ev.user_id]) byUser[ev.user_id] = []
     byUser[ev.user_id].push(ev)
   }
+  const counts = Object.fromEntries(eventTypes.map(e => [e, uniqueByEvent[e].size]))
   const shown = counts.shown || 1
 
   return (

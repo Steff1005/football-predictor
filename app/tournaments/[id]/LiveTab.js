@@ -195,9 +195,14 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                       <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.away_team}</span>
                     </div>
                     {(match.home_score != null && match.away_score != null) && (
-                      <span className="text-lg font-bold tabular-nums text-red-500 dark:text-red-400">
-                        {match.home_score}:{match.away_score}
-                      </span>
+                      <div className="flex flex-col items-end flex-shrink-0">
+                        <span className="text-lg font-bold tabular-nums text-red-500 dark:text-red-400">
+                          {match.home_score}:{match.away_score}
+                        </span>
+                        {match.clock && (
+                          <span className="text-xs text-red-400 dark:text-red-500 tabular-nums">{match.clock}</span>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -211,11 +216,16 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                     {match.home_logo && <img src={match.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
                   </div>
 
-                  <div className="w-[80px] flex justify-center flex-shrink-0">
+                  <div className="w-[80px] flex flex-col items-center justify-center gap-0.5 flex-shrink-0">
                     {match.home_score != null && match.away_score != null ? (
-                      <span className="bg-red-500/10 rounded-md px-2.5 py-0.5 text-sm font-bold text-red-500 dark:text-red-400 tabular-nums">
-                        {match.home_score} : {match.away_score}
-                      </span>
+                      <>
+                        <span className="bg-red-500/10 rounded-md px-2.5 py-0.5 text-sm font-bold text-red-500 dark:text-red-400 tabular-nums">
+                          {match.home_score} : {match.away_score}
+                        </span>
+                        {match.clock && (
+                          <span className="text-xs text-red-400 dark:text-red-500 tabular-nums">🔴 {match.clock}</span>
+                        )}
+                      </>
                     ) : (
                       <span className="bg-red-500/10 rounded-md px-2 py-0.5 text-xs font-semibold text-red-500 dark:text-red-400 whitespace-nowrap">
                         🔴 {match.clock ?? 'Live'}

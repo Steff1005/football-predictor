@@ -32,8 +32,8 @@ function poissonP(k, lambda) {
 
 // Returns { pct, exact, impossible, noTime }
 function calcProb(predH, predA, curH, curA, kickoffAt) {
-  const needH = predH - curH
-  const needA = predA - curA
+  const needH = predH - (curH ?? 0)
+  const needA = predA - (curA ?? 0)
   if (needH < 0 || needA < 0) return { impossible: true }
   if (needH === 0 && needA === 0) return { exact: true }
   const elapsed   = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
@@ -81,7 +81,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
       const freshMap = Object.fromEntries(fresh.map(m => [m.id, m]))
       setMatches(prev =>
         prev.map(m => freshMap[m.id]
-          ? { ...m, home_score: freshMap[m.id].home_score, away_score: freshMap[m.id].away_score, status: freshMap[m.id].status }
+          ? { ...m, home_score: freshMap[m.id].home_score, away_score: freshMap[m.id].away_score, status: freshMap[m.id].status, clock: freshMap[m.id].clock }
           : m
         )
       )
@@ -182,7 +182,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs text-gray-400 dark:text-gray-500">{dateStr}, {timeStr}</span>
                     <span className="bg-red-500/10 rounded-full px-2.5 py-0.5 text-xs font-semibold text-red-500 dark:text-red-400">
-                      🔴 Матч триває
+                      🔴 {match.clock ? `${match.clock}` : 'Live'}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -218,7 +218,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                       </span>
                     ) : (
                       <span className="bg-red-500/10 rounded-md px-2 py-0.5 text-xs font-semibold text-red-500 dark:text-red-400 whitespace-nowrap">
-                        🔴 Live
+                        🔴 {match.clock ?? 'Live'}
                       </span>
                     )}
                   </div>

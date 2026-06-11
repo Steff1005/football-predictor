@@ -1069,8 +1069,15 @@ function PwaTab({ profiles }) {
   )
 }
 
+const REGISTRY_SUFFIX = {
+  'oleksandr_shliakhtiuk2106': ' (П)',
+  'oleksandr_shliakhtiuk':     ' (В)',
+}
+
 function RegistryTab({ profiles, tournaments }) {
-  const [tournamentId, setTournamentId] = useState(tournaments[0]?.id ?? '')
+  const [tournamentId, setTournamentId] = useState(
+    (tournaments.find(t => t.is_active) ?? tournaments[0])?.id ?? ''
+  )
   const [statusFilter, setStatusFilter] = useState('scheduled')
   const [data,         setData]         = useState(null)
   const [loading,      setLoading]      = useState(false)
@@ -1113,8 +1120,8 @@ function RegistryTab({ profiles, tournaments }) {
   predictions.forEach(p => { userTotal[p.user_id] = (userTotal[p.user_id] ?? 0) + 1 })
 
   function shortName(p) {
-    if (p.first_name && p.last_name) return `${p.first_name[0]}. ${p.last_name}`
-    return p.first_name || p.username || '—'
+    const base = p.first_name && p.last_name ? `${p.first_name[0]}. ${p.last_name}` : p.first_name || p.username || '—'
+    return base + (REGISTRY_SUFFIX[p.username] ?? '')
   }
 
   function matchDate(m) {

@@ -30,35 +30,38 @@ function poissonP(k, lambda) {
   return Math.exp(log)
 }
 
-// Returns { pct, exact, impossible, noTime }
+// Returns { pct, raw, exact, impossible, noTime }
 function calcProb(predH, predA, curH, curA, kickoffAt) {
   const needH = predH - (curH ?? 0)
   const needA = predA - (curA ?? 0)
   if (needH < 0 || needA < 0) return { impossible: true }
-  if (needH === 0 && needA === 0) return { exact: true }
   const elapsed   = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
   const remaining = Math.max(0, 90 - elapsed)
-  if (remaining === 0) return { noTime: true }
+  if (remaining === 0) {
+    return needH === 0 && needA === 0 ? { exact: true } : { noTime: true }
+  }
   const muH = 1.7 * remaining / 90
   const muA = 1.3 * remaining / 90
-  const p   = poissonP(needH, muH) * poissonP(needA, muA)
-  return { pct: Math.round(p * 100) }
+  const raw = poissonP(needH, muH) * poissonP(needA, muA)
+  return { pct: Math.round(raw * 100), raw }
 }
 
 function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
   const r = calcProb(predH, predA, curH, curA, kickoffAt)
-  const base = 'text-xs font-semibold rounded px-1.5 py-0.5 w-10 text-center inline-block flex-shrink-0'
-  if (r.impossible) return <span className={`${base} bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-600`}>✕</span>
-  if (r.exact)      return <span className={`${base} bg-green-500/20 text-green-600 dark:text-green-400`}>🎯</span>
-  if (r.noTime)     return <span className={`${base} bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500`}>—</span>
-  const cls = r.pct >= 30
+  const base = 'text-xs font-semibold rounded px-1.5 py-0.5 text-center inline-block flex-shrink-0'
+  if (r.impossible) return <span className={`${base} min-w-[2.5rem] bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-600`}>✕</span>
+  if (r.exact)      return <span className={`${base} min-w-[2.5rem] bg-green-500/20 text-green-600 dark:text-green-400`}>🎯</span>
+  if (r.noTime)     return <span className={`${base} min-w-[2.5rem] bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500`}>—</span>
+  const isLeading = predH === (curH ?? 0) && predA === (curA ?? 0)
+  const label = r.pct === 0 ? '<1%' : `${r.pct}%`
+  const cls = isLeading || r.pct >= 30
     ? 'bg-green-500/15 text-green-600 dark:text-green-400'
     : r.pct >= 10
       ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400'
       : 'bg-red-500/10 text-red-500 dark:text-red-400'
   return (
-    <span className={`${base} tabular-nums ${cls}`}>
-      {r.pct}%
+    <span className={`${base} min-w-[2.5rem] tabular-nums ${cls}`}>
+      {isLeading ? `🎯 ${label}` : label}
     </span>
   )
 }

@@ -60,7 +60,7 @@ function ProbBadge({ prob, isWinning }) {
           style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)' }}
         >
           <span className="text-[10px]">🎯</span>
-          <span className="animate-prob-shimmer">{pct}%</span>
+          <span className="animate-prob-shimmer">{pct === 0 ? '<1%' : `${pct}%`}</span>
         </span>
       </div>
     )
@@ -83,7 +83,7 @@ function ProbBadge({ prob, isWinning }) {
   return (
     <div className="w-[58px] flex-shrink-0 flex justify-end">
       <span className={`text-[11px] font-semibold tabular-nums select-none ${color}`}>
-        {pct}%
+        {pct === 0 ? '<1%' : `${pct}%`}
       </span>
     </div>
   )

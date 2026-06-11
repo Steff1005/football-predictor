@@ -81,7 +81,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
       const freshMap = Object.fromEntries(fresh.map(m => [m.id, m]))
       setMatches(prev =>
         prev.map(m => freshMap[m.id]
-          ? { ...m, home_score: freshMap[m.id].home_score, away_score: freshMap[m.id].away_score, status: freshMap[m.id].status, clock: freshMap[m.id].clock }
+          ? { ...m, home_score: freshMap[m.id].home_score, away_score: freshMap[m.id].away_score, status: freshMap[m.id].status, clock: freshMap[m.id].clock, halftime: freshMap[m.id].halftime }
           : m
         )
       )
@@ -103,6 +103,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
       else { fetchScores(); start() }
     }
 
+    fetchScores()
     start()
     document.addEventListener('visibilitychange', onVisibility)
     return () => { stop(); document.removeEventListener('visibilitychange', onVisibility) }
@@ -181,8 +182,8 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                 <div className="sm:hidden">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs text-gray-400 dark:text-gray-500">{dateStr}, {timeStr}</span>
-                    <span className="bg-red-500/10 rounded-full px-2.5 py-0.5 text-xs font-semibold text-red-500 dark:text-red-400">
-                      🔴 {match.clock ? `${match.clock}` : 'Live'}
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${match.halftime ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' : 'bg-red-500/10 text-red-500 dark:text-red-400'}`}>
+                      {match.halftime ? '⏸ Перерва' : `🔴 ${match.clock || 'Live'}`}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -216,15 +217,15 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                     {match.home_logo && <img src={match.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
                   </div>
 
-                  <div className="w-[80px] flex flex-col items-center justify-center gap-0.5 flex-shrink-0">
+                  <div className="w-[90px] flex flex-col items-center justify-center gap-0.5 flex-shrink-0">
                     {match.home_score != null && match.away_score != null ? (
                       <>
                         <span className="bg-red-500/10 rounded-md px-2.5 py-0.5 text-sm font-bold text-red-500 dark:text-red-400 tabular-nums">
                           {match.home_score} : {match.away_score}
                         </span>
-                        {match.clock && (
-                          <span className="text-xs text-red-400 dark:text-red-500 tabular-nums">🔴 {match.clock}</span>
-                        )}
+                        <span className={`text-xs font-medium whitespace-nowrap ${match.halftime ? 'text-yellow-500 dark:text-yellow-400' : 'text-red-400 dark:text-red-500'}`}>
+                          {match.halftime ? '⏸ Перерва' : `🔴 ${match.clock || 'Live'}`}
+                        </span>
                       </>
                     ) : (
                       <span className="bg-red-500/10 rounded-md px-2 py-0.5 text-xs font-semibold text-red-500 dark:text-red-400 whitespace-nowrap">

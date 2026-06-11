@@ -28,10 +28,10 @@ async function fetchEspnScores() {
       const kickoffMin = comp.date ? comp.date.slice(0, 16) : null // "2026-06-11T19:00"
       if (!kickoffMin) continue
       map[kickoffMin] = {
-        home:   parseInt(homeC.score ?? '0', 10),
-        away:   parseInt(awayC.score ?? '0', 10),
-        clock:  comp.status?.displayClock ?? '',
-        period: comp.status?.period ?? 1,
+        home:     parseInt(homeC.score ?? '0', 10),
+        away:     parseInt(awayC.score ?? '0', 10),
+        clock:    comp.status?.displayClock ?? '',
+        halftime: statusName === 'STATUS_HALFTIME',
       }
     }
     return map
@@ -69,7 +69,7 @@ export async function GET(request) {
     const key = m.kickoff_at?.slice(0, 16) // "2026-06-11T19:00"
     const live = espn[key]
     if (live) {
-      return { ...m, home_score: live.home, away_score: live.away, clock: live.clock, status: 'live' }
+      return { ...m, home_score: live.home, away_score: live.away, clock: live.clock, halftime: live.halftime, status: 'live' }
     }
     return m
   })

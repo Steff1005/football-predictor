@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
-import { getLiveStatus } from '../../../lib/liveStatus'
+import { getLiveStatus, parseFullTime } from '../../../lib/liveStatus'
 
 function statusCls(v) {
   if (v === 'good')            return 'bg-green-500/10 text-green-600 dark:text-green-400'
@@ -32,10 +32,11 @@ function PlayerAvatar({ profile }) {
   )
 }
 
-function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
+function ProbBadge({ predH, predA, curH, curA, kickoffAt, clock }) {
   if (curH == null || curA == null) return <div className="flex-shrink-0 w-10" />
-  const elapsed = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
-  const { variant, pulse, pct } = getLiveStatus(predH - curH, predA - curA, elapsed)
+  const elapsed   = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
+  const fullTime  = parseFullTime(clock)
+  const { variant, pulse, pct } = getLiveStatus(predH - curH, predA - curA, elapsed, fullTime)
 
   if (variant === 'impossible') {
     return (
@@ -154,13 +155,14 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
 
       <div className="space-y-3">
         {matches.map(match => {
-          const elapsed = Math.max(0, (Date.now() - new Date(match.kickoff_at)) / 60000)
+          const elapsed   = Math.max(0, (Date.now() - new Date(match.kickoff_at)) / 60000)
+          const fullTime  = parseFullTime(match.clock)
           const preds = (predsByMatch[match.id] ?? [])
             .filter(p => profileMap[p.user_id])
             .sort((a, b) => {
               if (match.home_score == null || match.away_score == null) return 0
-              const aPct = getLiveStatus(a.predicted_home - match.home_score, a.predicted_away - match.away_score, elapsed).pct ?? -1
-              const bPct = getLiveStatus(b.predicted_home - match.home_score, b.predicted_away - match.away_score, elapsed).pct ?? -1
+              const aPct = getLiveStatus(a.predicted_home - match.home_score, a.predicted_away - match.away_score, elapsed, fullTime).pct ?? -1
+              const bPct = getLiveStatus(b.predicted_home - match.home_score, b.predicted_away - match.away_score, elapsed, fullTime).pct ?? -1
               return bPct - aPct
             })
           const kickoff = new Date(match.kickoff_at)
@@ -255,7 +257,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                       <span className={`font-mono text-sm font-semibold flex-shrink-0 tabular-nums ${isWinning ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
                         {pred.predicted_home}:{pred.predicted_away}
                       </span>
-                      <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
+                      <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} clock={match.clock} />
                     </div>
 
                     {/* Desktop row */}
@@ -271,7 +273,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                       }`}>
                         {pred.predicted_home}:{pred.predicted_away}
                       </span>
-                      <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
+                      <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} clock={match.clock} />
                     </div>
                   </div>
                 )

@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { getLiveStatus } from '../../lib/liveStatus'
+import { getLiveStatus, parseFullTime } from '../../lib/liveStatus'
 
 function statusCls(v) {
   if (v === 'good')            return 'bg-green-500/10 text-green-600 dark:text-green-400'
@@ -34,10 +34,11 @@ function PlayerAvatar({ profile }) {
   )
 }
 
-function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
+function ProbBadge({ predH, predA, curH, curA, kickoffAt, clock }) {
   if (curH == null || curA == null) return <div className="flex-shrink-0 w-10" />
-  const elapsed = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
-  const { variant, pulse, pct } = getLiveStatus(predH - curH, predA - curA, elapsed)
+  const elapsed  = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
+  const fullTime = parseFullTime(clock)
+  const { variant, pulse, pct } = getLiveStatus(predH - curH, predA - curA, elapsed, fullTime)
 
   if (variant === 'impossible') {
     return (
@@ -69,12 +70,13 @@ function MatchCard({ match, preds, profileMap }) {
   const dateStr  = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
   const timeStr  = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
   const elapsed  = Math.max(0, (Date.now() - kickoff) / 60000)
+  const fullTime = parseFullTime(match.clock)
   const filtered = (preds ?? [])
     .filter(p => profileMap[p.user_id])
     .sort((a, b) => {
       if (match.home_score == null || match.away_score == null) return 0
-      const aPct = getLiveStatus(a.predicted_home - match.home_score, a.predicted_away - match.away_score, elapsed).pct ?? -1
-      const bPct = getLiveStatus(b.predicted_home - match.home_score, b.predicted_away - match.away_score, elapsed).pct ?? -1
+      const aPct = getLiveStatus(a.predicted_home - match.home_score, a.predicted_away - match.away_score, elapsed, fullTime).pct ?? -1
+      const bPct = getLiveStatus(b.predicted_home - match.home_score, b.predicted_away - match.away_score, elapsed, fullTime).pct ?? -1
       return bPct - aPct
     })
 
@@ -167,7 +169,7 @@ function MatchCard({ match, preds, profileMap }) {
               <span className={`font-mono text-sm font-semibold flex-shrink-0 tabular-nums ${isWinning ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
                 {pred.predicted_home}:{pred.predicted_away}
               </span>
-              <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
+              <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} clock={match.clock} />
             </div>
 
             {/* Desktop */}
@@ -183,7 +185,7 @@ function MatchCard({ match, preds, profileMap }) {
               }`}>
                 {pred.predicted_home}:{pred.predicted_away}
               </span>
-              <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
+              <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} clock={match.clock} />
             </div>
           </div>
         )

@@ -247,9 +247,9 @@ export default async function HomePage() {
 
   // ── Leaderboard — ranked by efficiency (points per prediction) ────────────────
   const leaderboard = (allProfiles ?? [])
-    .filter(p => (p.total_predictions ?? 0) > 0)
+    .filter(p => (p.total_predictions ?? 0) > 0 || userAnalytics[p.id])
     .filter(p => p.first_name !== 'Адмін')
-    .map(p => ({ ...p, efficiency: p.total_points / p.total_predictions }))
+    .map(p => ({ ...p, efficiency: p.total_predictions > 0 ? p.total_points / p.total_predictions : 0 }))
     .sort((a, b) => b.efficiency - a.efficiency)
 
   const maxEfficiency = leaderboard[0]?.efficiency ?? 1

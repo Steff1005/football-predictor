@@ -213,7 +213,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                 </div>
 
                 {/* Desktop */}
-                <div className="hidden sm:grid grid-cols-[6rem_1fr_90px_1fr_auto] gap-x-2 items-center">
+                <div className="hidden sm:grid grid-cols-[6rem_1fr_90px_1fr] gap-x-2 items-center">
                   <span className="text-xs text-gray-400 dark:text-gray-500">{dateStr}, {timeStr}</span>
 
                   <div className="flex items-center gap-1.5 justify-end min-w-0">
@@ -241,11 +241,10 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                   <div className="flex items-center gap-1.5 min-w-0">
                     {match.away_logo && <img src={match.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
                     <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.away_team}</span>
+                    <span className="ml-auto pl-2 flex-shrink-0 text-xs text-gray-400 dark:text-gray-500">
+                      {preds.length} прогноз{preds.length === 1 ? '' : preds.length < 5 ? 'и' : 'ів'}
+                    </span>
                   </div>
-
-                  <span className="text-xs text-gray-400 dark:text-gray-500 text-right whitespace-nowrap">
-                    {preds.length} прогноз{preds.length === 1 ? '' : preds.length < 5 ? 'и' : 'ів'}
-                  </span>
                 </div>
               </div>
 
@@ -269,7 +268,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                     </div>
 
                     {/* Desktop row */}
-                    <div className="hidden sm:grid grid-cols-[6rem_1fr_90px_1fr_auto] gap-x-2 items-center px-4 py-2">
+                    <div className="hidden sm:grid grid-cols-[6rem_1fr_90px_1fr] gap-x-2 items-center px-4 py-2">
                       <Link href={`/players/${pred.user_id}`} className="col-span-2 flex items-center gap-2 min-w-0 hover:opacity-75 transition-opacity">
                         <PlayerAvatar profile={profile} />
                         <span className="text-sm text-gray-900 dark:text-white min-w-0 truncate">{displayName(profile)}</span>
@@ -279,7 +278,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                           {pred.predicted_home}:{pred.predicted_away}
                         </span>
                       </div>
-                      <div className="col-span-2 flex items-center">
+                      <div className="flex items-center">
                         <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
                       </div>
                     </div>

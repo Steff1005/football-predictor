@@ -117,13 +117,15 @@ export default async function HomePage() {
   const finishedTourneyMatches  = finishedTourneyMatchesResult.data ?? []
 
   // Match lookup maps
-  const matchDateMap = {}
-  const matchInfoMap = {}
-  const matchTidMap  = {}
+  const matchDateMap      = {}
+  const matchInfoMap      = {}
+  const matchTidMap       = {}
+  const finishedMatchIdSet = new Set()
   for (const m of allActiveMatches) {
     matchDateMap[m.id] = m.kickoff_at
     matchTidMap[m.id]  = m.tournament_id
     matchInfoMap[m.id] = { home: m.home_team, away: m.away_team, scoreH: m.home_score, scoreA: m.away_score }
+    if (m.status === 'finished') finishedMatchIdSet.add(m.id)
   }
 
   // Compute last match date per finished tournament for sorting
@@ -135,6 +137,7 @@ export default async function HomePage() {
     matchDateMap[m.id] = m.kickoff_at
     matchTidMap[m.id]  = m.tournament_id
     matchInfoMap[m.id] = { home: m.home_team, away: m.away_team, scoreH: m.home_score, scoreA: m.away_score }
+    finishedMatchIdSet.add(m.id)  // all matches from finished tournaments are finished
   }
 
   // Sort finished tournaments by last match date descending
@@ -177,6 +180,7 @@ export default async function HomePage() {
   // ── Form: per-user last 8 scored predictions (by match date desc) ─────────────
   const userFormRaw = {}
   for (const p of allScoredPreds) {
+    if (!finishedMatchIdSet.has(p.match_id)) continue  // skip upcoming/live matches
     const date = matchDateMap[p.match_id]
     if (!date) continue
     if (!userFormRaw[p.user_id]) userFormRaw[p.user_id] = []
@@ -200,7 +204,7 @@ export default async function HomePage() {
       .reverse()
   }
 
-  // Trend: compare last-20 efficiency vs overall (arrays already sorted desc after above loop)
+  // Trend: compare last-20 efficiency vs overall (only finished matches, sorted desc)
   const userTrend = {}
   for (const [uid, entries] of Object.entries(userFormRaw)) {
     const last20 = entries.slice(0, 20)

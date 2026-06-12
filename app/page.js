@@ -292,9 +292,14 @@ export default async function HomePage() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
+  // Only subscribe to realtime when there are active tournaments with upcoming/live matches
+  const hasLiveActivity = activeTournaments.length > 0 && allActiveMatches.some(
+    m => m.status === 'live' || (m.status !== 'finished' && new Date(m.kickoff_at) <= new Date(now.getTime() + 24 * 60 * 60 * 1000))
+  )
+
   return (
     <div className="space-y-6">
-      <RealtimeRefresher />
+      {hasLiveActivity && <RealtimeRefresher />}
 
       {/* Personal welcome card */}
       {myProfile && (

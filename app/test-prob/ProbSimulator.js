@@ -82,8 +82,8 @@ export default function ProbSimulator() {
 
   // fullTime: 95 default, or 90+extra+3 if extra time indicated
   const fullTime = extraMin > 0 ? 90 + extraMin + 3 : 95
-  // elapsed accounts for halftime break
-  const elapsed = halftime ? 45 : (minute > 63 ? minute - 15 : minute)
+  // simulator input is game clock (what's shown on scoreboard) — no wall-time correction needed
+  const elapsed = halftime ? 45 : minute
   const remaining = Math.max(0, fullTime - elapsed)
 
   const pPct = impossible ? null : poissonPct(needH, needA, remaining)
@@ -96,7 +96,7 @@ export default function ProbSimulator() {
   const timeline = useMemo(() => {
     const rows = []
     for (let m = 0; m <= 90; m += 5) {
-      const el = halftime ? (m === 45 ? 45 : m > 63 ? m - 15 : m) : m
+      const el = halftime ? 45 : m
       const rem = Math.max(0, fullTime - el)
       rows.push({
         minute: m,

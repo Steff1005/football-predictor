@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "../lib";
+@source "../components";
 
 /* Class-based dark mode for next-themes */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -63,6 +65,15 @@ html.dark .table-inset-ring { box-shadow: inset 0 0 0 1px rgb(31 41 55); }
 }
 .animate-prob-shimmer {
   background: linear-gradient(90deg, #22c55e 0%, #86efac 45%, #22c55e 100%);
+  background-size: 200% auto;
+  animation: prob-shimmer 2.5s linear infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+/* Darker shimmer in light mode so text is legible on light green background */
+html.light .animate-prob-shimmer {
+  background: linear-gradient(90deg, #15803d 0%, #16a34a 45%, #15803d 100%);
   background-size: 200% auto;
   animation: prob-shimmer 2.5s linear infinite;
   -webkit-background-clip: text;

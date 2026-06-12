@@ -49,10 +49,7 @@ function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
 
   if (variant === 'exact') {
     return (
-      <span
-        className="text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 inline-block w-10 text-center animate-prob-glow"
-        style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)' }}
-      >
+      <span className="text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 inline-block w-10 text-center animate-prob-glow bg-green-100 dark:bg-green-500/15 border border-green-400 dark:border-green-500/40">
         <span className="animate-prob-shimmer">{pct}%</span>
       </span>
     )
@@ -247,7 +244,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                 return (
                   <div
                     key={pred.user_id}
-                    className={`border-t border-gray-100 dark:border-white/10 transition-colors ${isWinning ? 'bg-green-500/5 dark:bg-green-500/8' : ''}`}
+                    className={`border-t border-gray-100 dark:border-white/10 transition-colors ${isWinning ? 'bg-green-50 dark:bg-green-500/8' : ''}`}
                   >
                     {/* Mobile row */}
                     <div className="sm:hidden flex items-center px-4 py-2 gap-3">

@@ -37,7 +37,10 @@ function PlayerAvatar({ profile }) {
 function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
   if (curH == null || curA == null) return <div className="flex-shrink-0" />
   const elapsed = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
-  const { label, variant, pulse } = getLiveStatus(predH - curH, predA - curA, elapsed)
+  const { label, variant, pulse, pct } = getLiveStatus(predH - curH, predA - curA, elapsed)
+
+  const mob = pct != null ? `${pct}%` : (variant === 'impossible' ? '×' : '—')
+  const desk = pct != null ? `${label} · ${pct}%` : label
 
   if (variant === 'exact') {
     return (
@@ -46,7 +49,10 @@ function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
           className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold animate-prob-glow whitespace-nowrap"
           style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)' }}
         >
-          <span className="animate-prob-shimmer">{label}</span>
+          <span className="animate-prob-shimmer">
+            <span className="sm:hidden">{mob}</span>
+            <span className="hidden sm:inline">{desk}</span>
+          </span>
         </span>
       </div>
     )
@@ -55,7 +61,8 @@ function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
   return (
     <div className="flex-shrink-0 flex justify-end">
       <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 whitespace-nowrap ${statusCls(variant)} ${pulse ? 'animate-status-pulse' : ''}`}>
-        {label}
+        <span className="sm:hidden">{mob}</span>
+        <span className="hidden sm:inline">{desk}</span>
       </span>
     </div>
   )
@@ -149,14 +156,9 @@ function MatchCard({ match, preds, profileMap }) {
                 <PlayerAvatar profile={profile} />
                 <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">{displayName(profile)}</span>
               </Link>
-              <div className="flex-shrink-0 flex flex-col items-center w-9">
-                <span className={`font-mono text-sm font-semibold leading-snug ${isWinning ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                  {pred.predicted_home}
-                </span>
-                <span className={`font-mono text-sm font-semibold leading-snug ${isWinning ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                  {pred.predicted_away}
-                </span>
-              </div>
+              <span className={`font-mono text-sm font-semibold flex-shrink-0 tabular-nums ${isWinning ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                {pred.predicted_home}:{pred.predicted_away}
+              </span>
               <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
             </div>
 
@@ -166,13 +168,15 @@ function MatchCard({ match, preds, profileMap }) {
                 <PlayerAvatar profile={profile} />
                 <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">{displayName(profile)}</span>
               </Link>
-              <span className={`rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold flex-shrink-0 min-w-[2.75rem] text-center transition-colors ${
-                isWinning
-                  ? 'bg-green-500/15 text-green-600 dark:text-green-400 ring-1 ring-green-500/30'
-                  : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200'
-              }`}>
-                {pred.predicted_home}:{pred.predicted_away}
-              </span>
+              <div className="w-[90px] flex-shrink-0 flex items-center justify-center">
+                <span className={`rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-center transition-colors tabular-nums ${
+                  isWinning
+                    ? 'bg-green-500/15 text-green-600 dark:text-green-400 ring-1 ring-green-500/30'
+                    : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200'
+                }`}>
+                  {pred.predicted_home}:{pred.predicted_away}
+                </span>
+              </div>
               <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
             </div>
           </div>

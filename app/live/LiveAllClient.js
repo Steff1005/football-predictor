@@ -39,32 +39,37 @@ function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
   const elapsed = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
   const { label, variant, pulse, pct } = getLiveStatus(predH - curH, predA - curA, elapsed)
 
-  const mob = pct != null ? `${pct}%` : (variant === 'impossible' ? '×' : '—')
+  const mob  = pct != null ? `${pct}%` : '—'
   const desk = pct != null ? `${label} · ${pct}%` : label
 
   if (variant === 'exact') {
     return (
-      <div className="flex-shrink-0 flex justify-end">
-        <span
-          className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold animate-prob-glow whitespace-nowrap"
-          style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)' }}
-        >
-          <span className="animate-prob-shimmer">
-            <span className="sm:hidden">{mob}</span>
-            <span className="hidden sm:inline">{desk}</span>
-          </span>
+      <span
+        className="text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 inline-block animate-prob-glow whitespace-nowrap min-w-[2.5rem] text-center"
+        style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)' }}
+      >
+        <span className="animate-prob-shimmer">
+          <span className="sm:hidden">{mob}</span>
+          <span className="hidden sm:inline">{desk}</span>
         </span>
-      </div>
+      </span>
+    )
+  }
+
+  if (variant === 'impossible') {
+    return (
+      <span className="text-[10px] font-semibold rounded-full px-2 py-0.5 flex-shrink-0 inline-block whitespace-nowrap min-w-[2.5rem] text-center bg-gray-100 dark:bg-white/5">
+        <span className="sm:hidden font-bold text-red-400">×</span>
+        <span className="hidden sm:inline text-gray-400 dark:text-gray-600">Неможливо</span>
+      </span>
     )
   }
 
   return (
-    <div className="flex-shrink-0 flex justify-end">
-      <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 whitespace-nowrap ${statusCls(variant)} ${pulse ? 'animate-status-pulse' : ''}`}>
-        <span className="sm:hidden">{mob}</span>
-        <span className="hidden sm:inline">{desk}</span>
-      </span>
-    </div>
+    <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 flex-shrink-0 inline-block whitespace-nowrap min-w-[2.5rem] text-center ${statusCls(variant)} ${pulse ? 'animate-status-pulse' : ''}`}>
+      <span className="sm:hidden">{mob}</span>
+      <span className="hidden sm:inline">{desk}</span>
+    </span>
   )
 }
 
@@ -104,13 +109,13 @@ function MatchCard({ match, preds, profileMap }) {
         </div>
 
         {/* Desktop */}
-        <div className="hidden sm:flex items-center gap-2">
-          <span className="text-xs text-gray-400 dark:text-gray-500 w-24 flex-shrink-0">{dateStr}, {timeStr}</span>
-          <div className="flex items-center gap-1.5 w-[35%] justify-end min-w-0">
+        <div className="hidden sm:grid grid-cols-[6rem_1fr_90px_1fr_auto] gap-x-2 items-center">
+          <span className="text-xs text-gray-400 dark:text-gray-500">{dateStr}, {timeStr}</span>
+          <div className="flex items-center gap-1.5 justify-end min-w-0">
             <span className="text-sm font-semibold text-gray-900 dark:text-white truncate text-right">{match.home_team}</span>
             {match.home_logo && <img src={match.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
           </div>
-          <div className="w-[90px] flex flex-col items-center justify-center gap-0.5 flex-shrink-0">
+          <div className="flex flex-col items-center justify-center gap-0.5">
             {match.home_score != null && match.away_score != null ? (
               <>
                 <span className="bg-red-500/10 rounded-md px-2.5 py-0.5 text-sm font-bold text-red-500 dark:text-red-400 tabular-nums">
@@ -126,11 +131,11 @@ function MatchCard({ match, preds, profileMap }) {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5 w-[35%] min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
             {match.away_logo && <img src={match.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
             <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.away_team}</span>
           </div>
-          <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
+          <span className="text-xs text-gray-400 dark:text-gray-500 text-right whitespace-nowrap">
             {filtered.length} прогноз{filtered.length === 1 ? '' : filtered.length < 5 ? 'и' : 'ів'}
           </span>
         </div>
@@ -163,12 +168,12 @@ function MatchCard({ match, preds, profileMap }) {
             </div>
 
             {/* Desktop */}
-            <div className="hidden sm:flex items-center px-4 py-2 gap-3">
-              <Link href={`/players/${pred.user_id}`} className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-75 transition-opacity">
+            <div className="hidden sm:grid grid-cols-[6rem_1fr_90px_1fr_auto] gap-x-2 items-center px-4 py-2">
+              <Link href={`/players/${pred.user_id}`} className="col-span-2 flex items-center gap-2 min-w-0 hover:opacity-75 transition-opacity">
                 <PlayerAvatar profile={profile} />
-                <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">{displayName(profile)}</span>
+                <span className="text-sm text-gray-900 dark:text-white min-w-0 truncate">{displayName(profile)}</span>
               </Link>
-              <div className="w-[90px] flex-shrink-0 flex items-center justify-center">
+              <div className="flex items-center justify-center">
                 <span className={`rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-center transition-colors tabular-nums ${
                   isWinning
                     ? 'bg-green-500/15 text-green-600 dark:text-green-400 ring-1 ring-green-500/30'
@@ -177,7 +182,9 @@ function MatchCard({ match, preds, profileMap }) {
                   {pred.predicted_home}:{pred.predicted_away}
                 </span>
               </div>
-              <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
+              <div className="col-span-2 flex items-center">
+                <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
+              </div>
             </div>
           </div>
         )

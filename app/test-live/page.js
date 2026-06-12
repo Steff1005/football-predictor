@@ -96,7 +96,7 @@ export default function TestLivePage() {
       // 90+2', рахунок 1:2, remaining ≈ 3
       { user_id: 'u-1', predicted_home: 1, predicted_away: 2 }, // → Точно · дод. час (pulse)
       { user_id: 'u-2', predicted_home: 1, predicted_away: 3 }, // → Мало часу + pulse (need=1, rem=3)
-      { user_id: 'u-3', predicted_home: 2, predicted_away: 2 }, // → Мало часу + pulse
+      { user_id: 'u-3', predicted_home: 2, predicted_away: 1 }, // → Неможливо (needA=1-2=-1)
       { user_id: 'u-4', predicted_home: 2, predicted_away: 3 }, // → Дуже складно + pulse
       { user_id: 'u-5', predicted_home: 0, predicted_away: 2 }, // → Неможливо (needH=-1)
     ],

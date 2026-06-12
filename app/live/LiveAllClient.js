@@ -1,7 +1,17 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { getLiveStatus, VARIANT_CLS } from '../../lib/liveStatus'
+import { getLiveStatus } from '../../lib/liveStatus'
+
+function statusCls(v) {
+  if (v === 'good')            return 'bg-green-500/10 text-green-600 dark:text-green-400'
+  if (v === 'ok')              return 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
+  if (v === 'warning')         return 'bg-orange-500/10 text-orange-500 dark:text-orange-400'
+  if (v === 'danger')          return 'bg-red-500/10 text-red-500 dark:text-red-400'
+  if (v === 'near-impossible') return 'bg-red-500/5 text-red-400 dark:text-red-500'
+  if (v === 'impossible')      return 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-600'
+  return 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500'
+}
 
 const POLL_INTERVAL = 30_000
 
@@ -44,7 +54,7 @@ function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
 
   return (
     <div className="flex-shrink-0 flex justify-end">
-      <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 whitespace-nowrap ${VARIANT_CLS[variant]} ${pulse ? 'animate-status-pulse' : ''}`}>
+      <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 whitespace-nowrap ${statusCls(variant)} ${pulse ? 'animate-status-pulse' : ''}`}>
         {label}
       </span>
     </div>

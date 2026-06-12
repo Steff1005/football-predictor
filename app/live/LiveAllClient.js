@@ -40,7 +40,7 @@ function ProbBadge({ predH, predA, curH, curA, kickoffAt, clock, halftime }) {
   const { elapsed, fullTime } = getGameTime(clock, wall, halftime)
   const { variant, pulse, pct } = getLiveStatus(predH - curH, predA - curA, elapsed, fullTime)
 
-  if (variant === 'impossible') {
+  if (variant === 'impossible' || variant === 'neutral') {
     return (
       <span className="text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 inline-block w-10 text-center bg-gray-100 dark:bg-white/5">
         ❌

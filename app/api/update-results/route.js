@@ -17,6 +17,7 @@ export async function GET(request) {
   try {
     const now = new Date()
     const cutoff = new Date(now - 120 * 60 * 1000).toISOString()
+    const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString()
 
     // Matches past kickoff that haven't been marked finished yet
     const { data: pendingMatches } = await supabase
@@ -25,22 +26,24 @@ export async function GET(request) {
       .lte('kickoff_at', cutoff)
       .neq('status', 'finished')
 
-    // Matches already marked finished by sync-matches but with uncalculated predictions
-    const { data: uncalcPreds } = await supabase
-      .from('predictions')
-      .select('match_id')
-      .or('is_calculated.is.null,is_calculated.eq.false')
+    // Fix #2: start from recent finished matches — not a full predictions table scan
+    const { data: recentFinishedRaw } = await supabase
+      .from('matches')
+      .select('*')
+      .eq('status', 'finished')
+      .not('home_score', 'is', null)
+      .gte('kickoff_at', thirtyDaysAgo)
 
-    const uncalcMatchIds = [...new Set((uncalcPreds ?? []).map(p => p.match_id))]
+    const recentFinishedIds = (recentFinishedRaw ?? []).map(m => m.id)
     let alreadyFinished = []
-    if (uncalcMatchIds.length) {
-      const { data } = await supabase
-        .from('matches')
-        .select('*')
-        .in('id', uncalcMatchIds)
-        .eq('status', 'finished')
-        .not('home_score', 'is', null)
-      alreadyFinished = data ?? []
+    if (recentFinishedIds.length) {
+      const { data: uncalc } = await supabase
+        .from('predictions')
+        .select('match_id')
+        .in('match_id', recentFinishedIds)
+        .or('is_calculated.is.null,is_calculated.eq.false')
+      const uncalcIds = new Set((uncalc ?? []).map(p => p.match_id))
+      alreadyFinished = (recentFinishedRaw ?? []).filter(m => uncalcIds.has(m.id))
     }
 
     if (!pendingMatches?.length && !alreadyFinished.length) {
@@ -50,7 +53,6 @@ export async function GET(request) {
     let updatedCount = 0
     const affectedTournamentIds = new Set()
 
-    // Helper: calculate predictions for a finished match with known scores
     async function calcPredictions(match, homeScore, awayScore) {
       const { data: predictions } = await supabase
         .from('predictions')
@@ -58,8 +60,9 @@ export async function GET(request) {
         .eq('match_id', match.id)
         .or('is_calculated.is.null,is_calculated.eq.false')
 
-      // Fetch user notification prefs once per match
-      const userIds = [...new Set((predictions ?? []).map(p => p.user_id))]
+      if (!predictions?.length) return
+
+      const userIds = [...new Set(predictions.map(p => p.user_id))]
       let notifyResultsSet = new Set()
       if (userIds.length) {
         const { data: profs } = await supabase
@@ -69,33 +72,38 @@ export async function GET(request) {
         notifyResultsSet = new Set((profs ?? []).filter(p => p.notify_results !== false).map(p => p.id))
       }
 
+      // Fix #1: compute all points then batch upsert (single DB round trip)
       const pointsByUser = {}
-      for (const prediction of predictions ?? []) {
+      const updates = predictions.map(prediction => {
         const pts = calculatePoints(
           prediction.predicted_home, prediction.predicted_away,
           homeScore, awayScore
         )
-        await supabase.from('predictions').update({
-          ...pts, is_calculated: true,
-        }).eq('id', prediction.id)
-
         pointsByUser[prediction.user_id] = pts.points
+        return { id: prediction.id, ...pts, is_calculated: true }
+      })
 
-        if (notifyResultsSet.has(prediction.user_id)) {
-          const label = pts.points === 4 ? '🎯 Точний рахунок!' : pts.points === 1 ? '✅ Правильний результат' : '❌ Промах'
-          const score = `${homeScore}:${awayScore}`
-          sendPushToUser(supabase, prediction.user_id, {
-            title: `${label} +${pts.points} балів`,
-            body: `${match.home_team} ${score} ${match.away_team}`,
-            url: `/tournaments/${match.tournament_id}`,
-          }).catch(() => {})
-        }
+      await supabase.from('predictions').upsert(updates)
+
+      // Push notifications (fire-and-forget)
+      for (const prediction of predictions) {
+        if (!notifyResultsSet.has(prediction.user_id)) continue
+        const pts = calculatePoints(
+          prediction.predicted_home, prediction.predicted_away,
+          homeScore, awayScore
+        )
+        const label = pts.points === 4 ? '🎯 Точний рахунок!' : pts.points === 1 ? '✅ Правильний результат' : '❌ Промах'
+        sendPushToUser(supabase, prediction.user_id, {
+          title: `${label} +${pts.points} балів`,
+          body: `${match.home_team} ${homeScore}:${awayScore} ${match.away_team}`,
+          url: `/tournaments/${match.tournament_id}`,
+        }).catch(() => {})
       }
 
-      // Recalculate total_points for each affected user from scratch
+      // Fix #3: use is_calculated=true (not .not('points', 'is', null)) to avoid counting defaults
       await Promise.all(Object.keys(pointsByUser).map(async uid => {
         const { data: allPreds } = await supabase
-          .from('predictions').select('points').eq('user_id', uid).not('points', 'is', null)
+          .from('predictions').select('points').eq('user_id', uid).eq('is_calculated', true)
         const total = (allPreds ?? []).reduce((s, p) => s + (p.points ?? 0), 0)
         await supabase.from('profiles')
           .update({ total_points: total, total_predictions: allPreds?.length ?? 0 })
@@ -112,15 +120,13 @@ export async function GET(request) {
       }
     }
 
-    // Pass 2 first: already-finished matches (set by sync) with uncalculated predictions.
-    // Runs before Pass 1 so an API-heavy Pass 1 timeout doesn't block these.
+    // Pass 2 first: already-finished matches with uncalculated predictions
     for (const match of alreadyFinished) {
       await calcPredictions(match, match.home_score, match.away_score)
       updatedCount++
     }
 
     // Pass 1: pending matches — fetch result from football-data.org
-    // Delay 7 s between calls to stay within the free-tier limit of 10 req/min.
     let pass1Count = 0
     for (const match of pendingMatches ?? []) {
       if (pass1Count > 0) await new Promise(r => setTimeout(r, 7000))
@@ -135,7 +141,6 @@ export async function GET(request) {
       } catch { continue }
 
       if (response.status === 429) {
-        // Rate limited — skip remaining, will be caught on next cron run
         console.warn('football-data.org rate limit hit, stopping Pass 1 early')
         break
       }
@@ -158,7 +163,6 @@ export async function GET(request) {
       updatedCount++
     }
 
-    // Rebuild probability cache once per tournament (after all matches processed)
     for (const tournamentId of affectedTournamentIds) {
       try {
         await rebuildProbabilityCache(supabase, tournamentId)

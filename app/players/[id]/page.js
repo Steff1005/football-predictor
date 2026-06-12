@@ -1,33 +1,34 @@
-import { cookies } from 'next/headers'
+import { cache } from 'react'
 import { createServerClient } from '@supabase/ssr'
 import { notFound } from 'next/navigation'
 import { translateTeam } from '../../../lib/team-translations'
 import CLUB_CRESTS from '../../../lib/club-crests'
 import { computeTourneyRanks } from '../../../lib/rankings'
 import Avatar from '../../../components/Avatar'
+import IsOwnProfileLink from '../../../components/IsOwnProfileLink'
+
+export const revalidate = 60
 
 const PAGE = 1000
-async function fetchAll(supabase, buildQuery) {
-  let all = [], from = 0
-  while (true) {
-    const { data, error } = await buildQuery(from, from + PAGE - 1)
-    if (error || !data?.length) break
-    all = all.concat(data)
-    if (data.length < PAGE) break
-    from += PAGE
-  }
-  return all
-}
 
-export async function generateMetadata({ params }) {
-  const { id } = await params
+// Fix #10: shared between generateMetadata and page component — one DB call per request
+const fetchProfile = cache(async (id) => {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     { cookies: { getAll: () => [] } }
   )
-  const { data: profile } = await supabase.from('profiles')
-    .select('first_name, last_name, username').eq('id', id).single()
+  const { data } = await supabase
+    .from('profiles')
+    .select('username, first_name, last_name, avatar_url')
+    .eq('id', id)
+    .single()
+  return data
+})
+
+export async function generateMetadata({ params }) {
+  const { id } = await params
+  const profile = await fetchProfile(id)
   if (!profile) return { title: 'Профіль — Kickoff' }
   const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username || 'Гравець'
   return {
@@ -40,25 +41,29 @@ export async function generateMetadata({ params }) {
   }
 }
 
+async function fetchAll(supabase, buildQuery) {
+  let all = [], from = 0
+  while (true) {
+    const { data, error } = await buildQuery(from, from + PAGE - 1)
+    if (error || !data?.length) break
+    all = all.concat(data)
+    if (data.length < PAGE) break
+    from += PAGE
+  }
+  return all
+}
+
 export default async function PlayerProfilePage({ params }) {
   const { id } = await params
 
-  const cookieStore = await cookies()
+  // Fix #9: anonymous client — no cookies needed, enables revalidate = 60
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    { cookies: { getAll() { return cookieStore.getAll() } } }
+    { cookies: { getAll: () => [] } }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
-  const isOwn = session?.user?.id === id
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('username, first_name, last_name, avatar_url')
-    .eq('id', id)
-    .single()
-
+  const profile = await fetchProfile(id)
   if (!profile) notFound()
 
   const fullName    = [profile.first_name, profile.last_name].filter(Boolean).join(' ')
@@ -92,12 +97,10 @@ export default async function PlayerProfilePage({ params }) {
     .map(p => ({ ...p, match: finishedMatchMap[p.match_id] }))
     .filter(p => p.match && p.match.status === 'finished')
 
-  // Last 10 predictions sorted by match date desc → then reversed for left-to-right display
   const recentForm = [...allPredictions]
     .sort((a, b) => b.match.kickoff_at.localeCompare(a.match.kickoff_at))
     .slice(0, 10)
     .reverse()
-
 
   const totalPoints     = allPredictions.reduce((s, p) => s + (p.points ?? 0), 0)
   const exactScores     = allPredictions.filter(p => (p.points_exact  ?? 0) > 0).length
@@ -149,12 +152,8 @@ export default async function PlayerProfilePage({ params }) {
         <Avatar url={profile.avatar_url} initials={initials} sizeCls="w-20 h-20" textCls="text-2xl" />
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{displayName}</h1>
-          {isOwn && (
-            <a href="/profile"
-              className="text-sm text-green-500 hover:text-green-400 transition-colors">
-              Редагувати профіль →
-            </a>
-          )}
+          {/* Fix #9: isOwn checked client-side to allow page caching */}
+          <IsOwnProfileLink userId={id} />
         </div>
       </div>
 
@@ -189,11 +188,6 @@ export default async function PlayerProfilePage({ params }) {
               <div className="text-xs text-gray-400 dark:text-gray-500 mb-2">Остання форма ({recentForm.length} прогнозів)</div>
               <div className="flex gap-1.5 items-center">
                 {recentForm.map((p, i) => {
-                  const color = p.points === 4
-                    ? 'bg-yellow-400 title="4 бали — точний рахунок"'
-                    : p.points === 1
-                      ? 'bg-green-500'
-                      : 'bg-red-400'
                   const title = p.points === 4 ? '4 бали — точний рахунок' : p.points === 1 ? '1 бал — правильний результат' : '0 балів'
                   return (
                     <div
@@ -274,7 +268,6 @@ export default async function PlayerProfilePage({ params }) {
         </div>
       )}
 
-      {/* Predictions section intentionally hidden on public profile */}
     </div>
   )
 }

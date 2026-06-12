@@ -59,13 +59,16 @@ function FormDot({ pts }) {
 
 // ── Data helpers ──────────────────────────────────────────────────────────────
 
-async function fetchPagedPreds(supabase) {
+// Fix #8: filter by match IDs from loaded tournaments instead of full table scan
+async function fetchPagedPreds(supabase, matchIds) {
+  if (!matchIds?.length) return []
   const PAGE = 1000
   let all = [], from = 0
   while (true) {
     const { data, error } = await supabase
       .from('predictions')
       .select('user_id, match_id, points, predicted_home, predicted_away')
+      .in('match_id', matchIds)
       .not('points', 'is', null)
       .range(from, from + PAGE - 1)
     if (error || !data?.length) break
@@ -157,9 +160,14 @@ export default async function HomePage() {
 
   const allUpcomingIds = activeTournaments.flatMap(t => activeMatchStats[t.id]?.upcomingIds ?? [])
 
+  const allRelevantMatchIds = [
+    ...allActiveMatches.map(m => m.id),
+    ...finishedTourneyMatches.map(m => m.id),
+  ]
+
   // ── Phase 3: predictions ──────────────────────────────────────────────────────
   const [allScoredPreds, userUpcomingPredsResult] = await Promise.all([
-    fetchPagedPreds(supabase),
+    fetchPagedPreds(supabase, allRelevantMatchIds),
     userId && allUpcomingIds.length > 0
       ? supabase.from('predictions').select('match_id').eq('user_id', userId).in('match_id', allUpcomingIds)
       : Promise.resolve({ data: [] }),

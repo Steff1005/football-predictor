@@ -1,5 +1,5 @@
-const CACHE_STATIC = 'kickoff-static-v4'
-const CACHE_PAGES  = 'kickoff-pages-v1'
+const CACHE_STATIC = 'kickoff-static-v5'
+const CACHE_PAGES  = 'kickoff-pages-v2'
 const CACHE_API    = 'kickoff-api-v1'
 const KNOWN_CACHES = new Set([CACHE_STATIC, CACHE_PAGES, CACHE_API])
 
@@ -82,25 +82,21 @@ self.addEventListener('fetch', event => {
     return
   }
 
-  // Navigation (HTML pages): network-first; on failure serve cached page or /offline.html
+  // Navigation: stale-while-revalidate — serve cached instantly, refresh in background
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
-        .then(res => {
-          // Cache tournament and standings pages for offline browsing (stale-while-revalidate)
-          if (res.ok && (
-            url.pathname.startsWith('/tournaments') ||
-            url.pathname === '/' ||
-            url.pathname === '/hall-of-fame'
-          )) {
-            caches.open(CACHE_PAGES).then(c => c.put(event.request, res.clone()))
-          }
+      caches.open(CACHE_PAGES).then(async cache => {
+        const cached = await cache.match(event.request)
+        const networkFetch = fetch(event.request).then(res => {
+          if (res.ok) cache.put(event.request, res.clone())
           return res
-        })
-        .catch(async () => {
-          const cached = await caches.match(event.request)
-          return cached || caches.match('/offline.html')
-        })
+        }).catch(() => null)
+        if (cached) {
+          event.waitUntil(networkFetch)
+          return cached
+        }
+        return await networkFetch || caches.match('/offline.html')
+      })
     )
     return
   }

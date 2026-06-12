@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
@@ -19,14 +20,20 @@ import RealtimeRefresher from '../../../components/RealtimeRefresher'
 
 export const revalidate = 60
 
-export async function generateMetadata({ params }) {
-  const { id } = await params
+// Fix #10: cached tournament fetch — shared between generateMetadata and page (one DB call)
+const getTournament = cache(async (id) => {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     { cookies: { getAll: () => [] } }
   )
-  const { data: t } = await supabase.from('tournaments').select('name').eq('id', id).single()
+  const { data } = await supabase.from('tournaments').select('*').eq('id', id).single()
+  return data
+})
+
+export async function generateMetadata({ params }) {
+  const { id } = await params
+  const t = await getTournament(id)
   if (!t) return { title: 'Турнір — Kickoff' }
   return {
     title: `${t.name} — Kickoff`,
@@ -54,9 +61,6 @@ function getFlagUrl(name) {
   return code ? `https://flagcdn.com/32x24/${code}.png` : null
 }
 
-// ── Tabs config ───────────────────────────────────────────────────────────────
-
-// Fetch all rows past the 1000-row PostgREST cap
 async function fetchAllRows(buildQuery) {
   const PAGE = 1000
   let all = [], from = 0
@@ -87,8 +91,9 @@ export default async function TournamentPage({ params, searchParams }) {
   const userId  = session?.user?.id
   const isAdmin = isAdminEmail(session?.user?.email)
 
-  const [{ data: tournament }, { data: matches }, { data: roundAnalysesRows }] = await Promise.all([
-    supabase.from('tournaments').select('*').eq('id', id).single(),
+  // Fix #10: tournament from cache (no extra DB call vs generateMetadata)
+  const [tournament, { data: matches }, { data: roundAnalysesRows }] = await Promise.all([
+    getTournament(id),
     supabase.from('matches').select('*').eq('tournament_id', id).order('kickoff_at', { ascending: true }),
     supabase.from('round_analyses').select('round_label, analysis_text').eq('tournament_id', id),
   ])
@@ -125,27 +130,17 @@ export default async function TournamentPage({ params, searchParams }) {
     preds?.forEach(p => { userPredictions[p.match_id] = p })
   }
 
-  // Calculated predictions → standings + по-турах
+  // Fix #5: only fetch calcPreds when needed (not for matches/live tabs)
+  const needCalcPreds = !['matches', 'live'].includes(tab)
+
   let calcPreds = []
-  if (matchIds.length > 0) {
+  if (needCalcPreds && matchIds.length > 0) {
     calcPreds = await fetchAllRows((from, to) =>
       supabase
         .from('predictions')
         .select('user_id, match_id, predicted_home, predicted_away, points, points_exact, points_result')
         .in('match_id', matchIds)
         .not('points', 'is', null)
-        .range(from, to)
-    )
-  }
-
-  // Public predictions (past matches)
-  let publicPreds = []
-  if (finishedMatchIds.length > 0) {
-    publicPreds = await fetchAllRows((from, to) =>
-      supabase
-        .from('predictions')
-        .select('user_id, match_id, predicted_home, predicted_away, points')
-        .in('match_id', finishedMatchIds)
         .range(from, to)
     )
   }
@@ -160,7 +155,7 @@ export default async function TournamentPage({ params, searchParams }) {
     livePreds = data ?? []
   }
 
-  // Upcoming predictions (to surface late joiners)
+  // Upcoming predictions (to surface late joiners in standings)
   const upcomingMatchIds = allMatches.filter(m => new Date(m.kickoff_at) > now).map(m => m.id)
   let upcomingPreds = []
   if (upcomingMatchIds.length > 0) {
@@ -174,7 +169,6 @@ export default async function TournamentPage({ params, searchParams }) {
   // Profiles for everyone who has predictions
   const allUserIds = [...new Set([
     ...calcPreds.map(p => p.user_id),
-    ...publicPreds.map(p => p.user_id),
     ...upcomingPreds.map(p => p.user_id),
     ...livePreds.map(p => p.user_id),
   ])]
@@ -241,9 +235,11 @@ export default async function TournamentPage({ params, searchParams }) {
     predsByLiveMatch[p.match_id].push(p)
   }
 
-  // ── Прогнози tab ──────────────────────────────────────────────────────────
+  // ── Прогнози tab — built from calcPreds (eliminates separate publicPreds fetch) ──
+  const finishedMatchIdSet = new Set(finishedMatchIds)
   const predsByMatch = {}
-  for (const p of publicPreds) {
+  for (const p of calcPreds) {
+    if (!finishedMatchIdSet.has(p.match_id)) continue
     if (!predsByMatch[p.match_id]) predsByMatch[p.match_id] = []
     predsByMatch[p.match_id].push(p)
   }
@@ -285,7 +281,6 @@ export default async function TournamentPage({ params, searchParams }) {
       for (const mid of finishedByRound[rk].matchIds) matchToRoundIdx[mid] = ri
     })
 
-    // Points earned per user per round
     const ppr = {}
     for (const p of calcPreds) {
       const ri = matchToRoundIdx[p.match_id]
@@ -296,14 +291,12 @@ export default async function TournamentPage({ params, searchParams }) {
 
     const dynUserIds = Object.keys(ppr)
 
-    // Cumulative points after each round
     const cum = {}
     for (const uid of dynUserIds) {
       let total = 0
       cum[uid] = dynRounds.map((_, ri) => { total += ppr[uid][ri] ?? 0; return total })
     }
 
-    // Rank at each round (ties broken by uid for stability)
     const ranksByRound = dynRounds.map((_, ri) => {
       const sorted = [...dynUserIds]
         .map(uid => ({ uid, pts: cum[uid][ri] }))
@@ -327,9 +320,9 @@ export default async function TournamentPage({ params, searchParams }) {
       .filter(r => r.profile)
   }
 
-  // ── Probability matrix — read from cache, fallback to live simulation ─────
+  // ── Probability matrix — Fix #5: only fetch for standings tab ────────────
   let probMatrix = null
-  if (matchesTabMatches.length > 0 && standings.length > 0) {
+  if (tab === 'standings' && matchesTabMatches.length > 0 && standings.length > 0) {
     const { data: cached } = await supabase
       .from('probability_cache')
       .select('data')

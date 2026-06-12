@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
+import { getLiveStatus, VARIANT_CLS } from '../../../lib/liveStatus'
 
 const POLL_INTERVAL = 30_000
 
@@ -22,46 +23,25 @@ function PlayerAvatar({ profile }) {
   )
 }
 
-// Poisson P(X = k) using log to avoid overflow for large k
-function poissonP(k, lambda) {
-  if (k < 0 || lambda <= 0) return k === 0 ? 1 : 0
-  let log = -lambda + k * Math.log(lambda)
-  for (let i = 1; i <= k; i++) log -= Math.log(i)
-  return Math.exp(log)
-}
-
-// Returns { pct, raw, exact, impossible, noTime }
-function calcProb(predH, predA, curH, curA, kickoffAt) {
-  const needH = predH - (curH ?? 0)
-  const needA = predA - (curA ?? 0)
-  if (needH < 0 || needA < 0) return { impossible: true }
-  const elapsed   = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
-  const remaining = Math.max(0, 90 - elapsed)
-  if (remaining === 0) {
-    return needH === 0 && needA === 0 ? { exact: true } : { noTime: true }
-  }
-  const muH = 1.7 * remaining / 90
-  const muA = 1.3 * remaining / 90
-  const raw = poissonP(needH, muH) * poissonP(needA, muA)
-  return { pct: Math.round(raw * 100), raw }
-}
-
 function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
-  const r = calcProb(predH, predA, curH, curA, kickoffAt)
-  const base = 'text-xs font-semibold rounded px-1.5 py-0.5 text-center inline-block flex-shrink-0'
-  if (r.impossible) return <span className={`${base} min-w-[2.5rem] bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-600`}>✕</span>
-  if (r.exact)      return <span className={`${base} min-w-[2.5rem] bg-green-500/20 text-green-600 dark:text-green-400`}>🎯</span>
-  if (r.noTime)     return <span className={`${base} min-w-[2.5rem] bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500`}>—</span>
-  const isLeading = predH === (curH ?? 0) && predA === (curA ?? 0)
-  const label = r.pct === 0 ? '<1%' : `${r.pct}%`
-  const cls = isLeading || r.pct >= 30
-    ? 'bg-green-500/15 text-green-600 dark:text-green-400'
-    : r.pct >= 10
-      ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400'
-      : 'bg-red-500/10 text-red-500 dark:text-red-400'
+  if (curH == null || curA == null) return <div className="flex-shrink-0" />
+  const elapsed = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
+  const { label, variant, pulse } = getLiveStatus(predH - curH, predA - curA, elapsed)
+
+  if (variant === 'exact') {
+    return (
+      <span
+        className="text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 inline-block animate-prob-glow whitespace-nowrap"
+        style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)' }}
+      >
+        <span className="animate-prob-shimmer">{label}</span>
+      </span>
+    )
+  }
+
   return (
-    <span className={`${base} min-w-[2.5rem] tabular-nums ${cls}`}>
-      {isLeading ? `🎯 ${label}` : label}
+    <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 flex-shrink-0 inline-block whitespace-nowrap ${VARIANT_CLS[variant]} ${pulse ? 'animate-status-pulse' : ''}`}>
+      {label}
     </span>
   )
 }
@@ -261,9 +241,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                         <span className="font-mono text-sm font-semibold text-gray-500 dark:text-gray-400 leading-snug">{pred.predicted_home}</span>
                         <span className="font-mono text-sm font-semibold text-gray-500 dark:text-gray-400 leading-snug">{pred.predicted_away}</span>
                       </div>
-                      {hasScore
-                        ? <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
-                        : <div className="w-10 flex-shrink-0" />}
+                      <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
                     </div>
 
                     {/* Desktop row */}
@@ -275,9 +253,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                       <span className="bg-gray-100 dark:bg-white/10 rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 flex-shrink-0 min-w-[2.75rem] text-center">
                         {pred.predicted_home}:{pred.predicted_away}
                       </span>
-                      {hasScore
-                        ? <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
-                        : <div className="w-16 flex-shrink-0" />}
+                      <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
                     </div>
                   </div>
                 )

@@ -1,31 +1,9 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { getLiveStatus, VARIANT_CLS } from '../../lib/liveStatus'
 
 const POLL_INTERVAL = 30_000
-const LAMBDA_HOME   = 1.7   // WC avg ~2.5 goals/game → ~1.7 home
-const LAMBDA_AWAY   = 1.3   // ~1.3 away
-
-// ── Math ─────────────────────────────────────────────────────────────────────
-
-function poisson(k, lambda) {
-  if (k < 0 || lambda <= 0) return k === 0 ? 1 : 0
-  // log-space to avoid overflow
-  let logP = -lambda + k * Math.log(lambda)
-  for (let i = 1; i <= k; i++) logP -= Math.log(i)
-  return Math.exp(logP)
-}
-
-function calcProb(ph, pa, ch, ca, kickoffAt, now) {
-  if (ch == null || ca == null) return null       // no score yet
-  if (ph < ch || pa < ca)       return 0          // impossible
-  const elapsed   = (now - new Date(kickoffAt)) / 60000
-  const remaining = Math.max(0, Math.min(90, 90 - elapsed))
-  if (remaining === 0) return ph === ch && pa === ca ? 1 : 0
-  const muH = LAMBDA_HOME * remaining / 90
-  const muA = LAMBDA_AWAY * remaining / 90
-  return poisson(ph - ch, muH) * poisson(pa - ca, muA)
-}
 
 // ── Components ────────────────────────────────────────────────────────────────
 
@@ -46,51 +24,34 @@ function PlayerAvatar({ profile }) {
   )
 }
 
-function ProbBadge({ prob, isWinning }) {
-  if (prob === null) return <div className="w-[58px] flex-shrink-0" />
+function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
+  if (curH == null || curA == null) return <div className="flex-shrink-0" />
+  const elapsed = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
+  const { label, variant, pulse } = getLiveStatus(predH - curH, predA - curA, elapsed)
 
-  const pct = Math.round(prob * 100)
-
-  // 🎯 Score currently matches prediction — always show glow regardless of %
-  if (isWinning) {
+  if (variant === 'exact') {
     return (
-      <div className="w-[58px] flex-shrink-0 flex justify-end">
+      <div className="flex-shrink-0 flex justify-end">
         <span
-          className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums animate-prob-glow"
+          className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold animate-prob-glow whitespace-nowrap"
           style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)' }}
         >
-          <span className="text-[10px]">🎯</span>
-          <span className="animate-prob-shimmer">{pct === 0 ? '<1%' : `${pct}%`}</span>
+          <span className="animate-prob-shimmer">{label}</span>
         </span>
       </div>
     )
   }
 
-  if (prob === 0) {
-    return (
-      <div className="w-[58px] flex-shrink-0 flex justify-end">
-        <span className="text-[11px] text-gray-300 dark:text-gray-700 font-medium tabular-nums select-none">✕ 0%</span>
-      </div>
-    )
-  }
-
-  const color = pct >= 20
-    ? 'text-green-500 dark:text-green-400'
-    : pct >= 8
-      ? 'text-amber-500 dark:text-amber-400'
-      : 'text-red-400 dark:text-red-500'
-
   return (
-    <div className="w-[58px] flex-shrink-0 flex justify-end">
-      <span className={`text-[11px] font-semibold tabular-nums select-none ${color}`}>
-        {pct === 0 ? '<1%' : `${pct}%`}
+    <div className="flex-shrink-0 flex justify-end">
+      <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 whitespace-nowrap ${VARIANT_CLS[variant]} ${pulse ? 'animate-status-pulse' : ''}`}>
+        {label}
       </span>
     </div>
   )
 }
 
 function MatchCard({ match, preds, profileMap }) {
-  const now = Date.now()
   const kickoff  = new Date(match.kickoff_at)
   const dateStr  = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
   const timeStr  = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
@@ -162,12 +123,7 @@ function MatchCard({ match, preds, profileMap }) {
       {filtered.length === 0 ? (
         <div className="px-4 py-3 text-sm text-center text-gray-400 dark:text-gray-600">Прогнозів немає</div>
       ) : filtered.map(pred => {
-        const profile = profileMap[pred.user_id]
-        const prob    = calcProb(
-          pred.predicted_home, pred.predicted_away,
-          match.home_score,    match.away_score,
-          match.kickoff_at,    now
-        )
+        const profile   = profileMap[pred.user_id]
         const isWinning = match.home_score === pred.predicted_home && match.away_score === pred.predicted_away
 
         return (
@@ -191,7 +147,7 @@ function MatchCard({ match, preds, profileMap }) {
                   {pred.predicted_away}
                 </span>
               </div>
-              <ProbBadge prob={prob} isWinning={isWinning} />
+              <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
             </div>
 
             {/* Desktop */}
@@ -207,7 +163,7 @@ function MatchCard({ match, preds, profileMap }) {
               }`}>
                 {pred.predicted_home}:{pred.predicted_away}
               </span>
-              <ProbBadge prob={prob} isWinning={isWinning} />
+              <ProbBadge predH={pred.predicted_home} predA={pred.predicted_away} curH={match.home_score} curA={match.away_score} kickoffAt={match.kickoff_at} />
             </div>
           </div>
         )

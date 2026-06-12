@@ -70,6 +70,13 @@ html.dark .table-inset-ring { box-shadow: inset 0 0 0 1px rgb(31 41 55); }
   background-clip: text;
 }
 
+/* Urgency pulse — danger/warning badges at ≤5 min remaining */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+.animate-status-pulse { animation: status-pulse 1s ease-in-out infinite; }
+
 /* Remove number input arrows */
 .no-spin::-webkit-outer-spin-button,
 .no-spin::-webkit-inner-spin-button {

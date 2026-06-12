@@ -59,8 +59,8 @@ export async function GET(request, { params }) {
   // Recalculate and update each prediction
   const affectedUsers = new Set()
   for (const pred of predictions) {
-    const newPts = calculatePoints(pred.predicted_home, pred.predicted_away, match.home_score, match.away_score)
-    await adminDb.from('predictions').update({ points: newPts }).eq('id', pred.id)
+    const pts = calculatePoints(pred.predicted_home, pred.predicted_away, match.home_score, match.away_score)
+    await adminDb.from('predictions').update(pts).eq('id', pred.id)
     affectedUsers.add(pred.user_id)
   }
 

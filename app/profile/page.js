@@ -72,9 +72,9 @@ export default async function ProfilePage({ searchParams }) {
     : allPredictions.filter(p => p.match.tournament_id === tournamentFilter)
 
   const finished = allPredictions.filter(p => p.points !== null)
-  const totalPoints  = finished.reduce((s, p) => s + (p.points ?? 0), 0)
-  const exactScores  = finished.filter(p => p.points === 4).length
-  const correctResults = finished.filter(p => p.points === 1).length
+  const totalPoints    = finished.reduce((s, p) => s + (p.points ?? 0), 0)
+  const exactScores    = finished.filter(p => (p.points_exact  ?? 0) > 0).length
+  const correctResults = finished.filter(p => (p.points_result ?? 0) > 0 && (p.points_exact ?? 0) === 0).length
 
   const exactPct   = finished.length > 0 ? Math.round(exactScores   / finished.length * 100) : 0
   const correctPct = finished.length > 0 ? Math.round(correctResults / finished.length * 100) : 0

@@ -19,7 +19,7 @@ async function fetchStandings(supabase, tournamentId) {
   while (true) {
     const { data, error } = await supabase
       .from('predictions')
-      .select('user_id, points')
+      .select('user_id, points, points_exact, points_result')
       .in('match_id', matchIds)
       .not('points', 'is', null)
       .range(from, from + PAGE - 1)
@@ -34,8 +34,8 @@ async function fetchStandings(supabase, tournamentId) {
     if (!userStats[p.user_id]) userStats[p.user_id] = { total: 0, exact: 0, results: 0, predictions: 0 }
     userStats[p.user_id].predictions++
     userStats[p.user_id].total += p.points ?? 0
-    if (p.points === 4) userStats[p.user_id].exact++
-    if (p.points === 1) userStats[p.user_id].results++
+    if ((p.points_exact  ?? 0) > 0) userStats[p.user_id].exact++
+    if ((p.points_result ?? 0) > 0) userStats[p.user_id].results++
   }
 
   const userIds = Object.keys(userStats)

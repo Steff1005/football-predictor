@@ -131,7 +131,7 @@ export default async function TournamentPage({ params, searchParams }) {
     calcPreds = await fetchAllRows((from, to) =>
       supabase
         .from('predictions')
-        .select('user_id, match_id, predicted_home, predicted_away, points')
+        .select('user_id, match_id, predicted_home, predicted_away, points, points_exact, points_result')
         .in('match_id', matchIds)
         .not('points', 'is', null)
         .range(from, to)
@@ -194,8 +194,8 @@ export default async function TournamentPage({ params, searchParams }) {
     if (!userStats[p.user_id]) userStats[p.user_id] = { results: 0, exact: 0, total: 0, predictions: 0 }
     userStats[p.user_id].predictions++
     userStats[p.user_id].total += p.points ?? 0
-    if (p.points === 1) userStats[p.user_id].results++
-    if (p.points === 4) userStats[p.user_id].exact++
+    if ((p.points_result ?? 0) > 0) userStats[p.user_id].results++
+    if ((p.points_exact  ?? 0) > 0) userStats[p.user_id].exact++
     countedPairs.add(`${p.user_id}|${p.match_id}`)
   }
   for (const p of livePreds) {

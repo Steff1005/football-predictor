@@ -38,7 +38,7 @@ export default function StandingsTab({ standings, roundLabels, roundPointsMap, p
               <span>Рез: <b className="text-gray-600 dark:text-gray-300">{s.results}</b></span>
               <span className="text-blue-400">×1: <b>{s.results}</b></span>
               <span>Точних: <b className="text-gray-600 dark:text-gray-300">{s.exact}</b></span>
-              <span className="text-blue-400">×4: <b>{s.exact * 4}</b></span>
+              <span className="text-blue-400">×3: <b>{s.exact * 3}</b></span>
             </div>
           </div>
         ))}
@@ -76,7 +76,7 @@ export default function StandingsTab({ standings, roundLabels, roundPointsMap, p
                   <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">{s.results}</td>
                   <td className="px-3 py-3 text-right font-medium text-blue-600 dark:text-blue-400">{s.results}</td>
                   <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300">{s.exact}</td>
-                  <td className="px-3 py-3 text-right font-medium text-blue-600 dark:text-blue-400">{s.exact * 4}</td>
+                  <td className="px-3 py-3 text-right font-medium text-blue-600 dark:text-blue-400">{s.exact * 3}</td>
                   <td className="px-3 py-3 text-right font-bold text-green-500 dark:text-green-400 text-lg">{s.total}</td>
                 </tr>
               ))}

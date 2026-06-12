@@ -69,7 +69,7 @@ export default async function PlayerProfilePage({ params }) {
   // ── Finished predictions (for stats + history only) ─────────────────────────
   const rawPredictions = await fetchAll(supabase, (from, to) =>
     supabase.from('predictions')
-      .select('id, match_id, points')
+      .select('id, match_id, points, points_exact, points_result')
       .eq('user_id', id)
       .not('points', 'is', null)
       .range(from, to)
@@ -100,8 +100,8 @@ export default async function PlayerProfilePage({ params }) {
 
 
   const totalPoints     = allPredictions.reduce((s, p) => s + (p.points ?? 0), 0)
-  const exactScores     = allPredictions.filter(p => p.points === 4).length
-  const correctResults  = allPredictions.filter(p => p.points === 1).length
+  const exactScores     = allPredictions.filter(p => (p.points_exact  ?? 0) > 0).length
+  const correctResults  = allPredictions.filter(p => (p.points_result ?? 0) > 0 && (p.points_exact ?? 0) === 0).length
   const exactPct        = allPredictions.length > 0 ? Math.round(exactScores    / allPredictions.length * 100) : 0
   const correctPct      = allPredictions.length > 0 ? Math.round(correctResults / allPredictions.length * 100) : 0
 
@@ -116,8 +116,8 @@ export default async function PlayerProfilePage({ params }) {
     if (!userTourneyStats[tid]) userTourneyStats[tid] = { total: 0, exact: 0, correct: 0, predictions: 0 }
     const s = userTourneyStats[tid]
     s.predictions++; s.total += p.points
-    if (p.points === 4) s.exact++
-    if (p.points === 1) s.correct++
+    if ((p.points_exact  ?? 0) > 0) s.exact++
+    if ((p.points_result ?? 0) > 0 && (p.points_exact ?? 0) === 0) s.correct++
   }
 
   const tourneyRankMap = await computeTourneyRanks(supabase, userTournamentIds, id)

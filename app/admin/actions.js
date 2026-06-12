@@ -93,7 +93,7 @@ export async function updateMatch(matchId, { home_score, away_score, status, kic
         // Update each prediction's points
         await Promise.all(preds.map(p =>
           db.from('predictions')
-            .update({ points: calculatePoints(p.predicted_home, p.predicted_away, home_score, away_score), is_calculated: true })
+            .update({ ...calculatePoints(p.predicted_home, p.predicted_away, home_score, away_score), is_calculated: true })
             .eq('id', p.id)
         ))
 

@@ -71,21 +71,21 @@ export async function GET(request) {
 
       const pointsByUser = {}
       for (const prediction of predictions ?? []) {
-        const points = calculatePoints(
+        const pts = calculatePoints(
           prediction.predicted_home, prediction.predicted_away,
           homeScore, awayScore
         )
         await supabase.from('predictions').update({
-          points, is_calculated: true,
+          ...pts, is_calculated: true,
         }).eq('id', prediction.id)
 
-        pointsByUser[prediction.user_id] = points
+        pointsByUser[prediction.user_id] = pts.points
 
         if (notifyResultsSet.has(prediction.user_id)) {
-          const label = points === 4 ? '🎯 Точний рахунок!' : points === 1 ? '✅ Правильний результат' : '❌ Промах'
+          const label = pts.points === 4 ? '🎯 Точний рахунок!' : pts.points === 1 ? '✅ Правильний результат' : '❌ Промах'
           const score = `${homeScore}:${awayScore}`
           sendPushToUser(supabase, prediction.user_id, {
-            title: `${label} +${points} балів`,
+            title: `${label} +${pts.points} балів`,
             body: `${match.home_team} ${score} ${match.away_team}`,
             url: `/tournaments/${match.tournament_id}`,
           }).catch(() => {})

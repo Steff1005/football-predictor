@@ -33,24 +33,24 @@ function PlayerAvatar({ profile }) {
 }
 
 function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
-  if (curH == null || curA == null) return <div className="flex-shrink-0 w-8" />
+  if (curH == null || curA == null) return <div className="flex-shrink-0 w-10" />
   const elapsed = Math.max(0, (Date.now() - new Date(kickoffAt)) / 60000)
   const { variant, pulse, pct } = getLiveStatus(predH - curH, predA - curA, elapsed)
 
   if (variant === 'impossible') {
     return (
-      <span className="text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 inline-block min-w-[2rem] text-center bg-gray-100 dark:bg-white/5">
+      <span className="text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 inline-block w-10 text-center bg-gray-100 dark:bg-white/5">
         ❌
       </span>
     )
   }
 
-  if (pct == null) return <div className="flex-shrink-0 w-8" />
+  if (pct == null) return <div className="flex-shrink-0 w-10" />
 
   if (variant === 'exact') {
     return (
       <span
-        className="text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 inline-block animate-prob-glow whitespace-nowrap min-w-[2rem] text-center"
+        className="text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 inline-block w-10 text-center animate-prob-glow"
         style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)' }}
       >
         <span className="animate-prob-shimmer">{pct}%</span>
@@ -59,7 +59,7 @@ function ProbBadge({ predH, predA, curH, curA, kickoffAt }) {
   }
 
   return (
-    <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 flex-shrink-0 inline-block whitespace-nowrap min-w-[2rem] text-center ${statusCls(variant)} ${pulse ? 'animate-status-pulse' : ''}`}>
+    <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 flex-shrink-0 inline-block w-10 text-center ${statusCls(variant)} ${pulse ? 'animate-status-pulse' : ''}`}>
       {pct}%
     </span>
   )
@@ -157,7 +157,15 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
 
       <div className="space-y-3">
         {matches.map(match => {
-          const preds = (predsByMatch[match.id] ?? []).filter(p => profileMap[p.user_id])
+          const elapsed = Math.max(0, (Date.now() - new Date(match.kickoff_at)) / 60000)
+          const preds = (predsByMatch[match.id] ?? [])
+            .filter(p => profileMap[p.user_id])
+            .sort((a, b) => {
+              if (match.home_score == null || match.away_score == null) return 0
+              const aPct = getLiveStatus(a.predicted_home - match.home_score, a.predicted_away - match.away_score, elapsed).pct ?? -1
+              const bPct = getLiveStatus(b.predicted_home - match.home_score, b.predicted_away - match.away_score, elapsed).pct ?? -1
+              return bPct - aPct
+            })
           const kickoff = new Date(match.kickoff_at)
           const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
           const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })

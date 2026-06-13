@@ -69,7 +69,7 @@ async function fetchPagedPreds(supabase, matchIds) {
       .from('predictions')
       .select('user_id, match_id, points, predicted_home, predicted_away')
       .in('match_id', matchIds)
-      .not('points', 'is', null)
+      .eq('is_calculated', true)
       .range(from, from + PAGE - 1)
     if (error || !data?.length) break
     all = all.concat(data)

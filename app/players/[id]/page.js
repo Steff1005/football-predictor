@@ -76,7 +76,7 @@ export default async function PlayerProfilePage({ params }) {
     supabase.from('predictions')
       .select('id, match_id, points, points_exact, points_result')
       .eq('user_id', id)
-      .not('points', 'is', null)
+      .eq('is_calculated', true)
       .range(from, to)
   )
 

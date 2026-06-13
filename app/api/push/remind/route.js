@@ -37,7 +37,6 @@ export async function GET(request) {
   const userIds = (profiles ?? []).map(p => p.id)
   if (!userIds.length) return Response.json({ sent: 0 })
 
-  // Filter to users who actually have a push subscription
   const { data: subs } = await supabase
     .from('push_subscriptions')
     .select('user_id')
@@ -49,25 +48,32 @@ export async function GET(request) {
   let sent = 0
 
   for (const match of matches) {
-    const matchIds = [match.id]
-
     // Find who already has a prediction for this match
     const { data: preds } = await supabase
       .from('predictions')
       .select('user_id')
       .in('user_id', subscribedIds)
-      .in('match_id', matchIds)
+      .eq('match_id', match.id)
 
     const alreadyPredicted = new Set((preds ?? []).map(p => p.user_id))
-
     const targets = subscribedIds.filter(id => !alreadyPredicted.has(id))
     if (!targets.length) continue
 
     const home = translateTeam(match.home_team)
     const away = translateTeam(match.away_team)
-    const time = new Date(match.kickoff_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' })
+    const time = new Date(match.kickoff_at).toLocaleTimeString('uk-UA', {
+      hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv',
+    })
 
     for (const userId of targets) {
+      // Deduplicate: skip if already reminded for this match
+      const { error: logError } = await supabase
+        .from('reminder_log')
+        .insert({ match_id: match.id, user_id: userId })
+
+      // If insert was rejected (duplicate key) — already sent, skip
+      if (logError) continue
+
       await sendPushToUser(supabase, userId, {
         title: '⏰ Матч за 30 хвилин!',
         body: `${home} — ${away} о ${time}. Прогноз ще не зроблено.`,

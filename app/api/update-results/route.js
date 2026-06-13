@@ -83,7 +83,18 @@ export async function GET(request) {
         return { id: prediction.id, ...pts, is_calculated: true }
       })
 
-      await supabase.from('predictions').upsert(updates)
+      const updateResult = await Promise.all(
+        updates.map(u => supabase.from('predictions').update({
+          points: u.points,
+          points_exact: u.points_exact,
+          points_result: u.points_result,
+          is_calculated: true,
+        }).eq('id', u.id))
+      )
+      const updateErrors = updateResult.filter(r => r.error)
+      if (updateErrors.length) {
+        console.error('prediction update errors:', updateErrors.map(r => r.error))
+      }
 
       // Push notifications (fire-and-forget)
       for (const prediction of predictions) {

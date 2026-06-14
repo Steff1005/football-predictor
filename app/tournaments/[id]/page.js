@@ -18,7 +18,6 @@ import TournamentTabs from './TournamentTabs'
 import DynamicsTab from './DynamicsTab'
 import RealtimeRefresher from '../../../components/RealtimeRefresher'
 
-export const revalidate = 60
 
 // Fix #10: cached tournament fetch — shared between generateMetadata and page (one DB call)
 const getTournament = cache(async (id) => {

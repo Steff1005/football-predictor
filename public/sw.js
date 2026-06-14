@@ -1,6 +1,6 @@
-const CACHE_STATIC = 'kickoff-static-v5'
-const CACHE_PAGES  = 'kickoff-pages-v2'
-const CACHE_API    = 'kickoff-api-v1'
+const CACHE_STATIC = 'kickoff-static-v6'
+const CACHE_PAGES  = 'kickoff-pages-v3'
+const CACHE_API    = 'kickoff-api-v2'
 const KNOWN_CACHES = new Set([CACHE_STATIC, CACHE_PAGES, CACHE_API])
 
 // Pre-cache at install: offline fallback + app icons
@@ -33,28 +33,6 @@ self.addEventListener('fetch', event => {
   // Never intercept cross-origin
   if (url.origin !== self.location.origin) return
 
-  // /api/live-scores — stale-while-revalidate (serve cached, refresh in background)
-  if (url.pathname.startsWith('/api/live-scores')) {
-    event.respondWith(
-      caches.open(CACHE_API).then(async cache => {
-        const cached = await cache.match(event.request)
-        const networkFetch = fetch(event.request).then(res => {
-          if (res.ok) cache.put(event.request, res.clone())
-          return res
-        }).catch(() => null)
-        if (cached) {
-          event.waitUntil(networkFetch)
-          return cached
-        }
-        return await networkFetch || Response.error()
-      })
-    )
-    return
-  }
-
-  // Skip all other API routes
-  if (url.pathname.startsWith('/api/')) return
-
   // _next/static: cache-first forever (content-hashed filenames, safe to cache indefinitely)
   if (url.pathname.startsWith('/_next/static/')) {
     event.respondWith(
@@ -68,7 +46,7 @@ self.addEventListener('fetch', event => {
     return
   }
 
-  // Icons and static images: cache-first, revalidate in background
+  // Icons and static images: cache-first
   if (url.pathname.startsWith('/icons/') || /\.(png|jpg|jpeg|svg|ico|webp)$/.test(url.pathname)) {
     event.respondWith(
       caches.match(event.request).then(cached => {
@@ -82,21 +60,33 @@ self.addEventListener('fetch', event => {
     return
   }
 
-  // Navigation: stale-while-revalidate — serve cached instantly, refresh in background
+  // API routes: skip all except live-scores (network-first, cache only as offline fallback)
+  if (url.pathname.startsWith('/api/')) {
+    if (url.pathname.startsWith('/api/live-scores')) {
+      event.respondWith(
+        fetch(event.request)
+          .then(res => {
+            if (res.ok) caches.open(CACHE_API).then(c => c.put(event.request, res.clone()))
+            return res
+          })
+          .catch(() => caches.match(event.request).then(c => c || Response.error()))
+      )
+    }
+    // All other API routes: let the browser handle normally (no SW intervention)
+    return
+  }
+
+  // Navigation: network-first — always fresh data, cache only as offline fallback
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      caches.open(CACHE_PAGES).then(async cache => {
-        const cached = await cache.match(event.request)
-        const networkFetch = fetch(event.request).then(res => {
-          if (res.ok) cache.put(event.request, res.clone())
+      fetch(event.request)
+        .then(res => {
+          if (res.ok) caches.open(CACHE_PAGES).then(c => c.put(event.request, res.clone()))
           return res
-        }).catch(() => null)
-        if (cached) {
-          event.waitUntil(networkFetch)
-          return cached
-        }
-        return await networkFetch || caches.match('/offline.html')
-      })
+        })
+        .catch(() =>
+          caches.match(event.request).then(c => c || caches.match('/offline.html'))
+        )
     )
     return
   }

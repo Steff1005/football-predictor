@@ -352,12 +352,9 @@ export default async function TournamentPage({ params, searchParams }) {
     ? (predGroups.find(g => g.matches.some(m => m.id === mostRecentFinished.id))?.label ?? predGroups[predGroups.length - 1]?.label ?? null)
     : (predGroups[predGroups.length - 1]?.label ?? null)
 
-  // Realtime only makes sense when the tournament is active (predictions/scores can change)
-  const needsRealtime = tournament.is_active && (liveMatches.length > 0 || matchesTabMatches.length > 0)
-
   return (
     <div>
-      {needsRealtime && <RealtimeRefresher />}
+      {tournament.is_active && <RealtimeRefresher />}
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 mb-4">
         <a href="/tournaments" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Турніри</a>

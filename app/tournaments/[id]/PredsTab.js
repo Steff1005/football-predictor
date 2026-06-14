@@ -4,6 +4,65 @@ import Link from 'next/link'
 import PredictionBadge from '../../../components/PredictionBadge'
 import { groupAndSortMatches } from '../../../lib/round-sort'
 
+function MatchAnalysis({ matchId, initial, isAdmin }) {
+  const [text, setText]       = useState(initial ?? null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState(null)
+
+  async function generate() {
+    setLoading(true); setError(null)
+    try {
+      const res = await fetch('/api/analyze-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Помилка')
+      setText(data.analysis)
+    } catch (e) { setError(e.message) }
+    finally { setLoading(false) }
+  }
+
+  if (!text && !isAdmin) return null
+
+  return (
+    <div className="px-4 py-3 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/3">
+      {text ? (
+        <div className="flex items-start gap-2">
+          <span className="text-base flex-shrink-0 mt-0.5">🤖</span>
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{text}</p>
+          {isAdmin && (
+            <button
+              onClick={generate}
+              disabled={loading}
+              title="Перегенерувати"
+              className="flex-shrink-0 text-gray-300 dark:text-gray-600 hover:text-green-500 dark:hover:text-green-400 transition-colors text-xs mt-0.5"
+            >
+              ↺
+            </button>
+          )}
+        </div>
+      ) : isAdmin && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={generate}
+            disabled={loading}
+            className="text-xs text-green-600 dark:text-green-400 hover:text-green-500 transition-colors font-medium disabled:opacity-50 flex items-center gap-1"
+          >
+            {loading ? (
+              <><span className="animate-spin inline-block">⟳</span> Генерую…</>
+            ) : (
+              <>✨ Згенерувати аналіз</>
+            )}
+          </button>
+          {error && <span className="text-xs text-red-500">{error}</span>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function displayName(profile) {
   return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
 }
@@ -54,7 +113,7 @@ function ScoreChip({ match }) {
   )
 }
 
-export default function PredsTab({ finishedMatches, predsByMatch, profileMap, defaultRound }) {
+export default function PredsTab({ finishedMatches, predsByMatch, profileMap, defaultRound, matchAnalyses = {}, isAdmin = false }) {
   // Reverse so most recently finished rounds (and matches within them) appear first
   const groups = groupAndSortMatches(finishedMatches)
     .reverse()
@@ -190,6 +249,13 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
             {/* ── Expanded predictions ── */}
             {isOpen && (
               <div>
+                {isFinished && (
+                  <MatchAnalysis
+                    matchId={match.id}
+                    initial={matchAnalyses[match.id] ?? null}
+                    isAdmin={isAdmin}
+                  />
+                )}
                 {preds.length === 0 ? (
                   <div className="px-4 py-3 border-t border-gray-100 dark:border-white/10 text-sm text-center text-gray-400 dark:text-gray-600">
                     Прогнозів немає

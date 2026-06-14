@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { calcPredictions } from '../../../lib/calc-predictions'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -92,15 +93,31 @@ export async function GET(request) {
     }
   }
 
-  // Mark finished matches in DB so update-results can score them
+  // Mark finished matches in DB and immediately calculate predictions
   if (toFinish.length) {
-    await Promise.all(toFinish.map(f =>
-      supabase.from('matches').update({
+    // Fetch full match rows needed by calcPredictions (home_team, away_team, tournament_id, round)
+    const { data: fullMatches } = await supabase
+      .from('matches')
+      .select('*')
+      .in('id', toFinish.map(f => f.id))
+
+    const fullMatchMap = Object.fromEntries((fullMatches ?? []).map(m => [m.id, m]))
+
+    await Promise.all(toFinish.map(async f => {
+      await supabase.from('matches').update({
         status: 'finished',
         home_score: f.home_score,
         away_score: f.away_score,
       }).eq('id', f.id)
-    ))
+
+      const match = fullMatchMap[f.id]
+      if (match) {
+        // Calculate immediately — idempotent, safe to call even if cron runs concurrently
+        calcPredictions(supabase, match, f.home_score, f.away_score).catch(e =>
+          console.error('calcPredictions failed in live-scores:', e.message)
+        )
+      }
+    }))
   }
 
   return Response.json({ matches: enriched }, {

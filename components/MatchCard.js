@@ -114,22 +114,9 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
         : 'border-gray-200 dark:border-gray-700'
     }`}>
 
-      {/* Top row: date + dirty indicator + status badge + flashscore link */}
+      {/* Top row: date + dirty indicator + status badge */}
       <div className="flex justify-between items-center mb-2 text-xs text-gray-400 dark:text-gray-500">
-        <div className="flex items-center gap-2">
-          <span suppressHydrationWarning>{dateStr}, {timeStr}</span>
-          {match.flashscore_url && (
-            <a
-              href={match.flashscore_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-500/15 text-orange-500 hover:bg-orange-500/25 transition-colors leading-none"
-              title="Переглянути на FlashScore"
-            >
-              FS
-            </a>
-          )}
-        </div>
+        <span suppressHydrationWarning>{dateStr}, {timeStr}</span>
         <div className="flex items-center gap-2">
           {isDirty && (
             <span className="text-amber-500 dark:text-amber-400 font-medium">● не збережено</span>
@@ -198,7 +185,12 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
             </div>
           </div>
         )}
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-between">
+          {match.flashscore_url ? (
+            <a href={match.flashscore_url} target="_blank" rel="noopener noreferrer"
+              className="px-2 py-1 rounded text-xs font-bold bg-orange-500/15 text-orange-500 hover:bg-orange-500/25 transition-colors"
+              title="Статистика матчу">Статистика</a>
+          ) : <span />}
           {badge ?? (!isFinished && !isPast ? (
             <button onClick={savePrediction} disabled={saving || !isValid} className={saveBtnCls}>
               {saveBtnLabel}
@@ -260,8 +252,13 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
           </div>
         </div>
 
-        {/* Action row: compact, right-aligned */}
-        <div className="flex items-center justify-end mt-1">
+        {/* Action row: stats link left, save button right */}
+        <div className="flex items-center justify-between mt-1">
+          {match.flashscore_url ? (
+            <a href={match.flashscore_url} target="_blank" rel="noopener noreferrer"
+              className="px-2 py-1 rounded text-xs font-bold bg-orange-500/15 text-orange-500 hover:bg-orange-500/25 transition-colors"
+              title="Статистика матчу">Статистика</a>
+          ) : <span />}
           {badge ?? (!isFinished && !isPast ? (
             <button onClick={savePrediction} disabled={saving || !isValid} className={saveBtnCls}>
               {saveBtnLabel}

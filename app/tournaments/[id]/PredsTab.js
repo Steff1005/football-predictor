@@ -6,6 +6,7 @@ import { groupAndSortMatches } from '../../../lib/round-sort'
 
 function MatchAnalysis({ matchId, initial, isAdmin }) {
   const [text, setText]       = useState(initial ?? null)
+  const [open, setOpen]       = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
 
@@ -20,6 +21,7 @@ function MatchAnalysis({ matchId, initial, isAdmin }) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Помилка')
       setText(data.analysis)
+      setOpen(true)
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
@@ -27,40 +29,52 @@ function MatchAnalysis({ matchId, initial, isAdmin }) {
   if (!isAdmin) return null
 
   return (
-    <div className="px-4 py-3 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/3">
-      {text ? (
-        <div className="flex items-start gap-2">
-          <span className="text-base flex-shrink-0 mt-0.5">🤖</span>
-          <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed space-y-2">
-            {text.split(/\n+/).filter(Boolean).map((para, i) => (
-              <p key={i}>{para}</p>
-            ))}
-          </div>
-          {isAdmin && (
-            <button
-              onClick={generate}
-              disabled={loading}
-              title="Перегенерувати"
-              className="flex-shrink-0 text-gray-300 dark:text-gray-600 hover:text-green-500 dark:hover:text-green-400 transition-colors text-xs mt-0.5"
-            >
-              ↺
-            </button>
+    <div className="border-t border-gray-100 dark:border-white/10">
+      {/* Toggle row */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-white/3 transition-colors"
+      >
+        <span className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+          <span>📰</span>
+          <span>Кореспондент</span>
+          {!text && <span className="text-xs text-gray-300 dark:text-gray-600 font-normal">— немає аналізу</span>}
+        </span>
+        <svg
+          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Content */}
+      {open && (
+        <div className="px-4 pb-3 bg-gray-50 dark:bg-white/3">
+          {text ? (
+            <div className="flex items-start gap-2 pt-1">
+              <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed space-y-2 flex-1">
+                {text.split(/\n+/).filter(Boolean).map((para, i) => (
+                  <p key={i}>{para}</p>
+                ))}
+              </div>
+              <button
+                onClick={generate} disabled={loading}
+                title="Перегенерувати"
+                className="flex-shrink-0 text-gray-300 dark:text-gray-600 hover:text-green-500 dark:hover:text-green-400 transition-colors text-sm mt-0.5"
+              >↺</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={generate} disabled={loading}
+                className="text-xs text-green-600 dark:text-green-400 hover:text-green-500 transition-colors font-medium disabled:opacity-50 flex items-center gap-1"
+              >
+                {loading ? <><span className="animate-spin inline-block">⟳</span> Генерую…</> : <>✨ Згенерувати аналіз</>}
+              </button>
+              {error && <span className="text-xs text-red-500">{error}</span>}
+            </div>
           )}
-        </div>
-      ) : isAdmin && (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={generate}
-            disabled={loading}
-            className="text-xs text-green-600 dark:text-green-400 hover:text-green-500 transition-colors font-medium disabled:opacity-50 flex items-center gap-1"
-          >
-            {loading ? (
-              <><span className="animate-spin inline-block">⟳</span> Генерую…</>
-            ) : (
-              <>✨ Згенерувати аналіз</>
-            )}
-          </button>
-          {error && <span className="text-xs text-red-500">{error}</span>}
         </div>
       )}
     </div>
@@ -253,13 +267,6 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
             {/* ── Expanded predictions ── */}
             {isOpen && (
               <div>
-                {isFinished && (
-                  <MatchAnalysis
-                    matchId={match.id}
-                    initial={matchAnalyses[match.id] ?? null}
-                    isAdmin={isAdmin}
-                  />
-                )}
                 {preds.length === 0 ? (
                   <div className="px-4 py-3 border-t border-gray-100 dark:border-white/10 text-sm text-center text-gray-400 dark:text-gray-600">
                     Прогнозів немає
@@ -310,6 +317,13 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                     </div>
                   )
                 })}
+                {isFinished && (
+                  <MatchAnalysis
+                    matchId={match.id}
+                    initial={matchAnalyses[match.id] ?? null}
+                    isAdmin={isAdmin}
+                  />
+                )}
               </div>
             )}
           </div>

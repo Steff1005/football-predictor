@@ -11,9 +11,9 @@ function getInitials(p) {
 }
 
 const RANK_STYLE = [
-  { medal: '🥇', row: 'bg-yellow-500/5 border-l-[3px] border-l-yellow-400', pts: 'text-yellow-500 dark:text-yellow-400', avatarCls: 'w-10 h-10', nameCls: 'text-base font-bold text-gray-900 dark:text-white' },
-  { medal: '🥈', row: 'border-l-[3px] border-l-gray-400',                   pts: 'text-gray-500 dark:text-gray-300',       avatarCls: 'w-8 h-8',   nameCls: 'text-sm font-medium text-gray-800 dark:text-gray-200' },
-  { medal: '🥉', row: 'border-l-[3px] border-l-orange-400/70',              pts: 'text-orange-600 dark:text-orange-400',   avatarCls: 'w-8 h-8',   nameCls: 'text-sm font-medium text-gray-800 dark:text-gray-200' },
+  { medal: '🥇', row: 'bg-yellow-500/5 border-l-[3px] border-l-yellow-400', pts: 'text-yellow-500 dark:text-yellow-400', nameCls: 'text-sm font-bold text-gray-900 dark:text-white' },
+  { medal: '🥈', row: 'border-l-[3px] border-l-gray-400',                   pts: 'text-gray-500 dark:text-gray-300',       nameCls: 'text-sm font-medium text-gray-800 dark:text-gray-200' },
+  { medal: '🥉', row: 'border-l-[3px] border-l-orange-400/70',              pts: 'text-orange-600 dark:text-orange-400',   nameCls: 'text-sm font-medium text-gray-800 dark:text-gray-200' },
 ]
 
 const TABS = [
@@ -76,8 +76,8 @@ export default function HallOfFamePageClient({ enriched, medalRows, tournamentLo
                     return (
                       <a key={row.uid} href={`/players/${row.uid}`}
                         className={`flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-white/5 last:border-0 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${s.row}`}>
-                        <span className="text-xl w-6 text-center flex-shrink-0 leading-none">{s.medal}</span>
-                        <Avatar url={row.profile?.avatar_url} initials={getInitials(row.profile)} sizeCls={s.avatarCls} textCls="text-xs" />
+                        <span className="text-lg w-6 text-center flex-shrink-0 leading-none">{s.medal}</span>
+                        <Avatar url={row.profile?.avatar_url} initials={getInitials(row.profile)} sizeCls="w-8 h-8" textCls="text-xs" />
                         <span className={`flex-1 min-w-0 truncate ${s.nameCls}`}>{displayName(row.profile)}</span>
                         <div className="flex items-center gap-3 flex-shrink-0">
                           <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">

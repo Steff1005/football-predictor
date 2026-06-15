@@ -24,7 +24,7 @@ function MatchAnalysis({ matchId, initial, isAdmin }) {
     finally { setLoading(false) }
   }
 
-  if (!text && !isAdmin) return null
+  if (!isAdmin) return null
 
   return (
     <div className="px-4 py-3 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/3">

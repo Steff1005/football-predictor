@@ -15,9 +15,6 @@ export async function GET(request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const url = new URL(request.url)
-  const event_type = url.searchParams.get('event_type') ?? 'correspondent_open'
-
   const db = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -27,9 +24,8 @@ export async function GET(request) {
   const { data, error } = await db
     .from('tab_events')
     .select('user_id, event_type, metadata, created_at')
-    .eq('event_type', event_type)
     .order('created_at', { ascending: false })
-    .limit(2000)
+    .limit(5000)
 
   if (error) {
     if (error.code === '42P01') return Response.json({ tableNotFound: true })

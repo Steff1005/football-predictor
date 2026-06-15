@@ -23,7 +23,14 @@ export default function TournamentTabs({ id, activeTab, hasLive = false, hasDyna
           onClick={e => {
             if (!confirmLeave('Є незбережений прогноз. Перейти на іншу вкладку?')) {
               e.preventDefault()
+              return
             }
+            fetch('/api/track-tab-event', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ event_type: 'tab_open', metadata: { tab: t.id } }),
+              keepalive: true,
+            }).catch(() => {})
           }}
           className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
             activeTab === t.id

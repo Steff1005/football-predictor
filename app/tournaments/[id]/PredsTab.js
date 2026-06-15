@@ -31,7 +31,11 @@ function MatchAnalysis({ matchId, initial, isAdmin }) {
       {text ? (
         <div className="flex items-start gap-2">
           <span className="text-base flex-shrink-0 mt-0.5">🤖</span>
-          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{text}</p>
+          <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed space-y-2">
+            {text.split(/\n+/).filter(Boolean).map((para, i) => (
+              <p key={i}>{para}</p>
+            ))}
+          </div>
           {isAdmin && (
             <button
               onClick={generate}

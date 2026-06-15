@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import Groq from 'groq-sdk'
 import { isAdminEmail } from '../../../lib/admin'
 
 function displayName(profile) {
@@ -87,10 +87,13 @@ ${predLines || '(прогнозів немає)'}
 
 Напиши аналіз туру (3-4 абзаци) українською мовою. Розкажи про результати матчів, хто з учасників виступив найкраще і чому, відзнач найцікавіші або несподівані прогнози, зроби загальний підсумок. Пиши природно й жваво, без заголовків і маркованих списків.`
 
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY)
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-    const result = await model.generateContent(prompt)
-    const analysisText = result.response.text() ?? ''
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    const analysisText = completion.choices[0]?.message?.content ?? ''
 
     const { data: saved, error: saveErr } = await db
       .from('round_analyses')

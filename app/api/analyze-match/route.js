@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import Groq from 'groq-sdk'
 import { isAdminEmail } from '../../../lib/admin'
 
 function displayName(profile) {
@@ -71,10 +71,13 @@ ${predLines || '(прогнозів не було)'}
 
 Відзнач хто вгадав (особливо точний рахунок якщо є), чи рахунок був несподіваним, і загальне враження від туру.`
 
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY)
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-    const result = await model.generateContent(prompt)
-    const analysisText = result.response.text() ?? ''
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 300,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    const analysisText = completion.choices[0]?.message?.content ?? ''
 
     const { error: saveErr } = await db
       .from('match_analyses')

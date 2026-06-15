@@ -57,8 +57,6 @@ export async function POST(request) {
         errors.push({ match: `${match.home_team} – ${match.away_team}`, error: e.message })
       }
 
-      // Respect Groq free-tier rate limit (30 req/min)
-      if (done < todo.length) await new Promise(r => setTimeout(r, 2500))
     }
 
     return Response.json({ done, total: todo.length, errors })

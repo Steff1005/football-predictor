@@ -4,6 +4,64 @@ import { supabase } from '../lib/supabase'
 import { useToast } from './ToastProvider'
 import { markDirty, markClean } from '../lib/unsaved-guard'
 
+function StatsUrlEditor({ matchId, initialUrl }) {
+  const [url, setUrl]       = useState(initialUrl ?? '')
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft]   = useState('')
+  const [saving, setSaving] = useState(false)
+  const inputRef = useRef(null)
+
+  function openEdit() { setDraft(url); setEditing(true); setTimeout(() => inputRef.current?.focus(), 0) }
+  function cancelEdit() { setEditing(false) }
+
+  async function save() {
+    setSaving(true)
+    const res = await fetch('/api/admin/update-stats-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ matchId, url: draft.trim() }),
+    })
+    setSaving(false)
+    if (res.ok) { setUrl(draft.trim()); setEditing(false) }
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1 flex-1 min-w-0">
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancelEdit() }}
+          placeholder="https://..."
+          className="flex-1 min-w-0 text-xs px-2 py-1 rounded border border-orange-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white outline-none"
+        />
+        <button onClick={save} disabled={saving}
+          className="text-green-500 hover:text-green-400 text-sm font-bold px-1 flex-shrink-0">✓</button>
+        <button onClick={cancelEdit}
+          className="text-gray-400 hover:text-gray-300 text-sm px-1 flex-shrink-0">✕</button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 flex-shrink-0">
+      {url ? (
+        <a href={url} target="_blank" rel="noopener noreferrer"
+          className="px-2 py-1 rounded text-xs font-bold bg-orange-500/15 text-orange-500 hover:bg-orange-500/25 transition-colors">
+          Статистика
+        </a>
+      ) : (
+        <span className="text-xs text-gray-300 dark:text-gray-600">URL</span>
+      )}
+      <button onClick={openEdit} title="Змінити URL статистики"
+        className="text-gray-300 dark:text-gray-600 hover:text-orange-400 dark:hover:text-orange-400 transition-colors text-xs">
+        ✏
+      </button>
+    </div>
+  )
+}
+
 let _cardSeq = 0
 
 function getClean(value) {
@@ -186,11 +244,9 @@ export default function MatchCard({ match, userPrediction, userId, highlight, is
           </div>
         )}
         <div className="flex items-center justify-between">
-          {isAdmin && match.flashscore_url ? (
-            <a href={match.flashscore_url} target="_blank" rel="noopener noreferrer"
-              className="px-2 py-1 rounded text-xs font-bold bg-orange-500/15 text-orange-500 hover:bg-orange-500/25 transition-colors"
-              title="Статистика матчу">Статистика</a>
-          ) : <span />}
+          {isAdmin
+            ? <StatsUrlEditor matchId={match.id} initialUrl={match.flashscore_url} />
+            : <span />}
           {badge ?? (!isFinished && !isPast ? (
             <button onClick={savePrediction} disabled={saving || !isValid} className={saveBtnCls}>
               {saveBtnLabel}
@@ -254,11 +310,9 @@ export default function MatchCard({ match, userPrediction, userId, highlight, is
 
         {/* Action row: stats link left, save button right */}
         <div className="flex items-center justify-between mt-1">
-          {isAdmin && match.flashscore_url ? (
-            <a href={match.flashscore_url} target="_blank" rel="noopener noreferrer"
-              className="px-2 py-1 rounded text-xs font-bold bg-orange-500/15 text-orange-500 hover:bg-orange-500/25 transition-colors"
-              title="Статистика матчу">Статистика</a>
-          ) : <span />}
+          {isAdmin
+            ? <StatsUrlEditor matchId={match.id} initialUrl={match.flashscore_url} />
+            : <span />}
           {badge ?? (!isFinished && !isPast ? (
             <button onClick={savePrediction} disabled={saving || !isValid} className={saveBtnCls}>
               {saveBtnLabel}

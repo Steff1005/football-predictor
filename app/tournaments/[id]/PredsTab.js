@@ -180,7 +180,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
               <div className="sm:hidden">
                 {/* Row 1: date + status + chevron */}
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-400 dark:text-gray-500">{dateStr}</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500" suppressHydrationWarning>{dateStr}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
                       Завершено
@@ -226,7 +226,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
 
               {/* === Desktop layout (unchanged) === */}
               <div className="hidden sm:flex items-center gap-2">
-                <span className="text-xs text-gray-400 dark:text-gray-500 w-20 flex-shrink-0">{dateStr}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500 w-20 flex-shrink-0" suppressHydrationWarning>{dateStr}</span>
 
                 <div className="flex items-center gap-1.5 w-[38%] justify-end min-w-0">
                   <span className="text-sm font-medium text-gray-900 dark:text-white truncate text-right">{match.home_team}</span>

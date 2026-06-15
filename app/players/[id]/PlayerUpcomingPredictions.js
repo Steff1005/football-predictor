@@ -33,7 +33,7 @@ export default function PlayerUpcomingPredictions({ items, isOwn }) {
           return (
             <div key={m.id} className="bg-white dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800">
               <div className="flex justify-between items-center text-xs text-gray-400 dark:text-gray-500 mb-2">
-                <span>{dateStr}, {timeStr}</span>
+                <span suppressHydrationWarning>{dateStr}, {timeStr}</span>
                 {roundLabel && <span>{roundLabel}</span>}
               </div>
 

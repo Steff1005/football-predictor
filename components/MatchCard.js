@@ -116,7 +116,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
 
       {/* Top row: date + dirty indicator + status badge */}
       <div className="flex justify-between items-center mb-2 text-xs text-gray-400 dark:text-gray-500">
-        <span>{dateStr}, {timeStr}</span>
+        <span suppressHydrationWarning>{dateStr}, {timeStr}</span>
         <div className="flex items-center gap-2">
           {isDirty && (
             <span className="text-amber-500 dark:text-amber-400 font-medium">● не збережено</span>

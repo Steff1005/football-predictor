@@ -178,7 +178,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                 {/* Mobile */}
                 <div className="sm:hidden">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-400 dark:text-gray-500">{dateStr}, {timeStr}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500" suppressHydrationWarning>{dateStr}, {timeStr}</span>
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${match.halftime ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' : 'bg-red-500/10 text-red-500 dark:text-red-400'}`}>
                       {match.halftime ? '⏸ Перерва' : `🔴 ${match.clock || 'Live'}`}
                     </span>
@@ -202,7 +202,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
 
                 {/* Desktop */}
                 <div className="hidden sm:flex items-center gap-2">
-                  <span className="text-xs text-gray-400 dark:text-gray-500 w-24 flex-shrink-0">{dateStr}, {timeStr}</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 w-24 flex-shrink-0" suppressHydrationWarning>{dateStr}, {timeStr}</span>
 
                   <div className="flex items-center gap-1.5 w-[35%] justify-end min-w-0">
                     <span className="text-sm font-semibold text-gray-900 dark:text-white truncate text-right">{match.home_team}</span>

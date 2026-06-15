@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import { isAdminEmail } from '../../../lib/admin'
 
 function displayName(profile) {
@@ -68,13 +68,10 @@ ${predLines || '(прогнозів не було)'}
 
 Відзнач хто вгадав (особливо точний рахунок якщо є), чи рахунок був несподіваним, і загальне враження від туру.`
 
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 300,
-      messages: [{ role: 'user', content: prompt }],
-    })
-    const analysisText = message.content[0]?.text ?? ''
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY)
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const result = await model.generateContent(prompt)
+    const analysisText = result.response.text() ?? ''
 
     const { error: saveErr } = await db
       .from('match_analyses')

@@ -32,7 +32,7 @@ export async function POST(request) {
 
     const [{ data: match }, { data: preds }] = await Promise.all([
       db.from('matches')
-        .select('id, tournament_id, home_team, away_team, home_score, away_score, kickoff_at')
+        .select('id, tournament_id, home_team, away_team, home_score, away_score, kickoff_at, status')
         .eq('id', matchId)
         .single(),
       db.from('predictions')
@@ -42,6 +42,9 @@ export async function POST(request) {
     ])
 
     if (!match) return Response.json({ error: 'Match not found' }, { status: 404 })
+    if (match.status !== 'finished' || match.home_score == null || match.away_score == null) {
+      return Response.json({ error: 'Match not finished yet' }, { status: 400 })
+    }
 
     const userIds = [...new Set((preds ?? []).map(p => p.user_id))]
     let profileMap = {}

@@ -4,9 +4,18 @@ import Link from 'next/link'
 import PredictionBadge from '../../../components/PredictionBadge'
 import { groupAndSortMatches } from '../../../lib/round-sort'
 
-function MatchAnalysis({ matchId, initial, isAdmin }) {
+async function trackEvent(eventType, metadata = {}) {
+  try {
+    await fetch('/api/track-tab-event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_type: eventType, metadata }),
+    })
+  } catch {}
+}
+
+function MatchAnalysis({ matchId, initial, isAdmin, open, onToggle }) {
   const [text, setText]       = useState(initial ?? null)
-  const [open, setOpen]       = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
 
@@ -21,7 +30,6 @@ function MatchAnalysis({ matchId, initial, isAdmin }) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Помилка')
       setText(data.analysis)
-      setOpen(true)
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
@@ -32,7 +40,7 @@ function MatchAnalysis({ matchId, initial, isAdmin }) {
     <div className="border-t border-gray-100 dark:border-white/10">
       {/* Toggle row */}
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={onToggle}
         className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-white/3 transition-colors"
       >
         <span className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -91,7 +99,7 @@ function PlayerAvatar({ profile }) {
   return (
     <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-green-500/20 flex items-center justify-center">
       {profile?.avatar_url
-        ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+        ? <img src={profile.avatar_url} alt="" className="w-7 h-7 object-cover flex-shrink-0" />
         : <span className="text-xs font-bold text-green-600 dark:text-green-400">{initials}</span>
       }
     </div>
@@ -138,11 +146,27 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
     .map(g => ({ ...g, matches: [...g.matches].reverse() }))
   const rounds = groups.map(g => g.label)
 
-  const [activeRound, setActiveRound] = useState(defaultRound ?? rounds[0] ?? null)
-  const [openMatches, setOpenMatches] = useState({})
+  const [activeRound,       setActiveRound]       = useState(defaultRound ?? rounds[0] ?? null)
+  const [openMatches,       setOpenMatches]       = useState({})
+  const [openCorrespondent, setOpenCorrespondent] = useState({})
 
   function toggleMatch(matchId) {
     setOpenMatches(prev => ({ ...prev, [matchId]: !prev[matchId] }))
+  }
+
+  // Opens match + opens correspondent, fires analytics only on first open
+  function openMatchAndCorrespondent(matchId) {
+    setOpenMatches(prev => ({ ...prev, [matchId]: true }))
+    if (!openCorrespondent[matchId]) {
+      setOpenCorrespondent(prev => ({ ...prev, [matchId]: true }))
+      trackEvent('correspondent_open', { matchId })
+    }
+  }
+
+  function toggleCorrespondent(matchId) {
+    const willOpen = !openCorrespondent[matchId]
+    setOpenCorrespondent(prev => ({ ...prev, [matchId]: !prev[matchId] }))
+    if (willOpen) trackEvent('correspondent_open', { matchId })
   }
 
   if (!finishedMatches.length) {
@@ -181,9 +205,10 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
           .filter(p => profileMap[p.user_id])
           .sort((a, b) => (b.points ?? -1) - (a.points ?? -1))
 
-        const isOpen    = !!openMatches[match.id]
-        const kickoff   = new Date(match.kickoff_at)
-        const dateStr   = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
+        const isOpen     = !!openMatches[match.id]
+        const corrOpen   = !!openCorrespondent[match.id]
+        const kickoff    = new Date(match.kickoff_at)
+        const dateStr    = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
         const isFinished = match.status === 'finished'
 
         return (
@@ -209,7 +234,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
 
                 {/*
                   Row 2+3: same 4-column flex as player rows below.
-                  w-7 spacer | flex-1 teams | w-11 score | w-[52px] label
+                  w-7 spacer | flex-1 teams | w-11 score | w-[52px] label/button
                   This matches: w-7 avatar | flex-1 name | w-11 pred | w-[52px] badge
                 */}
                 <div className="flex items-center gap-3">
@@ -235,14 +260,24 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                     <span className="font-mono text-sm font-bold text-gray-900 dark:text-white leading-snug">{match.away_score}</span>
                   </div>
 
-                  {/* "Рах." — column header for badge column */}
+                  {/* Admin: 📰 shortcut; regular: "Рах." column header */}
                   <div className="w-[52px] flex-shrink-0 flex justify-end">
-                    <span className="text-xs text-gray-400 dark:text-gray-500">Рах.</span>
+                    {isAdmin ? (
+                      <button
+                        onClick={e => { e.stopPropagation(); openMatchAndCorrespondent(match.id) }}
+                        className="inline-flex items-center justify-center w-8 h-7 rounded-md border border-gray-200 dark:border-white/15 bg-white dark:bg-white/5 text-sm hover:bg-green-500/10 hover:border-green-500/30 transition-colors"
+                        title="Кореспондент"
+                      >
+                        📰
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-400 dark:text-gray-500">Рах.</span>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* === Desktop layout (unchanged) === */}
+              {/* === Desktop layout === */}
               <div className="hidden sm:flex items-center gap-2">
                 <span className="text-xs text-gray-400 dark:text-gray-500 w-20 flex-shrink-0" suppressHydrationWarning>{dateStr}</span>
 
@@ -259,6 +294,17 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                   {match.away_logo && <img src={match.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
                   <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{match.away_team}</span>
                 </div>
+
+                {/* Admin: 📰 shortcut button, highlighted in a box */}
+                {isAdmin && (
+                  <button
+                    onClick={e => { e.stopPropagation(); openMatchAndCorrespondent(match.id) }}
+                    className="inline-flex items-center justify-center w-7 h-6 rounded border border-gray-200 dark:border-white/15 bg-white dark:bg-white/5 text-sm hover:bg-green-500/10 hover:border-green-500/30 transition-colors flex-shrink-0"
+                    title="Кореспондент"
+                  >
+                    📰
+                  </button>
+                )}
 
                 <Chevron open={isOpen} />
               </div>
@@ -322,6 +368,8 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                     matchId={match.id}
                     initial={matchAnalyses[match.id] ?? null}
                     isAdmin={isAdmin}
+                    open={corrOpen}
+                    onToggle={() => toggleCorrespondent(match.id)}
                   />
                 )}
               </div>

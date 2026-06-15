@@ -1069,6 +1069,153 @@ function PwaTab({ profiles }) {
   )
 }
 
+// ── Correspondent tab ────────────────────────────────────────────────────────
+
+const TAB_EVENTS_SQL = `CREATE TABLE tab_events (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  event_type text NOT NULL,
+  metadata jsonb DEFAULT '{}',
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX ON tab_events (event_type, created_at DESC);
+CREATE INDEX ON tab_events (user_id, created_at DESC);
+ALTER TABLE tab_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "insert_own" ON tab_events FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "admin_select" ON tab_events FOR SELECT USING (true);`
+
+function CorrespondentTab({ profiles }) {
+  const [events,   setEvents]   = useState(null)
+  const [loading,  setLoading]  = useState(true)
+  const [tableErr, setTableErr] = useState(false)
+  const [copied,   setCopied]   = useState(false)
+
+  const profileMap = Object.fromEntries((profiles ?? []).map(p => [p.id, p]))
+  function pName(uid) {
+    const p = profileMap[uid]
+    return [p?.first_name, p?.last_name].filter(Boolean).join(' ') || p?.username || '—'
+  }
+
+  useEffect(() => {
+    fetch('/api/admin/tab-events?event_type=correspondent_open')
+      .then(r => r.json())
+      .then(d => {
+        if (d.tableNotFound) setTableErr(true)
+        else setEvents(d.events ?? [])
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function copySQL() {
+    navigator.clipboard.writeText(TAB_EVENTS_SQL).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
+  }
+
+  if (loading) return <div className="flex items-center justify-center py-16"><div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" /></div>
+
+  if (tableErr) {
+    return (
+      <div className="max-w-2xl space-y-4">
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 space-y-3">
+          <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">Потрібна міграція БД</p>
+          <p className="text-sm text-amber-700/80 dark:text-amber-400/80">
+            Таблиця <code className="font-mono bg-amber-500/10 px-1 rounded">tab_events</code> не існує. Виконай у Supabase SQL Editor:
+          </p>
+          <pre className="bg-gray-900 text-green-400 text-xs rounded-lg p-4 overflow-x-auto whitespace-pre-wrap">{TAB_EVENTS_SQL}</pre>
+          <button onClick={copySQL}
+            className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-400 rounded-lg text-sm font-medium transition-colors">
+            {copied ? '✓ Скопійовано' : 'Копіювати SQL'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const todayCount = (events ?? []).filter(e => e.created_at?.slice(0, 10) === today).length
+
+  // Aggregate per user
+  const byUser = {}
+  for (const ev of events ?? []) {
+    if (!byUser[ev.user_id]) byUser[ev.user_id] = { count: 0, last: null }
+    byUser[ev.user_id].count++
+    if (!byUser[ev.user_id].last || ev.created_at > byUser[ev.user_id].last) {
+      byUser[ev.user_id].last = ev.created_at
+    }
+  }
+
+  const rows = Object.entries(byUser)
+    .map(([uid, stats]) => ({ uid, ...stats }))
+    .sort((a, b) => b.count - a.count)
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <StatCard label="Всього відкрить" value={(events ?? []).length} />
+        <StatCard label="Унікальних юзерів" value={rows.length} />
+        <StatCard label="Сьогодні" value={todayCount} />
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="text-center py-12 text-gray-400 dark:text-gray-600 text-sm">
+          Ще ніхто не відкривав Кореспондент
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">📰 По учасникам</h3>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="sm:hidden divide-y divide-gray-100 dark:divide-gray-800">
+            {rows.map(r => (
+              <div key={r.uid} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{pName(r.uid)}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    {r.last ? new Date(r.last).toLocaleString('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                  </p>
+                </div>
+                <span className="inline-flex items-center justify-center min-w-[2rem] h-7 px-2 rounded-full bg-green-500/15 text-green-600 dark:text-green-400 text-sm font-bold flex-shrink-0">
+                  {r.count}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <table className="hidden sm:table w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                <th className="text-left px-4 py-2.5">Учасник</th>
+                <th className="text-center px-3 py-2.5">Відкрить</th>
+                <th className="text-right px-4 py-2.5">Останнє відкриття</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.uid} className="border-b border-gray-100 dark:border-gray-800/50 last:border-0 hover:bg-gray-50 dark:hover:bg-white/3 transition-colors">
+                  <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-white">{pName(r.uid)}</td>
+                  <td className="px-3 py-2.5 text-center">
+                    <span className="inline-flex items-center justify-center min-w-[2rem] h-6 px-2 rounded-full bg-green-500/15 text-green-600 dark:text-green-400 text-xs font-bold">
+                      {r.count}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-right text-xs text-gray-400 dark:text-gray-500">
+                    {r.last ? new Date(r.last).toLocaleString('uk-UA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Registry tab ────────────────────────────────────────────────────────────
+
 const REGISTRY_SUFFIX = {
   'oleksandr_shliakhtiuk2106': ' (П)',
   'oleksandr_shliakhtiuk':     ' (В)',
@@ -1306,13 +1453,14 @@ function RegistryTab({ profiles, tournaments }) {
 // ── Root panel ───────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'matches',   label: 'Матчі' },
-  { id: 'profiles',  label: 'Учасники' },
-  { id: 'merge',     label: 'Злиття профілів' },
-  { id: 'analytics', label: 'Аналітика' },
-  { id: 'registry',  label: 'Реєстр' },
-  { id: 'activity',  label: 'Активність' },
-  { id: 'pwa',       label: 'PWA' },
+  { id: 'matches',        label: 'Матчі' },
+  { id: 'profiles',       label: 'Учасники' },
+  { id: 'merge',          label: 'Злиття профілів' },
+  { id: 'analytics',      label: 'Аналітика' },
+  { id: 'registry',       label: 'Реєстр' },
+  { id: 'activity',       label: 'Активність' },
+  { id: 'pwa',            label: 'PWA' },
+  { id: 'correspondent',  label: '📰 Кореспондент' },
 ]
 
 export default function AdminPanel({ matches: initMatches, profiles: initProfiles, tournaments: initTournaments }) {
@@ -1343,7 +1491,8 @@ export default function AdminPanel({ matches: initMatches, profiles: initProfile
       {tab === 'analytics' && <AnalyticsTab matches={matches}   profiles={profiles} tournaments={tournaments} setProfiles={setProfiles} />}
       {tab === 'registry'  && <RegistryTab  profiles={profiles} tournaments={tournaments} />}
       {tab === 'activity'  && <ActivityTab />}
-      {tab === 'pwa'       && <PwaTab profiles={profiles} />}
+      {tab === 'pwa'           && <PwaTab           profiles={profiles} />}
+      {tab === 'correspondent' && <CorrespondentTab  profiles={profiles} />}
     </div>
   )
 }

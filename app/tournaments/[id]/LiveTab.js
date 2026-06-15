@@ -25,7 +25,7 @@ function PlayerAvatar({ profile }) {
   return (
     <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden bg-green-500/20 flex items-center justify-center">
       {profile?.avatar_url
-        ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+        ? <img src={profile.avatar_url} alt="" className="w-7 h-7 object-cover flex-shrink-0" />
         : <span className="text-xs font-bold text-green-600 dark:text-green-400">{initials}</span>
       }
     </div>

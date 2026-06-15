@@ -12,7 +12,7 @@ export function Avatar({ profile }) {
   return (
     <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
       {profile?.avatar_url
-        ? <img src={profile.avatar_url} alt={name} className="w-full h-full object-cover" />
+        ? <img src={profile.avatar_url} alt={name} className="w-8 h-8 object-cover flex-shrink-0" />
         : <span className="text-xs font-bold text-green-600 dark:text-green-400">{initials}</span>
       }
     </div>

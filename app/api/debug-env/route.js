@@ -14,10 +14,10 @@ export async function GET(request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const key = process.env.GROQ_API_KEY ?? ''
   return Response.json({
-    length: key.length,
-    starts: key.slice(0, 8),
-    ends: key.slice(-4),
+    GROQ_API_KEY:  (process.env.GROQ_API_KEY  ?? '').length,
+    GROQ_KEY:      (process.env.GROQ_KEY       ?? '').length,
+    GROQ_API:      (process.env.GROQ_API       ?? '').length,
+    starts: (process.env.GROQ_API_KEY ?? '').slice(0, 8),
   })
 }

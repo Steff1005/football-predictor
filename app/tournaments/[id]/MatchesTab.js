@@ -5,7 +5,7 @@ import { groupAndSortMatches } from '../../../lib/round-sort'
 import { confirmLeave } from '../../../lib/unsaved-guard'
 import { useToast } from '../../../components/ToastProvider'
 
-export default function MatchesTab({ matches, userPredictions, userId, defaultRound }) {
+export default function MatchesTab({ matches, userPredictions, userId, defaultRound, isAdmin = false }) {
   const toast  = useToast()
   const groups = groupAndSortMatches(matches)
   const rounds = groups.map(g => g.label)
@@ -58,6 +58,7 @@ export default function MatchesTab({ matches, userPredictions, userId, defaultRo
             match={match}
             userPrediction={userPredictions[match.id]}
             userId={userId}
+            isAdmin={isAdmin}
             highlight={
               !!userId &&
               match.status !== 'finished' &&

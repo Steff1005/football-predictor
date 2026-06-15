@@ -37,7 +37,7 @@ const blockKeys = e => {
   if (['.', ',', '-', '+', 'e', 'E'].includes(e.key)) e.preventDefault()
 }
 
-export default function MatchCard({ match, userPrediction, userId, highlight }) {
+export default function MatchCard({ match, userPrediction, userId, highlight, isAdmin = false }) {
   const toast = useToast()
   const [home, setHome] = useState(userPrediction?.predicted_home ?? '')
   const [away, setAway] = useState(userPrediction?.predicted_away ?? '')
@@ -186,7 +186,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
           </div>
         )}
         <div className="flex items-center justify-between">
-          {match.flashscore_url ? (
+          {isAdmin && match.flashscore_url ? (
             <a href={match.flashscore_url} target="_blank" rel="noopener noreferrer"
               className="px-2 py-1 rounded text-xs font-bold bg-orange-500/15 text-orange-500 hover:bg-orange-500/25 transition-colors"
               title="Статистика матчу">Статистика</a>
@@ -254,7 +254,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight }) 
 
         {/* Action row: stats link left, save button right */}
         <div className="flex items-center justify-between mt-1">
-          {match.flashscore_url ? (
+          {isAdmin && match.flashscore_url ? (
             <a href={match.flashscore_url} target="_blank" rel="noopener noreferrer"
               className="px-2 py-1 rounded text-xs font-bold bg-orange-500/15 text-orange-500 hover:bg-orange-500/25 transition-colors"
               title="Статистика матчу">Статистика</a>

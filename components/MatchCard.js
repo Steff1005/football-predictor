@@ -48,14 +48,17 @@ function StatsUrlEditor({ matchId, initialUrl }) {
     <div className="flex items-center gap-1.5 flex-shrink-0">
       {url ? (
         <a href={url} target="_blank" rel="noopener noreferrer"
-          className="px-2 py-1 rounded text-xs font-bold bg-orange-500/15 text-orange-500 hover:bg-orange-500/25 transition-colors">
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/10 dark:bg-white/8 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-white/12 hover:bg-white/20 dark:hover:bg-white/15 hover:text-gray-900 dark:hover:text-white transition-all">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-60">
+            <path d="M1 9L9 1M9 1H4M9 1V6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
           Статистика
         </a>
       ) : (
-        <span className="text-xs text-gray-300 dark:text-gray-600">URL</span>
+        <span className="text-xs text-gray-300 dark:text-gray-700">—</span>
       )}
       <button onClick={openEdit} title="Змінити URL статистики"
-        className="text-gray-300 dark:text-gray-600 hover:text-orange-400 dark:hover:text-orange-400 transition-colors text-xs">
+        className="text-gray-300 dark:text-gray-600 hover:text-green-500 dark:hover:text-green-400 transition-colors text-xs leading-none">
         ✏
       </button>
     </div>

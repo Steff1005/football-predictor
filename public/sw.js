@@ -1,6 +1,6 @@
-const CACHE_STATIC = 'kickoff-static-v6'
-const CACHE_PAGES  = 'kickoff-pages-v3'
-const CACHE_API    = 'kickoff-api-v2'
+const CACHE_STATIC = 'kickoff-static-v7'
+const CACHE_PAGES  = 'kickoff-pages-v4'
+const CACHE_API    = 'kickoff-api-v3'
 const KNOWN_CACHES = new Set([CACHE_STATIC, CACHE_PAGES, CACHE_API])
 
 // Pre-cache at install: offline fallback + app icons
@@ -26,6 +26,11 @@ self.addEventListener('activate', event => {
   self.clients.claim()
 })
 
+function cacheResponse(cacheName, request, response) {
+  const clone = response.clone()
+  caches.open(cacheName).then(c => c.put(request, clone))
+}
+
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return
   const url = new URL(event.request.url)
@@ -38,7 +43,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       caches.match(event.request).then(cached =>
         cached || fetch(event.request).then(res => {
-          if (res.ok) caches.open(CACHE_STATIC).then(c => c.put(event.request, res.clone()))
+          if (res.ok) cacheResponse(CACHE_STATIC, event.request, res)
           return res
         })
       )
@@ -51,7 +56,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       caches.match(event.request).then(cached => {
         const network = fetch(event.request).then(res => {
-          if (res.ok) caches.open(CACHE_STATIC).then(c => c.put(event.request, res.clone()))
+          if (res.ok) cacheResponse(CACHE_STATIC, event.request, res)
           return res
         })
         return cached || network
@@ -66,13 +71,12 @@ self.addEventListener('fetch', event => {
       event.respondWith(
         fetch(event.request)
           .then(res => {
-            if (res.ok) caches.open(CACHE_API).then(c => c.put(event.request, res.clone()))
+            if (res.ok) cacheResponse(CACHE_API, event.request, res)
             return res
           })
           .catch(() => caches.match(event.request).then(c => c || Response.error()))
       )
     }
-    // All other API routes: let the browser handle normally (no SW intervention)
     return
   }
 
@@ -81,7 +85,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request)
         .then(res => {
-          if (res.ok) caches.open(CACHE_PAGES).then(c => c.put(event.request, res.clone()))
+          if (res.ok) cacheResponse(CACHE_PAGES, event.request, res)
           return res
         })
         .catch(() =>

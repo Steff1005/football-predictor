@@ -1078,7 +1078,6 @@ const TAB_COLS = [
   { id: 'standings',     label: 'Таблиця',    short: 'Табл.' },
   { id: 'rounds',        label: 'Тури',       short: 'Тури' },
   { id: 'dynamics',      label: '📈 Динаміка',short: '📈' },
-  { id: 'correspondent', label: '📰 Корес.',  short: '📰' },
 ]
 
 const PERIODS = [
@@ -1167,10 +1166,8 @@ function CorrespondentTab({ profiles }) {
   for (const ev of filtered) {
     const uid = ev.user_id
     if (!byUser[uid]) byUser[uid] = { total: 0, last: null }
-    let key
-    if (ev.event_type === 'correspondent_open') key = 'correspondent'
-    else if (ev.event_type === 'tab_open') key = ev.metadata?.tab ?? 'unknown'
-    else continue
+    if (ev.event_type !== 'tab_open') continue
+    const key = ev.metadata?.tab ?? 'unknown'
     byUser[uid][key] = (byUser[uid][key] ?? 0) + 1
     byUser[uid].total++
     if (!byUser[uid].last || ev.created_at > byUser[uid].last) byUser[uid].last = ev.created_at
@@ -1180,9 +1177,7 @@ function CorrespondentTab({ profiles }) {
   const tabTotals = {}
   for (const col of TAB_COLS) {
     tabTotals[col.id] = filtered.filter(e =>
-      col.id === 'correspondent'
-        ? e.event_type === 'correspondent_open'
-        : e.event_type === 'tab_open' && e.metadata?.tab === col.id
+      e.event_type === 'tab_open' && e.metadata?.tab === col.id
     ).length
   }
 

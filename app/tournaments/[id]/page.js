@@ -91,13 +91,10 @@ export default async function TournamentPage({ params, searchParams }) {
   const isAdmin = isAdminEmail(session?.user?.email)
 
   // Fix #10: tournament from cache (no extra DB call vs generateMetadata)
-  const [tournament, { data: matches }, { data: roundAnalysesRows }, { data: matchAnalysesRows }] = await Promise.all([
+  const [tournament, { data: matches }, { data: roundAnalysesRows }] = await Promise.all([
     getTournament(id),
     supabase.from('matches').select('*').eq('tournament_id', id).order('kickoff_at', { ascending: true }),
     supabase.from('round_analyses').select('round_label, analysis_text').eq('tournament_id', id),
-    tab === 'preds'
-      ? supabase.from('match_analyses').select('match_id, analysis_text').eq('tournament_id', id)
-      : Promise.resolve({ data: [] }),
   ])
 
   if (!tournament) {
@@ -255,10 +252,6 @@ export default async function TournamentPage({ params, searchParams }) {
   const analysisMap = {}
   ;(roundAnalysesRows ?? []).forEach(r => { analysisMap[r.round_label] = r.analysis_text })
 
-  // ── Match analyses map ────────────────────────────────────────────────────
-  const matchAnalysisMap = {}
-  ;(matchAnalysesRows ?? []).forEach(r => { matchAnalysisMap[r.match_id] = r.analysis_text })
-
   // ── Progress bar ──────────────────────────────────────────────────────────
   const matchesTabMatches = allMatches.filter(m => new Date(m.kickoff_at) > now)
   const predictedCount    = userId ? matchesTabMatches.filter(m => userPredictions[m.id]).length : 0
@@ -407,7 +400,7 @@ export default async function TournamentPage({ params, searchParams }) {
 
       {/* ── Predictions ─────────────────────────────────────────────────── */}
       {tab === 'preds' && (
-        <PredsTab finishedMatches={finishedMatches} predsByMatch={predsByMatch} profileMap={profileMap} defaultRound={defaultPredsRound} matchAnalyses={matchAnalysisMap} isAdmin={isAdmin} />
+        <PredsTab finishedMatches={finishedMatches} predsByMatch={predsByMatch} profileMap={profileMap} defaultRound={defaultPredsRound} isAdmin={isAdmin} />
       )}
 
       {/* ── Standings ───────────────────────────────────────────────────── */}

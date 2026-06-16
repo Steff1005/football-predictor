@@ -140,7 +140,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight, is
 
   const kickoff = new Date(match.kickoff_at)
   const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })
-  const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+  const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' })
 
   const { label: daysLabel, color: daysColor } = (!isFinished && match.status !== 'live')
     ? getDaysLabel(match.kickoff_at)
@@ -249,7 +249,15 @@ export default function MatchCard({ match, userPrediction, userId, highlight, is
         <div className="flex items-center justify-between">
           {isAdmin
             ? <StatsUrlEditor matchId={match.id} initialUrl={match.flashscore_url} />
-            : <span />}
+            : match.flashscore_url
+              ? <a href={match.flashscore_url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/10 dark:bg-white/8 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-white/12 hover:bg-white/20 dark:hover:bg-white/15 transition-all">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-60">
+                    <path d="M1 9L9 1M9 1H4M9 1V6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Статистика
+                </a>
+              : <span />}
           {badge ?? (!isFinished && !isPast ? (
             <button onClick={savePrediction} disabled={saving || !isValid} className={saveBtnCls}>
               {saveBtnLabel}
@@ -315,7 +323,15 @@ export default function MatchCard({ match, userPrediction, userId, highlight, is
         <div className="flex items-center justify-between mt-1">
           {isAdmin
             ? <StatsUrlEditor matchId={match.id} initialUrl={match.flashscore_url} />
-            : <span />}
+            : match.flashscore_url
+              ? <a href={match.flashscore_url} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/10 dark:bg-white/8 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-white/12 hover:bg-white/20 dark:hover:bg-white/15 transition-all">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-60">
+                    <path d="M1 9L9 1M9 1H4M9 1V6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Статистика
+                </a>
+              : <span />}
           {badge ?? (!isFinished && !isPast ? (
             <button onClick={savePrediction} disabled={saving || !isValid} className={saveBtnCls}>
               {saveBtnLabel}

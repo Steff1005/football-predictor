@@ -1117,7 +1117,9 @@ function CorrespondentTab({ profiles }) {
   const profileMap = Object.fromEntries((profiles ?? []).map(p => [p.id, p]))
   function pName(uid) {
     const p = profileMap[uid]
-    return [p?.first_name, p?.last_name].filter(Boolean).join(' ') || p?.username || '—'
+    if (!p) return '—'
+    const base = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.username || '—'
+    return base + (REGISTRY_SUFFIX[p.username] ?? '')
   }
 
   function load() {
@@ -1182,8 +1184,8 @@ function CorrespondentTab({ profiles }) {
   }
 
   // Filter + sort rows
-  let rows = Object.entries(byUser)
-    .map(([uid, stats]) => ({ uid, ...stats }))
+  let rows = (profiles ?? [])
+    .map(p => ({ uid: p.id, total: 0, last: null, ...(byUser[p.id] ?? {}) }))
     .filter(r => !search.trim() || pName(r.uid).toLowerCase().includes(search.trim().toLowerCase()))
 
   rows.sort((a, b) => {

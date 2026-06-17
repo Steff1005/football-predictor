@@ -67,8 +67,8 @@ function ProbBadge({ predH, predA, curH, curA, kickoffAt, clock, halftime }) {
 
 function MatchCard({ match, preds, profileMap }) {
   const kickoff  = new Date(match.kickoff_at)
-  const dateStr  = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
-  const timeStr  = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+  const dateStr  = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', timeZone: 'Europe/Kyiv' })
+  const timeStr  = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' })
   const wall = Math.max(0, (Date.now() - kickoff) / 60000)
   const { elapsed, fullTime } = getGameTime(match.clock, wall, match.halftime)
   const filtered = (preds ?? [])

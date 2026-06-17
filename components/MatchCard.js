@@ -139,7 +139,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight, is
   }
 
   const kickoff = new Date(match.kickoff_at)
-  const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })
+  const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', timeZone: 'Europe/Kyiv' })
   const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' })
 
   const { label: daysLabel, color: daysColor } = (!isFinished && match.status !== 'live')

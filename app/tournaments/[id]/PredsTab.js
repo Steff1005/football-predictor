@@ -106,7 +106,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
 
         const isOpen  = !!openMatches[match.id]
         const kickoff = new Date(match.kickoff_at)
-        const dateStr    = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
+        const dateStr    = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', timeZone: 'Europe/Kyiv' })
         const isFinished = match.status === 'finished'
 
         return (

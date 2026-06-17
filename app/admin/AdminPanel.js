@@ -1594,6 +1594,215 @@ function RegistryTab({ profiles, tournaments }) {
   )
 }
 
+// ── Team Analytics Tab ────────────────────────────────────────────────────────
+
+function TeamAnalyticsTab() {
+  const [data,    setData]    = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [view,    setView]    = useState('matrix')   // 'matrix' | 'xpoints'
+  const [xSort,   setXSort]   = useState('gap')      // 'gap' | 'xpts' | 'pts' | 'conv'
+
+  useEffect(() => {
+    fetch('/api/admin/team-analytics')
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  if (loading) return <div className="text-center py-16 text-gray-400">Завантаження…</div>
+  if (!data?.matches?.length) return <div className="text-center py-16 text-gray-400">Немає даних</div>
+
+  const { tournament, matches, predictions, profiles } = data
+
+  // Name helper with (П)/(В) suffix
+  function pName(p) {
+    if (!p) return '—'
+    const base = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.username || '—'
+    return base + (REGISTRY_SUFFIX[p.username] ?? '')
+  }
+
+  const profileMap = Object.fromEntries(profiles.map(p => [p.id, p]))
+  const predsByMatch = {}
+  for (const pred of predictions) {
+    if (!predsByMatch[pred.match_id]) predsByMatch[pred.match_id] = []
+    predsByMatch[pred.match_id].push(pred)
+  }
+
+  // ── Table 1: team → player points matrix ──────────────────────────────────
+  const teamPlayerPts = {}   // team -> { userId -> pts }
+  const teamTotals    = {}   // team -> total pts across all players
+
+  for (const match of matches) {
+    const preds = predsByMatch[match.id] ?? []
+    for (const team of [match.home_team, match.away_team]) {
+      if (!teamPlayerPts[team]) teamPlayerPts[team] = {}
+      for (const pred of preds) {
+        teamPlayerPts[team][pred.user_id] = (teamPlayerPts[team][pred.user_id] ?? 0) + pred.points
+        teamTotals[team] = (teamTotals[team] ?? 0) + pred.points
+      }
+    }
+  }
+
+  const sortedTeams   = Object.keys(teamTotals).sort((a, b) => teamTotals[b] - teamTotals[a])
+  const sortedPlayers = [...profiles].sort((a, b) => pName(a).localeCompare(pName(b), 'uk'))
+
+  // ── Table 2: xPoints per team ──────────────────────────────────────────────
+  const teamX = {}   // team -> { xPts, pts, predCount, correctCount }
+
+  for (const match of matches) {
+    const actualResult = match.home_score > match.away_score ? 'H'
+      : match.home_score < match.away_score ? 'A' : 'D'
+    const preds = predsByMatch[match.id] ?? []
+
+    for (const team of [match.home_team, match.away_team]) {
+      if (!teamX[team]) teamX[team] = { xPts: 0, pts: 0, predCount: 0, correctCount: 0 }
+      for (const pred of preds) {
+        const predResult = pred.predicted_home > pred.predicted_away ? 'H'
+          : pred.predicted_home < pred.predicted_away ? 'A' : 'D'
+        const correct = predResult === actualResult
+        teamX[team].xPts      += correct ? 4 : 0
+        teamX[team].pts       += pred.points
+        teamX[team].predCount++
+        if (correct) teamX[team].correctCount++
+      }
+    }
+  }
+
+  const xRows = Object.entries(teamX).map(([team, d]) => ({
+    team,
+    ...d,
+    conv:    d.xPts > 0 ? Math.round(d.pts / d.xPts * 100) : 0,
+    gap:     d.xPts - d.pts,
+    hitRate: d.predCount > 0 ? Math.round(d.correctCount / d.predCount * 100) : 0,
+  }))
+
+  const xSortFns = {
+    gap:  (a, b) => b.gap  - a.gap,
+    xpts: (a, b) => b.xPts - a.xPts,
+    pts:  (a, b) => b.pts  - a.pts,
+    conv: (a, b) => a.conv - b.conv,   // ascending: low conversion = "bad luck"
+  }
+  xRows.sort(xSortFns[xSort])
+
+  const thCls  = 'px-2 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 text-right whitespace-nowrap'
+  const thLCls = 'px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 text-left'
+  const tdCls  = 'px-2 py-2 text-sm tabular-nums text-right'
+  const tdLCls = 'px-3 py-2 text-sm text-gray-900 dark:text-white'
+
+  // Points cell color
+  function ptColor(pts) {
+    if (pts >= 4) return 'text-yellow-500 dark:text-yellow-400 font-bold'
+    if (pts >= 2) return 'text-green-500 dark:text-green-400 font-semibold'
+    if (pts >= 1) return 'text-blue-500 dark:text-blue-400'
+    return 'text-gray-300 dark:text-gray-700'
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">Турнір</h2>
+        <p className="text-base font-bold text-gray-900 dark:text-white">{tournament.name}</p>
+        <p className="text-xs text-gray-400 mt-0.5">{matches.length} матчів · {predictions.length} прогнозів</p>
+      </div>
+
+      {/* View switcher */}
+      <div className="flex gap-2">
+        {[['matrix','⚽ Хто від кого'], ['xpoints','📐 xPoints']].map(([id, label]) => (
+          <button key={id} onClick={() => setView(id)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              view === id ? 'bg-green-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Table 1: matrix ── */}
+      {view === 'matrix' && (
+        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+              <tr>
+                <th className={thLCls + ' sticky left-0 bg-gray-50 dark:bg-gray-900 z-10 min-w-[140px]'}>Команда</th>
+                {sortedPlayers.map(p => (
+                  <th key={p.id} className={thCls}>{pName(p).split(' ')[0]}</th>
+                ))}
+                <th className={thCls + ' border-l border-gray-200 dark:border-gray-700'}>Разом</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {sortedTeams.map((team, i) => (
+                <tr key={team} className={i % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-white/2'}>
+                  <td className={tdLCls + ' sticky left-0 bg-white dark:bg-gray-900 font-medium truncate max-w-[140px]'}>{team}</td>
+                  {sortedPlayers.map(p => {
+                    const pts = teamPlayerPts[team]?.[p.id] ?? 0
+                    return (
+                      <td key={p.id} className={`${tdCls} ${ptColor(pts)}`}>{pts || '—'}</td>
+                    )
+                  })}
+                  <td className={tdCls + ' border-l border-gray-200 dark:border-gray-700 font-bold text-gray-900 dark:text-white'}>{teamTotals[team]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── Table 2: xPoints ── */}
+      {view === 'xpoints' && (
+        <div className="space-y-3">
+          {/* Sort controls */}
+          <div className="flex gap-2 flex-wrap text-xs">
+            <span className="text-gray-400 self-center">Сортувати:</span>
+            {[['gap','Розрив ↑'],['xpts','xPts ↓'],['pts','Бали ↓'],['conv','Конверсія ↑']].map(([id, label]) => (
+              <button key={id} onClick={() => setXSort(id)}
+                className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+                  xSort === id ? 'bg-green-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                }`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400">xPts = максимум балів якщо б усі правильні результати стали точними рахунками. Розрив = "залишені на столі" бали.</p>
+
+          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+                <tr>
+                  <th className={thLCls + ' min-w-[140px]'}>Команда</th>
+                  <th className={thCls}>% влучань</th>
+                  <th className={thCls}>xPts</th>
+                  <th className={thCls}>Pts</th>
+                  <th className={thCls}>Конверсія</th>
+                  <th className={thCls}>Розрив</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {xRows.map((r, i) => (
+                  <tr key={r.team} className={i % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-white/2'}>
+                    <td className={tdLCls + ' font-medium'}>{r.team}</td>
+                    <td className={tdCls + ' text-blue-500 dark:text-blue-400'}>{r.hitRate}%</td>
+                    <td className={tdCls + ' text-gray-500 dark:text-gray-400'}>{r.xPts}</td>
+                    <td className={tdCls + ' text-green-500 dark:text-green-400 font-semibold'}>{r.pts}</td>
+                    <td className={tdCls}>
+                      <span className={r.conv >= 50 ? 'text-green-500' : r.conv >= 25 ? 'text-yellow-500' : 'text-red-400'}>
+                        {r.conv}%
+                      </span>
+                    </td>
+                    <td className={tdCls + ' font-bold ' + (r.gap > 20 ? 'text-red-400' : r.gap > 10 ? 'text-orange-400' : 'text-gray-400 dark:text-gray-500')}>
+                      -{r.gap}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Root panel ───────────────────────────────────────────────────────────────
 
 const TABS = [
@@ -1605,6 +1814,7 @@ const TABS = [
   { id: 'activity',       label: 'Активність' },
   { id: 'pwa',            label: 'PWA' },
   { id: 'correspondent',  label: '📊 Вкладки' },
+  { id: 'teams',          label: '⚽ Команди' },
 ]
 
 export default function AdminPanel({ matches: initMatches, profiles: initProfiles, tournaments: initTournaments }) {
@@ -1637,6 +1847,7 @@ export default function AdminPanel({ matches: initMatches, profiles: initProfile
       {tab === 'activity'  && <ActivityTab />}
       {tab === 'pwa'           && <PwaTab           profiles={profiles} />}
       {tab === 'correspondent' && <CorrespondentTab  profiles={profiles} />}
+      {tab === 'teams'         && <TeamAnalyticsTab />}
     </div>
   )
 }

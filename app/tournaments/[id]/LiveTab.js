@@ -166,7 +166,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
               return bPct - aPct
             })
           const kickoff = new Date(match.kickoff_at)
-          const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
+          const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', timeZone: 'Europe/Kyiv' })
           const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' })
 
           return (

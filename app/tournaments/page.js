@@ -18,7 +18,7 @@ const TOURNAMENT_DESCRIPTIONS = {
 
 function formatDateRange(min, max) {
   if (!min || !max) return null
-  const opts = { day: '2-digit', month: '2-digit' }
+  const opts = { day: '2-digit', month: '2-digit', timeZone: 'Europe/Kyiv' }
   const d1 = new Date(min).toLocaleDateString('uk-UA', opts)
   const d2 = new Date(max).toLocaleDateString('uk-UA', { ...opts, year: '2-digit' })
   return d1 === d2 ? d1 : `${d1} – ${d2}`

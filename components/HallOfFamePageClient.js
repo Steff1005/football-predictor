@@ -50,7 +50,7 @@ export default function HallOfFamePageClient({ enriched, medalRows, tournamentLo
             const top3 = standings.slice(0, 3)
             const rest = standings.length - top3.length
             const dateLabel = lastDate
-              ? new Date(lastDate).toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' })
+              ? new Date(lastDate).toLocaleDateString('uk-UA', { month: 'long', year: 'numeric', timeZone: 'Europe/Kyiv' })
               : null
 
             return (

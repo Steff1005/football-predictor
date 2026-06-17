@@ -28,9 +28,6 @@ function pdn(p) {
   return full || p?.username || 'Гравець'
 }
 
-function pdn_short(p) {
-  return p?.first_name || pdn(p)
-}
 
 function pini(p) {
   const n = pdn(p)
@@ -392,7 +389,7 @@ export default async function HomePage() {
                             <a href={`/players/${p.id}`} className="flex items-center gap-2.5 hover:opacity-75 transition-opacity">
                               <Avatar url={p.avatar_url} initials={pini(p)} sizeCls="w-8 h-8" textCls="text-xs" />
                               <span className="font-medium text-gray-900 dark:text-white truncate">
-                                {pdn(p)}{isMe && <span className="text-green-500 ml-1 text-xs font-normal">(я)</span>}
+                                {pdn(p)}
                               </span>
                             </a>
                           </td>
@@ -441,8 +438,7 @@ export default async function HomePage() {
                         <a href={`/players/${p.id}`}
                           className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-75 transition-opacity">
                           <Avatar url={p.avatar_url} initials={pini(p)} sizeCls="w-8 h-8" textCls="text-xs" />
-                          <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{pdn_short(p)}</span>
-                          {isMe && <span className="text-green-500 text-xs font-normal flex-shrink-0">(я)</span>}
+                          <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{pdn(p)}</span>
                         </a>
                         <div className="flex-shrink-0 text-right ml-1">
                           <div className="flex items-center justify-end gap-1">

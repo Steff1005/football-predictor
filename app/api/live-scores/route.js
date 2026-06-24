@@ -69,7 +69,7 @@ export async function GET(request) {
 
   let query = supabase
     .from('matches')
-    .select('id, tournament_id, home_score, away_score, status, kickoff_at')
+    .select('id, tournament_id, home_team, away_team, home_score, away_score, status, kickoff_at')
     .lte('kickoff_at', now)
     .neq('status', 'finished')
 

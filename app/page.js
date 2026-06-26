@@ -61,21 +61,28 @@ function FormDot({ pts }) {
 // ── Data helpers ──────────────────────────────────────────────────────────────
 
 // Fix #8: filter by match IDs from loaded tournaments instead of full table scan
+// Chunk match IDs: a single .in() with hundreds of UUIDs overflows the request
+// URL and fails ("fetch failed"), which silently emptied the leaderboard form.
 async function fetchPagedPreds(supabase, matchIds) {
   if (!matchIds?.length) return []
+  const ID_CHUNK = 150
   const PAGE = 1000
-  let all = [], from = 0
-  while (true) {
-    const { data, error } = await supabase
-      .from('predictions')
-      .select('user_id, match_id, points, predicted_home, predicted_away')
-      .in('match_id', matchIds)
-      .eq('is_calculated', true)
-      .range(from, from + PAGE - 1)
-    if (error || !data?.length) break
-    all = all.concat(data)
-    if (data.length < PAGE) break
-    from += PAGE
+  let all = []
+  for (let i = 0; i < matchIds.length; i += ID_CHUNK) {
+    const idChunk = matchIds.slice(i, i + ID_CHUNK)
+    let from = 0
+    while (true) {
+      const { data, error } = await supabase
+        .from('predictions')
+        .select('user_id, match_id, points, predicted_home, predicted_away')
+        .in('match_id', idChunk)
+        .eq('is_calculated', true)
+        .range(from, from + PAGE - 1)
+      if (error || !data?.length) break
+      all = all.concat(data)
+      if (data.length < PAGE) break
+      from += PAGE
+    }
   }
   return all
 }

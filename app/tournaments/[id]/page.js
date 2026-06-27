@@ -11,7 +11,7 @@ import CLUB_CRESTS from '../../../lib/club-crests'
 import TOURNAMENT_LOGOS from '../../../lib/tournament-logos'
 import { groupAndSortMatches } from '../../../lib/round-sort'
 import { translateTeam } from '../../../lib/team-translations'
-import { simulateProbabilities, SAMPLES_FAST } from '../../../lib/probability'
+import { simulateProbabilities, SAMPLES_FAST, remainingMatchCount } from '../../../lib/probability'
 import { isAdminEmail } from '../../../lib/admin'
 import { compareTournamentStandings } from '../../../lib/rankings'
 import TournamentTabs from './TournamentTabs'
@@ -252,6 +252,10 @@ export default async function TournamentPage({ params, searchParams }) {
   const analysisMap = {}
   ;(roundAnalysesRows ?? []).forEach(r => { analysisMap[r.round_label] = r.analysis_text })
 
+  // True remaining matches for the standings forecast = total fixtures − finished
+  // (includes TBD knockout matches not yet imported into `matches`).
+  const remainingCount = remainingMatchCount(tournament, allMatches)
+
   // ── Progress bar ──────────────────────────────────────────────────────────
   const matchesTabMatches = allMatches.filter(m => new Date(m.kickoff_at) > now)
   const predictedCount    = userId ? matchesTabMatches.filter(m => userPredictions[m.id]).length : 0
@@ -321,7 +325,7 @@ export default async function TournamentPage({ params, searchParams }) {
 
   // ── Probability matrix — Fix #5: only fetch for standings tab ────────────
   let probMatrix = null
-  if (tab === 'standings' && matchesTabMatches.length > 0 && standings.length > 0) {
+  if (tab === 'standings' && remainingCount > 0 && standings.length > 0) {
     const { data: cached } = await supabase
       .from('probability_cache')
       .select('data')
@@ -333,7 +337,7 @@ export default async function TournamentPage({ params, searchParams }) {
         .map(row => ({ uid: row.uid, profile: profileMap[row.uid] ?? null, probs: row.probs }))
         .filter(row => row.profile)
     } else {
-      probMatrix = simulateProbabilities(standings, matchesTabMatches.length, SAMPLES_FAST)
+      probMatrix = simulateProbabilities(standings, remainingCount, SAMPLES_FAST)
         ?.map(row => ({ ...row, profile: profileMap[row.uid] ?? null }))
         .filter(row => row.profile) ?? null
     }
@@ -410,7 +414,7 @@ export default async function TournamentPage({ params, searchParams }) {
           roundLabels={roundLabels}
           roundPointsMap={byRound}
           probMatrix={probMatrix}
-          upcomingCount={matchesTabMatches.length}
+          upcomingCount={remainingCount}
         />
       )}
 

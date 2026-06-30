@@ -101,13 +101,19 @@ export async function GET(request) {
         const kickoffKey = new Date(m.utcDate).toISOString().slice(0, 16)
         const espn       = espnMap[kickoffKey]
 
-        // Prefer ESPN score for live/finished; fall back to football-data.org
+        // Score = regulation time only (90'), excluding extra time and penalties.
+        // fd.org's `fullTime` lumps in ET + shootout for knockout games (e.g. a
+        // 1-1 decided on pens is reported 4-5); `regularTime` is the clean 90'
+        // score and is only populated when a match went beyond 90.
         let status     = m.status === 'FINISHED' ? 'finished' : m.status === 'IN_PLAY' ? 'live' : 'scheduled'
-        let home_score = m.score?.fullTime?.home ?? m.score?.regularTime?.home ?? null
-        let away_score = m.score?.fullTime?.away ?? m.score?.regularTime?.away ?? null
+        let home_score = m.score?.regularTime?.home ?? m.score?.fullTime?.home ?? null
+        let away_score = m.score?.regularTime?.away ?? m.score?.fullTime?.away ?? null
+        const wentToExtra = m.score?.regularTime?.home != null // ⇒ ET/pens occurred
 
         if (espn) {
-          if (espn.finished) { status = 'finished'; home_score = espn.home; away_score = espn.away }
+          // Don't let ESPN overwrite the 90' score when the match went to ET/pens —
+          // ESPN's `score` includes extra-time goals.
+          if (espn.finished) { status = 'finished'; if (!wentToExtra) { home_score = espn.home; away_score = espn.away } }
           else if (espn.live) { status = 'live'; home_score = espn.home; away_score = espn.away }
         }
 

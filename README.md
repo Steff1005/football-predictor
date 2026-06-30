@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# ⚽ Kickoff — футбольні прогнози
 
-## Getting Started
+Веб-застосунок для змагань у прогнозуванні футбольних матчів між друзями. Учасники
+ставлять рахунки на майбутні матчі турнірів (Чемпіонат світу, Євро, Ліга чемпіонів…),
+а після ігор система автоматично нараховує бали й веде рейтинги.
 
-First, run the development server:
+## Як працює гра
 
+Перед кожним матчем учасник прогнозує точний рахунок. Бали:
+
+| Результат прогнозу | Бали |
+|---|---|
+| Точний рахунок | **4** |
+| Вгаданий результат (П1 / Х / П2) | **1** |
+| Не вгадано | 0 |
+
+Рахується **тільки основний час** (90 хвилин разом із компенсованим). Додатковий час
+і серія пенальті у плей-оф на бали не впливають.
+
+### Що є в застосунку
+- **Загальний рейтинг** із формою (останні прогнози) та трендом ефективності (бали/прогноз)
+- **Сторінки турнірів:** майбутні матчі, лайв-рахунки, прогнози, турнірна таблиця,
+  динаміка місць по турах
+- **Прогноз підсумкових місць** — Монте-Карло симуляція ймовірностей фінального розподілу
+- **Зал слави** — переможці завершених турнірів і медальний залік
+- **Профілі гравців**, аватари, пуш-сповіщення про результати
+- **PWA** — встановлюється як застосунок
+
+## Стек
+- [Next.js 16](https://nextjs.org) (App Router) + React 19 + Tailwind CSS 4
+- [Supabase](https://supabase.com) — база даних і авторизація
+- Дані матчів: [football-data.org](https://www.football-data.org) (розклад/результати)
+  та ESPN (живі рахунки)
+- Хостинг: [Vercel](https://vercel.com)
+
+## Локальний запуск
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # http://localhost:3000
 ```
+Потрібен `.env.local` зі змінними Supabase (`NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`), ключем
+`FOOTBALL_DATA_KEY`, `GROQ_API_KEY` та `CRON_SECRET`.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Деплой
+Автоматичний — кожен `git push` у `main` Vercel деплоїть самостійно.

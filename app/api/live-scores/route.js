@@ -32,7 +32,12 @@ async function fetchEspnScores() {
       // Match has gone past regulation (extra time in progress, or decided in ET/pens).
       // Only the 90' result (incl. stoppage time) counts in this game, so we finalize
       // from key events at the 90' mark — the live score here includes extra-time goals.
+      // Status alone is unreliable: active ET is reported as STATUS_IN_PROGRESS, so we
+      // also treat a clock base minute ≥ 91 as extra time ("90'+5'" stoppage stays = 90).
+      const clockBase   = parseInt(String(comp.status?.displayClock ?? '').split('+')[0], 10)
+      const inExtraTime = Number.isFinite(clockBase) && clockBase >= 91
       const pastRegulation =
+        inExtraTime ||
         statusName.includes('OVERTIME') ||
         statusName === 'STATUS_END_OF_REGULATION' ||
         statusName.endsWith('_AET') || statusName.endsWith('_PEN')

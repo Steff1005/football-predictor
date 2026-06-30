@@ -105,7 +105,9 @@ export async function GET(request) {
         // fd.org's `fullTime` lumps in ET + shootout for knockout games (e.g. a
         // 1-1 decided on pens is reported 4-5); `regularTime` is the clean 90'
         // score and is only populated when a match went beyond 90.
-        let status     = m.status === 'FINISHED' ? 'finished' : m.status === 'IN_PLAY' ? 'live' : 'scheduled'
+        // fd.org reports a live match as IN_PLAY, and PAUSED during breaks (half-time,
+        // before/between extra-time periods) — both are "live", not "scheduled".
+        let status     = m.status === 'FINISHED' ? 'finished' : (m.status === 'IN_PLAY' || m.status === 'PAUSED') ? 'live' : 'scheduled'
         let home_score = m.score?.regularTime?.home ?? m.score?.fullTime?.home ?? null
         let away_score = m.score?.regularTime?.away ?? m.score?.fullTime?.away ?? null
         const wentToExtra = m.score?.regularTime?.home != null // ⇒ ET/pens occurred

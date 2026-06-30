@@ -29,7 +29,14 @@ async function fetchEspnScores() {
       const statusName = comp.status?.type?.name ?? ''
       const isLive     = statusName.includes('IN_PROGRESS') || statusName.includes('HALF')
       const isFinished = statusName === 'STATUS_FINAL' || statusName === 'STATUS_FULL_TIME'
-      if (!isLive && !isFinished) continue
+      // Match has gone past regulation (extra time in progress, or decided in ET/pens).
+      // Only the 90' result (incl. stoppage time) counts in this game, so we finalize
+      // from key events at the 90' mark — the live score here includes extra-time goals.
+      const pastRegulation =
+        statusName.includes('OVERTIME') ||
+        statusName === 'STATUS_END_OF_REGULATION' ||
+        statusName.endsWith('_AET') || statusName.endsWith('_PEN')
+      if (!isLive && !isFinished && !pastRegulation) continue
       const homeC = comp.competitors?.find(c => c.homeAway === 'home')
       const awayC = comp.competitors?.find(c => c.homeAway === 'away')
       if (!homeC || !awayC) continue
@@ -48,11 +55,43 @@ async function fetchEspnScores() {
         clock:    comp.status?.displayClock ?? '',
         halftime: statusName === 'STATUS_HALFTIME',
         finished: isFinished,
+        pastRegulation,
+        eventId:  event.id,
       })
     }
     return map
   } catch {
     return {}
+  }
+}
+
+// Regulation-time score (incl. stoppage time) for a match that went to ET/pens.
+// Tally goals whose clock base minute is ≤ 90: "90'+4'" (stoppage) counts, "103'" (ET) doesn't.
+async function regulationScore(eventId, homeTeam, awayTeam) {
+  try {
+    const res = await fetch(
+      `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${eventId}`,
+      { next: { revalidate: 0 } }
+    )
+    if (!res.ok) return null
+    const sum = await res.json()
+    // scoringPlay covers every goal type (goal, goal---header, penalties, own goals);
+    // type === 'goal' alone misses headers etc.
+    const goals = (sum.keyEvents ?? []).filter(e => e.scoringPlay === true)
+    if (!goals.length) return null
+    const norm = s => (s ?? '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim()
+    const match = (a, b) => { const x = norm(a), y = norm(b); return !!x && !!y && (x === y || x.includes(y) || y.includes(x)) }
+    let home = 0, away = 0
+    for (const g of goals) {
+      const base = parseInt(String(g.clock?.displayValue ?? '').split('+')[0], 10)
+      if (!(base <= 90)) continue // skip extra-time goals (minute ≥ 91) and unparseable clocks
+      const team = g.team?.displayName ?? g.team?.name ?? ''
+      if (match(team, homeTeam)) home++
+      else if (match(team, awayTeam)) away++
+    }
+    return { home, away }
+  } catch {
+    return null
   }
 }
 
@@ -104,13 +143,20 @@ export async function GET(request) {
 
   for (const m of matches ?? []) {
     const espnM = findEspnMatch(espn, m)
-    if (espnM?.finished) {
-      // ESPN says the match is over — persist to DB and exclude from live list
-      toFinish.push({ id: m.id, home_score: espnM.home, away_score: espnM.away })
-    } else if (espnM) {
-      enriched.push({ ...m, home_score: espnM.home, away_score: espnM.away, clock: espnM.clock, halftime: espnM.halftime, status: 'live' })
-    } else {
+    if (!espnM) {
       enriched.push(m)
+    } else if (espnM.pastRegulation) {
+      // Match went to extra time / penalties — for this game only the 90' result counts.
+      // Lock the regulation score (incl. stoppage time) from key events and finalize now.
+      const reg = await regulationScore(espnM.eventId, m.home_team, m.away_team)
+      if (reg) toFinish.push({ id: m.id, home_score: reg.home, away_score: reg.away })
+      // Couldn't resolve key events yet — keep showing live (sync-matches will finalize via regularTime)
+      else enriched.push({ ...m, status: 'live', clock: 'ET' })
+    } else if (espnM.finished) {
+      // Decided in regulation — persist ESPN score and exclude from live list
+      toFinish.push({ id: m.id, home_score: espnM.home, away_score: espnM.away })
+    } else {
+      enriched.push({ ...m, home_score: espnM.home, away_score: espnM.away, clock: espnM.clock, halftime: espnM.halftime, status: 'live' })
     }
   }
 

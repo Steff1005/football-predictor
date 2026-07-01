@@ -79,8 +79,8 @@ export default function NotificationPrompt({ userId }) {
             <Bell size={26} className="text-green-500" />
           </div>
           <div>
-            <p className="font-bold text-gray-900 dark:text-white text-base">Не пропускай матчі</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Увімкни сповіщення на цьому пристрої</p>
+            <p className="font-bold text-gray-900 dark:text-white text-base">Сповіщення не налаштовані</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Схоже, ти не до кінця їх увімкнув на цьому пристрої</p>
           </div>
         </div>
 

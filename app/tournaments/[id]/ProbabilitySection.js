@@ -6,6 +6,13 @@ function placeLabel(p) {
   return p === 1 ? '🥇' : p === 2 ? '🥈' : p === 3 ? '🥉' : `${p}`
 }
 
+// 0 → "—" (impossible); 0 < pct < 1 → "<1%" (small but real chance); else "N%"
+function fmtProb(pct) {
+  if (pct <= 0) return '—'
+  if (pct < 1)  return '<1%'
+  return `${pct}%`
+}
+
 function probCellCls(pct) {
   if (pct === 0) return 'text-gray-300 dark:text-gray-700'
   if (pct < 10)  return 'text-gray-500 dark:text-gray-400'
@@ -66,7 +73,7 @@ export default function ProbabilitySection({ probMatrix, remainingCount }) {
                         className="h-full rounded-full flex items-center justify-center transition-all duration-500 min-w-[32px]"
                         style={{ width: `${prob}%`, backgroundColor: barColor(prob) }}
                       >
-                        <span className="text-white text-xs font-medium px-2 whitespace-nowrap">{prob}%</span>
+                        <span className="text-white text-xs font-medium px-2 whitespace-nowrap">{fmtProb(prob)}</span>
                       </div>
                     </div>
                   </div>
@@ -107,7 +114,7 @@ export default function ProbabilitySection({ probMatrix, remainingCount }) {
                   const pct = row.probs[place] ?? 0
                   return (
                     <td key={place} className={`text-center px-2 py-2.5 tabular-nums min-w-[64px] ${probCellCls(pct)}`}>
-                      {pct > 0 ? `${pct}%` : '—'}
+                      {fmtProb(pct)}
                     </td>
                   )
                 })}

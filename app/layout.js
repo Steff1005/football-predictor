@@ -9,6 +9,7 @@ import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
 import ToastProvider from '@/components/ToastProvider'
 import ActivityTracker from '@/components/ActivityTracker'
 import InstallPrompt from '@/components/InstallPrompt'
+import NotificationPrompt from '@/components/NotificationPrompt'
 import BottomNav from '@/components/BottomNav'
 
 export const metadata = {
@@ -91,6 +92,7 @@ export default async function RootLayout({ children }) {
         </ThemeProvider>
         <ActivityTracker userId={session?.user?.id ?? null} />
         <InstallPrompt userId={session?.user?.id ?? null} />
+        <NotificationPrompt userId={session?.user?.id ?? null} />
         <ServiceWorkerRegister />
         <Analytics />
         <SpeedInsights />

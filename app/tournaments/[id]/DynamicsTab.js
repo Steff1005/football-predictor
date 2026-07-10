@@ -1,7 +1,7 @@
 import DynamicsBumpChart from './DynamicsBumpChart'
 
 function roundLabel(key) {
-  const m = key.match(/GROUP_STAGE_(\d+)/)
+  const m = key.match(/(?:GROUP_STAGE_|Regular Season - )0*(\d+)/i)
   if (m) return { long: `Тур ${m[1]}`, short: `Т${m[1]}` }
   const map = {
     LAST_32:        { long: 'R32',       short: 'R32' },
@@ -82,7 +82,7 @@ export default function DynamicsTab({ rounds, rows }) {
 
         {/* Scrollable: round columns */}
         <div className="overflow-x-auto scrollbar-hide flex-1 min-w-0">
-          <table className="text-sm w-full">
+          <table className="text-sm w-full table-fixed" style={{ minWidth: rounds.length * 52 }}>
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">
                 {rounds.map(rk => {

@@ -284,26 +284,36 @@ export default async function TournamentPage({ params, searchParams }) {
       for (const mid of finishedByRound[rk].matchIds) matchToRoundIdx[mid] = ri
     })
 
+    // Per round accumulate points + tiebreaker stats:
+    // points → correct results → exact scores → predictions made
     const ppr = {}
     for (const p of calcPreds) {
       const ri = matchToRoundIdx[p.match_id]
       if (ri === undefined) continue
       if (!ppr[p.user_id]) ppr[p.user_id] = {}
-      ppr[p.user_id][ri] = (ppr[p.user_id][ri] ?? 0) + (p.points ?? 0)
+      const r = ppr[p.user_id][ri] ?? (ppr[p.user_id][ri] = { pts: 0, res: 0, ex: 0, n: 0 })
+      r.pts += p.points ?? 0
+      if ((p.points_result ?? 0) > 0) r.res++
+      if ((p.points_exact  ?? 0) > 0) r.ex++
+      r.n++
     }
 
     const dynUserIds = Object.keys(ppr)
 
     const cum = {}
     for (const uid of dynUserIds) {
-      let total = 0
-      cum[uid] = dynRounds.map((_, ri) => { total += ppr[uid][ri] ?? 0; return total })
+      let pts = 0, res = 0, ex = 0, n = 0
+      cum[uid] = dynRounds.map((_, ri) => {
+        const r = ppr[uid][ri]
+        if (r) { pts += r.pts; res += r.res; ex += r.ex; n += r.n }
+        return { pts, res, ex, n }
+      })
     }
 
     const ranksByRound = dynRounds.map((_, ri) => {
       const sorted = [...dynUserIds]
-        .map(uid => ({ uid, pts: cum[uid][ri] }))
-        .sort((a, b) => b.pts - a.pts || a.uid.localeCompare(b.uid))
+        .map(uid => ({ uid, ...cum[uid][ri] }))
+        .sort((a, b) => b.pts - a.pts || b.res - a.res || b.ex - a.ex || b.n - a.n || a.uid.localeCompare(b.uid))
       return sorted.reduce((acc, u, i) => { acc[u.uid] = i + 1; return acc }, {})
     })
 
@@ -317,7 +327,7 @@ export default async function TournamentPage({ params, searchParams }) {
         rounds: dynRounds.map((_, ri) => {
           const rank     = ranksByRound[ri][uid]
           const prevRank = ri > 0 ? ranksByRound[ri - 1][uid] : null
-          return { rank, cumPoints: cum[uid][ri], delta: prevRank !== null ? prevRank - rank : null }
+          return { rank, cumPoints: cum[uid][ri].pts, delta: prevRank !== null ? prevRank - rank : null }
         }),
       }))
       .filter(r => r.profile)

@@ -15,6 +15,17 @@ function statusCls(v) {
 
 const POLL_INTERVAL = 30_000
 
+function Chevron({ open }) {
+  return (
+    <svg
+      className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
+      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+  )
+}
+
 function displayName(profile) {
   return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
 }
@@ -68,7 +79,14 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
   const [lastUpdated, setUpdated]   = useState(Date.now())
   const [secAgo, setSecAgo]         = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  // Прогнози згорнуті за замовчуванням (як у «Результатах») — важливо для турнірів
+  // із багатьма одночасними матчами (ЛЧ: до 6 матчів у той самий час)
+  const [openMatches, setOpenMatches] = useState({})
   const timerRef = useRef(null)
+
+  function toggleMatch(matchId) {
+    setOpenMatches(prev => ({ ...prev, [matchId]: !prev[matchId] }))
+  }
 
   const fetchScores = useCallback(async () => {
     if (!tournamentId || !liveMatches.length) return
@@ -169,19 +187,27 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
           const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', timeZone: 'Europe/Kyiv' })
           const timeStr = kickoff.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Kyiv' })
 
+          const isOpen = !!openMatches[match.id]
+
           return (
             <div key={match.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
 
-              {/* Match header */}
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-white/10">
+              {/* Match header — клік розгортає прогнози */}
+              <div
+                onClick={() => toggleMatch(match.id)}
+                className={`px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 select-none ${isOpen ? 'border-b border-gray-100 dark:border-white/10' : ''}`}
+              >
 
                 {/* Mobile */}
                 <div className="sm:hidden">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs text-gray-400 dark:text-gray-500" suppressHydrationWarning>{dateStr}, {timeStr}</span>
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${match.halftime ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' : 'bg-red-500/10 text-red-500 dark:text-red-400'}`}>
-                      {match.halftime ? '⏸ Перерва' : `🔴 ${match.clock || 'Live'}`}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${match.halftime ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' : 'bg-red-500/10 text-red-500 dark:text-red-400'}`}>
+                        {match.halftime ? '⏸ Перерва' : `🔴 ${match.clock || 'Live'}`}
+                      </span>
+                      <Chevron open={isOpen} />
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-7 flex-shrink-0 flex flex-col items-center gap-1.5">
@@ -231,14 +257,15 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                     <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.away_team}</span>
                   </div>
 
-                  <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
+                  <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 flex items-center gap-2">
                     {preds.length} прогноз{preds.length === 1 ? '' : preds.length < 5 ? 'и' : 'ів'}
+                    <Chevron open={isOpen} />
                   </span>
                 </div>
               </div>
 
-              {/* Predictions */}
-              {preds.length === 0 ? (
+              {/* Predictions — показуються після кліку на матч */}
+              {!isOpen ? null : preds.length === 0 ? (
                 <div className="px-4 py-3 text-sm text-center text-gray-400 dark:text-gray-600">Прогнозів немає</div>
               ) : preds.map(pred => {
                 const profile   = profileMap[pred.user_id]

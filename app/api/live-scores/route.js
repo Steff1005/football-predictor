@@ -82,8 +82,10 @@ async function regulationScore(eventId, homeTeam, awayTeam) {
     const sum = await res.json()
     // scoringPlay covers every goal type (goal, goal---header, penalties, own goals);
     // type === 'goal' alone misses headers etc.
-    const goals = (sum.keyEvents ?? []).filter(e => e.scoringPlay === true)
-    if (!goals.length) return null
+    // Empty keyEvents = feed not loaded yet → can't trust it. But a non-empty feed
+    // with zero scoring plays is a legit 0:0 in regulation (WC-2026 final!).
+    if (!(sum.keyEvents ?? []).length) return null
+    const goals = sum.keyEvents.filter(e => e.scoringPlay === true)
     const norm = s => (s ?? '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim()
     const match = (a, b) => { const x = norm(a), y = norm(b); return !!x && !!y && (x === y || x.includes(y) || y.includes(x)) }
     let home = 0, away = 0

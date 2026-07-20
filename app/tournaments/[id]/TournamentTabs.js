@@ -16,7 +16,8 @@ export default function TournamentTabs({ id, activeTab, hasLive = false, hasDyna
   const tabs = [...BASE_TABS]
   if (hasLive)     tabs.splice(1, 0, LIVE_TAB)
   if (hasDynamics) tabs.push(DYNAMICS_TAB)
-  if (hasReport)   tabs.push(REPORT_TAB)
+  // Фінальний звіт є лише в завершених турнірів — ставимо його першим
+  if (hasReport)   tabs.unshift(REPORT_TAB)
 
   return (
     <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-900 p-1 rounded-xl border border-gray-200 dark:border-gray-800 overflow-x-auto scrollbar-none">

@@ -95,8 +95,8 @@ export default function Navbar({ initialUser = null, initialProfile = null, init
 
   return (
     <>
-      <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 fixed top-0 left-0 right-0 z-50">
+        <div className="max-w-6xl mx-auto flex items-center justify-between min-h-[44px]">
           <Logo />
 
           {/* ── Desktop nav ─────────────────────────────────────────────── */}
@@ -170,6 +170,8 @@ export default function Navbar({ initialUser = null, initialProfile = null, init
           </div>
         </div>
       </nav>
+      {/* Розпірка під fixed-шапку: тримає висоту в потоці сторінки */}
+      <div className="h-[69px]" aria-hidden="true" />
 
       {/* ── Mobile drawer ────────────────────────────────────────────────── */}
       {menuOpen && (

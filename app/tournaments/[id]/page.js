@@ -19,6 +19,11 @@ import DynamicsTab from './DynamicsTab'
 import RealtimeRefresher from '../../../components/RealtimeRefresher'
 
 
+// Фінальні звіти завершених турнірів (статичні HTML у public/reports/)
+const FINAL_REPORTS = {
+  'c4da2f76-0013-4e09-8863-dccd900864aa': '/reports/wc2026-final.html', // ЧС-2026
+}
+
 // Fix #10: cached tournament fetch — shared between generateMetadata and page (one DB call)
 const getTournament = cache(async (id) => {
   const supabase = createServerClient(
@@ -384,7 +389,7 @@ export default async function TournamentPage({ params, searchParams }) {
       </div>
 
       {/* Tabs */}
-      <TournamentTabs id={id} activeTab={tab} hasLive={liveMatches.length > 0} hasDynamics={hasDynamics} />
+      <TournamentTabs id={id} activeTab={tab} hasLive={liveMatches.length > 0} hasDynamics={hasDynamics} hasReport={!!FINAL_REPORTS[id]} />
 
       {/* ── Matches ─────────────────────────────────────────────────────── */}
       {tab === 'matches' && (
@@ -441,6 +446,24 @@ export default async function TournamentPage({ params, searchParams }) {
       {/* ── Dynamics ────────────────────────────────────────────────────── */}
       {tab === 'dynamics' && (
         <DynamicsTab rounds={dynRounds} rows={dynamicsRows} />
+      )}
+
+      {/* ── Final report ────────────────────────────────────────────────── */}
+      {tab === 'report' && FINAL_REPORTS[id] && (
+        <div>
+          <div className="flex justify-end mb-2">
+            <a href={FINAL_REPORTS[id]} target="_blank" rel="noopener"
+              className="text-xs text-green-500 dark:text-green-400 hover:underline">
+              Відкрити на весь екран ↗
+            </a>
+          </div>
+          <iframe
+            src={FINAL_REPORTS[id]}
+            title="Фінальний звіт турніру"
+            className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
+            style={{ height: 'calc(100vh - 220px)', minHeight: 600 }}
+          />
+        </div>
       )}
     </div>
   )

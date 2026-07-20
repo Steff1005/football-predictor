@@ -10,11 +10,13 @@ const BASE_TABS = [
 
 const LIVE_TAB     = { id: 'live',     label: '🔴 Live',   short: '🔴 Live' }
 const DYNAMICS_TAB = { id: 'dynamics', label: '📈 Динаміка', short: '📈' }
+const REPORT_TAB   = { id: 'report',   label: '🏆 Фінальний звіт', short: '🏆 Звіт' }
 
-export default function TournamentTabs({ id, activeTab, hasLive = false, hasDynamics = false }) {
+export default function TournamentTabs({ id, activeTab, hasLive = false, hasDynamics = false, hasReport = false }) {
   const tabs = [...BASE_TABS]
   if (hasLive)     tabs.splice(1, 0, LIVE_TAB)
   if (hasDynamics) tabs.push(DYNAMICS_TAB)
+  if (hasReport)   tabs.push(REPORT_TAB)
 
   return (
     <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-900 p-1 rounded-xl border border-gray-200 dark:border-gray-800 overflow-x-auto scrollbar-none">

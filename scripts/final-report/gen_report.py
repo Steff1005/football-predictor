@@ -178,6 +178,26 @@ for u in by_official:
 head = '<th>Гравець</th>' + ''.join(f'<th class="num">{p}</th>' for p in range(1, NP + 1))
 t_days = table(rows, head)
 
+# ── Улюблені рахунки ─────────────────────────────────────────
+rows = ''
+for u in by_official:
+    cells = ''
+    for k in range(3):
+        fs = d['fav_score'][u]
+        if k < len(fs):
+            sc, cnt = fs[k]
+            cells += (f'<td class="num"><span class="b">{esc(sc)}</span>'
+                      f' <span class="dim">×{cnt}</span></td>')
+        else:
+            cells += '<td class="num dim">—</td>'
+    rows += f'<tr>{name_cell(u)}{cells}</tr>'
+real_row = ''.join(f'<td class="num"><span class="b">{esc(sc)}</span> <span class="dim">×{cnt}</span></td>'
+                   for sc, cnt in d['real_scores'][:3])
+rows += f'<tr><td class="pl dim">⚽ А насправді було…</td>{real_row}</tr>'
+t_fav = ('<div class="plain">'
+         + table(rows, '<th>Гравець</th><th class="num">№1</th><th class="num">№2</th><th class="num">№3</th>')
+         + '</div>')
+
 # ── Цікавинки ────────────────────────────────────────────────
 smax = lambda k: max(uids, key=lambda u: d['streaks'][u][k])
 se, sr, sm = smax('exact'), smax('result'), smax('miss')
@@ -271,6 +291,8 @@ th {{ font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(-
 td {{ padding:9px 12px; border-bottom:1px solid var(--line); white-space:nowrap }}
 tr:last-child td {{ border-bottom:0 }}
 tr:first-child td {{ background:color-mix(in srgb, var(--gold) 9%, transparent) }}
+.plain tr:first-child td {{ background:none }}
+.plain tr:last-child td {{ background:color-mix(in srgb, var(--acc) 8%, transparent) }}
 .num {{ text-align:right; font-variant-numeric:tabular-nums }}
 .rk {{ width:2.2em; text-align:center; font-variant-numeric:tabular-nums; color:var(--dim) }}
 .b {{ font-weight:800 }}
@@ -355,6 +377,9 @@ footer {{ margin-top:52px; padding-top:18px; border-top:1px solid var(--line); c
 
 {section('days', 'Хід турніру', 'Дні на місцях',
   f'Скільки ігрових днів (із {d["n_days"]}) кожен гравець завершував на кожній позиції.', t_days)}
+
+{section('favs', 'Поза таблицями', 'Улюблені рахунки',
+  'Топ-3 рахунки, які кожен ставив найчастіше, — і топ-3 рахунки, якими турнір відповідав.', t_fav)}
 
 {section('fun', 'Поза таблицями', 'Цікавинки турніру', '', f'<div class="cards">{cards_html}</div>')}
 

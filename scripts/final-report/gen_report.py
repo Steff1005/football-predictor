@@ -201,7 +201,9 @@ t_fav = ('<div class="plain">'
 
 # ── Цікавинки ────────────────────────────────────────────────
 smax = lambda k: max(uids, key=lambda u: d['streaks'][u][k])
-se, sr, sm = smax('exact'), smax('result'), smax('miss')
+se, sr = smax('exact'), smax('result')
+miss_max = max(d['streaks'][u]['miss'] for u in uids)
+miss_holders = [N[u] for u in uids if d['streaks'][u]['miss'] == miss_max]
 top1 = max(uids, key=lambda u: d['days_at_pos'][u].get('1', 0))
 tw = d['twins'][0]
 fav_all = {u: d['fav_score'][u][0] for u in uids}
@@ -218,7 +220,9 @@ cards = [
                     f'({(U[best_result]["n_result"] + U[best_result]["n_exact"]) * 100 // d["n_matches"]}%).'),
     ('🔥', 'Серії', f'<b>{esc(N[se])}</b> — {d["streaks"][se]["exact"]} точні поспіль (єдиний із серією 3). '
                     f'<b>{esc(N[sr])}</b> — {d["streaks"][sr]["result"]} результатів поспіль. '
-                    f'Антирекорд: <b>{esc(N[sm])}</b> — {d["streaks"][sm]["miss"]} промахів поспіль.'),
+                    f'Антирекорд ділять аж {["", "", "двоє", "троє", "четверо"][len(miss_holders)] if len(miss_holders) <= 4 else len(miss_holders)}: '
+                    f'<b>{esc(", ".join(miss_holders))}</b> — по {miss_max} промахів поспіль. '
+                    f'Причому обидва Олександри — це останні 6 матчів турніру: від чвертьфіналів до фіналу жодного вгаданого результату.'),
     ('🎪', 'Матчі-легенди', f'У <b>{d["all_missed_n"]}</b> матчах не вгадав ніхто (перший — {esc(d["all_missed"][0])}). '
                     f'У <b>{d["all_result_n"]}</b> — результат вгадали всі. '
                     f'Рекорд — <b>{d["max_exact"][0]} точних</b> в одному матчі: {esc(" та ".join(d["max_exact"][1]))}.'),

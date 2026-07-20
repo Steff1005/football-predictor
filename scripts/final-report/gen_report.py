@@ -111,7 +111,8 @@ bump_html = f'<div class="tblwrap">{"".join(svg)}</div><div class="legend">{lege
 # ── Перегони по днях (анімація) ──────────────────────────────
 race_data = dict(
     days=[dd[8:10] + '.' + dd[5:7] for dd in d['day_list']],
-    players=[dict(name=short(N[u]), color=COLOR[u], pts=d['day_pts'][u]) for u in by_official],
+    players=[dict(name=short(N[u]), color=COLOR[u], pts=d['day_pts'][u], rank=d['day_rank'][u])
+             for u in by_official],
 )
 race_html = f'''
 <div class="tblwrap race">
@@ -140,12 +141,12 @@ race_html = f'''
   function draw(di) {{
     dayEl.textContent = D.days[di] + ' · день ' + (di + 1) + '/' + D.days.length;
     slider.value = di;
-    const order = D.players.map((p, i) => [p.pts[di], i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]);
-    order.forEach(([pts, i], rank) => {{
+    // Порядок = місце з тайбрейкерами (бали → результати → точні → к-сть прогнозів)
+    D.players.forEach((p, i) => {{
       const r = rows[i];
-      r.style.transform = 'translateY(' + rank * 44 + 'px)';
-      r.querySelector('.rc-bar').style.width = (maxPts ? pts / maxPts * 100 : 0) + '%';
-      r.querySelector('.rc-pts').textContent = pts;
+      r.style.transform = 'translateY(' + (p.rank[di] - 1) * 44 + 'px)';
+      r.querySelector('.rc-bar').style.width = (maxPts ? p.pts[di] / maxPts * 100 : 0) + '%';
+      r.querySelector('.rc-pts').textContent = p.pts[di];
     }});
   }}
   let timer = null, di = 0;
@@ -157,7 +158,7 @@ race_html = f'''
     timer = setInterval(() => {{
       di++; draw(di);
       if (di >= D.days.length - 1) stop();
-    }}, 550);
+    }}, 1300);
   }});
   slider.addEventListener('input', () => {{ stop(); di = +slider.value; draw(di); }});
   draw(0);
@@ -325,11 +326,11 @@ svg {{ padding:6px 0 10px }}
 .rc-day {{ font-variant-numeric:tabular-nums; font-weight:700; font-size:14px; color:var(--dim); white-space:nowrap }}
 .rc-bars {{ position:relative }}
 .rc-row {{ position:absolute; left:0; right:0; height:38px; display:flex; align-items:center; gap:10px;
-  transition:transform .45s ease }}
+  transition:transform .7s ease }}
 .rc-name {{ width:150px; flex-shrink:0; font-size:13px; font-weight:600; text-align:right;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis }}
 .rc-track {{ flex:1; height:22px; border-radius:6px; background:color-mix(in srgb, var(--line) 45%, transparent) }}
-.rc-bar {{ height:100%; border-radius:6px; width:0; transition:width .45s ease; min-width:2px }}
+.rc-bar {{ height:100%; border-radius:6px; width:0; transition:width .7s ease; min-width:2px }}
 .rc-pts {{ width:2.6em; flex-shrink:0; font-variant-numeric:tabular-nums; font-weight:800; font-size:14px }}
 @media (max-width:520px) {{ .rc-name {{ width:104px; font-size:11px }} }}
 @media (prefers-reduced-motion: reduce) {{ .rc-row, .rc-bar {{ transition:none }} }}

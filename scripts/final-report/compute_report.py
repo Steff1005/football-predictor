@@ -180,7 +180,8 @@ for m in matches_sorted:
     day_of[m['id']] = ko.strftime('%Y-%m-%d')
 days = sorted(set(day_of.values()))
 days_at_pos = {u: Counter() for u in users}
-day_pts = {u: [] for u in users}   # накопичені бали після кожного дня (для перегонів)
+day_pts = {u: [] for u in users}    # накопичені бали після кожного дня (для перегонів)
+day_rank = {u: [] for u in users}   # місце після кожного дня (з тайбрейкерами)
 feed, get_ranks = make_ranker()
 for day in days:
     for m in matches_sorted:
@@ -190,6 +191,7 @@ for day in days:
     for u in users:
         days_at_pos[u][rankmap[u]] += 1
         day_pts[u].append(pts[u])
+        day_rank[u].append(rankmap[u])
 
 # ── динаміка по турах (bump) ──────────────────────────────────
 ROUND_ORDER = ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'THIRD_PLACE', 'FINAL']
@@ -233,7 +235,7 @@ out = dict(
     max_exact=max_exact,
     twins=[(pname(a), pname(b), c) for (a, b), c in pair_same.most_common(3)],
     days_at_pos={u: dict(days_at_pos[u]) for u in users},
-    n_days=len(days), day_list=days, day_pts=day_pts,
+    n_days=len(days), day_list=days, day_pts=day_pts, day_rank=day_rank,
     rounds=[rlabel(r) for r in rounds],
     bump={u: bump[u] for u in users},
     round_pts={u: {rlabel(k): v for k, v in round_pts[u].items()} for u in users},

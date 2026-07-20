@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react'
 import { Bell } from 'lucide-react'
 
+// Банер показується один раз: будь-яке закриття — назавжди (на цьому пристрої)
 const DISMISS_KEY = 'kickoff_push_dismissed'
-const DISMISS_TTL = 7 * 24 * 60 * 60 * 1000
 const NEVER_KEY   = 'kickoff_push_never'
 
 function urlBase64ToUint8Array(base64String) {
@@ -21,9 +21,7 @@ export default function NotificationPrompt({ userId }) {
   useEffect(() => {
     if (!userId) return
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
-    if (localStorage.getItem(NEVER_KEY)) return
-    const dismissed = localStorage.getItem(DISMISS_KEY)
-    if (dismissed && Date.now() - Number(dismissed) < DISMISS_TTL) return
+    if (localStorage.getItem(NEVER_KEY) || localStorage.getItem(DISMISS_KEY)) return
 
     navigator.serviceWorker.ready
       .then(reg => reg.pushManager.getSubscription())
@@ -37,11 +35,6 @@ export default function NotificationPrompt({ userId }) {
 
   function dismiss() {
     localStorage.setItem(DISMISS_KEY, String(Date.now()))
-    setShow(false)
-  }
-
-  function never() {
-    localStorage.setItem(NEVER_KEY, '1')
     setShow(false)
   }
 
@@ -111,15 +104,6 @@ export default function NotificationPrompt({ userId }) {
             className="w-full py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             Продовжити без сповіщень
-          </button>
-        </div>
-
-        <div className="mt-3 text-center">
-          <button
-            onClick={never}
-            className="text-xs text-gray-400 dark:text-gray-600 hover:text-red-400 dark:hover:text-red-400 transition-colors underline underline-offset-2"
-          >
-            Більше не показувати
           </button>
         </div>
       </div>

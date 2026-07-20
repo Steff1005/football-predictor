@@ -20,6 +20,11 @@ export default function NotificationPrompt({ userId }) {
 
   useEffect(() => {
     if (!userId) return
+    // Прев'ю для адміна: ?show-push-banner=1 показує банер попри всі перевірки
+    if (new URLSearchParams(location.search).has('show-push-banner')) {
+      setTimeout(() => setShow(true), 300)
+      return
+    }
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
     if (localStorage.getItem(NEVER_KEY) || localStorage.getItem(DISMISS_KEY)) return
 

@@ -65,13 +65,14 @@ export default async function RootLayout({ children }) {
     <html lang="uk" className={htmlClass} suppressHydrationWarning>
       <head>
         {/* Guarantees body bg on first paint — !important beats Tailwind class specificity */}
-        <style dangerouslySetInnerHTML={{ __html: 'body{background-color:#030712!important}html.light body{background-color:#f3f4f6!important}' }} />
+        {/* html bg = колір шапки: при iOS rubber-band зона над шапкою зливається з нею */}
+        <style dangerouslySetInnerHTML={{ __html: 'html{background-color:#111827}html.light{background-color:#ffffff}body{background-color:#030712!important}html.light body{background-color:#f3f4f6!important}' }} />
         {/*
           Runs synchronously before first paint:
           1. Reads localStorage (source of truth) and corrects html class if cookie was stale.
           2. Writes cookie so next SSR request renders the right class from the start.
         */}
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme'),d=document.documentElement,c=t==='light'?'light':'dark';d.className=c;d.style.backgroundColor=c==='light'?'#f3f4f6':'#030712';document.cookie='theme='+c+';path=/;max-age=31536000;SameSite=Lax'}catch(e){}})();` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme'),d=document.documentElement,c=t==='light'?'light':'dark';d.className=c;d.style.backgroundColor=c==='light'?'#ffffff':'#111827';document.cookie='theme='+c+';path=/;max-age=31536000;SameSite=Lax'}catch(e){}})();` }} />
         {/* Capture beforeinstallprompt before React hydrates — the event fires early and is lost otherwise */}
         <script dangerouslySetInnerHTML={{ __html: `window.__installPrompt=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__installPrompt=e;});` }} />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

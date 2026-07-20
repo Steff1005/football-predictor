@@ -1,4 +1,5 @@
 'use client'
+import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { confirmLeave } from '@/lib/unsaved-guard'
@@ -47,6 +48,26 @@ const NAV_ITEMS = [
 
 export default function BottomNav({ userId }) {
   const pathname = usePathname()
+  // Компактний режим (як таб-бар Safari): скрол вниз ховає підписи, вгору — повертає.
+  // passive-слухач + rAF — без впливу на продуктивність.
+  const [compact, setCompact] = useState(false)
+
+  useEffect(() => {
+    let last = window.scrollY, ticking = false
+    function onScroll() {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        const y = window.scrollY
+        if (y > last + 4 && y > 80) setCompact(true)
+        else if (y < last - 4 || y <= 80) setCompact(false)
+        last = y
+        ticking = false
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const items = NAV_ITEMS.filter(i => !i.requiresAuth || userId)
 
@@ -62,14 +83,14 @@ export default function BottomNav({ userId }) {
             key={item.href}
             href={item.href}
             onClick={e => { if (!confirmLeave('Є незбережений прогноз. Перейти?')) e.preventDefault() }}
-            className={`bottom-nav-item flex-1 flex flex-col items-center gap-1 pt-2 pb-2 transition-colors ${
+            className={`bottom-nav-item flex-1 flex flex-col items-center transition-all duration-200 ${compact ? 'gap-0 pt-1.5 pb-1' : 'gap-1 pt-2 pb-2'} ${
               active
                 ? item.liveAccent ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
             {item.icon(active)}
-            <span className={`text-[11px] font-medium flex items-center gap-1 ${active && item.liveAccent ? '' : ''}`}>
+            <span className={`text-[11px] font-medium flex items-center gap-1 overflow-hidden transition-all duration-200 ${compact ? 'max-h-0 opacity-0' : 'max-h-4 opacity-100'}`}>
               {item.liveAccent && <span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" /></span>}
               {item.label}
             </span>

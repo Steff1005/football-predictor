@@ -1078,6 +1078,7 @@ const TAB_COLS = [
   { id: 'standings',     label: 'Таблиця',    short: 'Табл.' },
   { id: 'rounds',        label: 'Тури',       short: 'Тури' },
   { id: 'dynamics',      label: '📈 Динаміка',short: '📈' },
+  { id: 'report',        label: '🏆 Фін. звіт',short: '🏆' },
 ]
 
 const PERIODS = [

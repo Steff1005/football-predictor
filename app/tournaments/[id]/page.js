@@ -452,7 +452,9 @@ export default async function TournamentPage({ params, searchParams }) {
       {tab === 'report' && FINAL_REPORTS[id] && (
         <div>
           <div className="flex justify-end mb-2">
-            <a href={FINAL_REPORTS[id]} target="_blank" rel="noopener"
+            {/* Same-tab navigation: браузерний «назад» (і кнопка ← Назад у самому звіті)
+                повертають у додаток — target=_blank у PWA лишав користувача без виходу */}
+            <a href={FINAL_REPORTS[id]}
               className="text-xs text-green-500 dark:text-green-400 hover:underline">
               Відкрити на весь екран ↗
             </a>

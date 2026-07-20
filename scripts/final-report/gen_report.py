@@ -365,4 +365,16 @@ footer {{ margin-top:52px; padding-top:18px; border-top:1px solid var(--line); c
 </div>
 '''
 open(f'{BASE}/wc2026_final_report.html', 'w').write(page)
-print('OK', len(page), 'chars')
+
+# Версія для додатку: плаваюча кнопка «Назад» (повернення з повноекранного
+# перегляду на мобільному/PWA — інакше з статичної сторінки нема шляху назад)
+TOURNAMENT_URL = '/tournaments/c4da2f76-0013-4e09-8863-dccd900864aa?tab=report'
+back_btn = f'''<a href="{TOURNAMENT_URL}"
+  onclick="if(history.length>1){{history.back();return false}}"
+  style="position:fixed;top:12px;right:14px;z-index:99;display:inline-flex;align-items:center;gap:6px;
+  background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:999px;
+  padding:7px 14px;font:600 13px system-ui;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.15)">← Назад</a>
+'''
+app_page = page.replace('<div class="wrap">', back_btn + '<div class="wrap">', 1)
+open(f'{BASE}/wc2026_final_report_app.html', 'w').write(app_page)
+print('OK', len(page), 'chars (+app variant)')

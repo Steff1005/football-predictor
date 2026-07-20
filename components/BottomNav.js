@@ -59,8 +59,10 @@ export default function BottomNav({ userId }) {
       ticking = true
       requestAnimationFrame(() => {
         const y = window.scrollY
-        if (y > last + 4 && y > 80) setCompact(true)
-        else if (y < last - 4 || y <= 80) setCompact(false)
+        // Великий гістерезис: панель не сіпається від мікроскролів,
+        // і кнопки не «тікають з-під пальця» в момент тапу
+        if (y > last + 24 && y > 120) setCompact(true)
+        else if (y < last - 24 || y <= 120) setCompact(false)
         last = y
         ticking = false
       })
@@ -83,7 +85,7 @@ export default function BottomNav({ userId }) {
             key={item.href}
             href={item.href}
             onClick={e => { if (!confirmLeave('Є незбережений прогноз. Перейти?')) e.preventDefault() }}
-            className={`bottom-nav-item flex-1 flex flex-col items-center transition-all duration-200 ${compact ? 'gap-0 pt-1.5 pb-1' : 'gap-1 pt-2 pb-2'} ${
+            className={`bottom-nav-item flex-1 flex flex-col items-center gap-1 pt-2 pb-2 transition-colors ${
               active
                 ? item.liveAccent ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'

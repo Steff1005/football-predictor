@@ -97,3 +97,6 @@ html.light .animate-prob-shimmer {
 .no-spin[type=number] {
   -moz-appearance: textfield;
 }
+
+/* Миттєвий відгук на тап: прибирає можливу затримку подвійного тапу на iOS */
+a, button, [role="button"] { touch-action: manipulation; }

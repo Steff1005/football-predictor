@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import TOURNAMENT_LOGOS from '../../lib/tournament-logos'
 import { pluralMatches } from '../../lib/formatters'
+import { SEASON_LABEL, LEAGUES } from '../../lib/season-2026'
 
 export const revalidate = 60
 export const metadata = { title: 'Турніри — Kickoff' }
@@ -108,6 +109,36 @@ export default async function TournamentsPage() {
   return (
     <div>
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6">🏆 Турніри</h1>
+
+      {/* ── Прогноз сезону 2026/27 ─────────────────────────────── */}
+      <div className="mb-8">
+        <h2 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">
+          Сезон {SEASON_LABEL}
+        </h2>
+        <a href="/seasons"
+          className="block bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800 hover:border-green-500/50 transition-colors group">
+          <div className="flex items-center gap-3">
+            <div className="flex -space-x-2 flex-shrink-0">
+              {LEAGUES.map(l => (
+                <div key={l.code} className="w-9 h-9 rounded-full bg-white dark:bg-gray-800 ring-2 ring-white dark:ring-gray-900 flex items-center justify-center">
+                  <img src={l.emblem} alt="" className="w-6 h-6 object-contain" />
+                </div>
+              ))}
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white group-hover:text-green-500 dark:group-hover:text-green-400 transition-colors">
+                Прогноз сезону {SEASON_LABEL}
+              </span>
+              <p className="text-xs text-gray-400 dark:text-gray-500 leading-tight mt-0.5">
+                5 топ-ліг · чемпіон, топ-4, виліт і сюрпризи
+              </p>
+            </div>
+            <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-green-500/20 text-green-500 dark:text-green-400 flex-shrink-0 whitespace-nowrap">
+              Новий
+            </span>
+          </div>
+        </a>
+      </div>
 
       {active.length > 0 && (
         <div className="mb-8">

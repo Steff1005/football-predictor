@@ -51,7 +51,7 @@ export default function SeasonCard({ league, prediction, profile }) {
         </svg>
         <div className="flex-1 min-w-0">
           <p className="text-lg font-extrabold text-white leading-tight">Прогноз сезону</p>
-          <p className="text-[11px] font-semibold tracking-[0.12em] text-white/45 uppercase leading-tight">
+          <p className="text-[11px] font-semibold tracking-[0.06em] text-white/45 uppercase leading-tight whitespace-nowrap">
             {league.name} · {SEASON_LABEL}
           </p>
         </div>

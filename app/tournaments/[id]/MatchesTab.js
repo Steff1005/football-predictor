@@ -5,7 +5,7 @@ import { groupAndSortMatches } from '../../../lib/round-sort'
 import { confirmLeave } from '../../../lib/unsaved-guard'
 import { useToast } from '../../../components/ToastProvider'
 
-export default function MatchesTab({ matches, userPredictions, userId, defaultRound, isAdmin = false }) {
+export default function MatchesTab({ matches, userPredictions, userId, defaultRound, isAdmin = false, hasAnyMatch = true }) {
   const toast  = useToast()
   const groups = groupAndSortMatches(matches)
   const rounds = groups.map(g => g.label)
@@ -19,10 +19,14 @@ export default function MatchesTab({ matches, userPredictions, userId, defaultRo
   }, [toast])
 
   if (!rounds.length) {
+    // Турнір без жодного матчу (щойно створений) ≠ турнір, де всі матчі зіграні
+    const noFixturesYet = !hasAnyMatch
     return (
       <div className="text-center py-20 text-gray-400 dark:text-gray-600">
-        <p className="text-5xl mb-4">✅</p>
-        <p>Усі матчі цього турніру завершені</p>
+        <p className="text-5xl mb-4">{noFixturesYet ? '📅' : '✅'}</p>
+        <p>{noFixturesYet
+          ? 'Календар ще не опубліковано — з’явиться після жеребкування'
+          : 'Усі матчі цього турніру завершені'}</p>
       </div>
     )
   }

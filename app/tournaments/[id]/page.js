@@ -408,7 +408,7 @@ export default async function TournamentPage({ params, searchParams }) {
               }
             </div>
           )}
-          <MatchesTab matches={matchesTabMatches} userPredictions={userPredictions} userId={userId} defaultRound={defaultMatchesRound} isAdmin={isAdmin} />
+          <MatchesTab matches={matchesTabMatches} userPredictions={userPredictions} userId={userId} defaultRound={defaultMatchesRound} isAdmin={isAdmin} hasAnyMatch={allMatches.length > 0} />
         </>
       )}
 

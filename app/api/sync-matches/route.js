@@ -146,23 +146,31 @@ export async function GET(request) {
       // Прогнози прив'язані до matches.id (uuid), тож заміна id їх не зачіпає.
       const { data: existing } = await supabase
         .from('matches')
-        .select('id, external_id, home_team, away_team, kickoff_at')
+        .select('id, external_id, home_team, away_team, kickoff_at, home_logo, away_logo')
         .eq('tournament_id', tournament.id)
-        .gte('external_id', 2_000_000_000)
+
+      const key = m => `${m.home_team}|${m.away_team}|${m.kickoff_at.slice(0, 10)}`
+      const byKey = Object.fromEntries((existing ?? []).map(m => [key(m), m]))
 
       if (existing?.length) {
-        const key = m => `${m.home_team}|${m.away_team}|${m.kickoff_at.slice(0, 10)}`
-        const byKey = Object.fromEntries(existing.map(m => [key(m), m]))
         const fdIds = new Set(matchesData.map(m => m.external_id))
-
         for (const fresh of matchesData) {
           const stale = byKey[key(fresh)]
-          // Не чіпаємо, якщо такий id уже є в базі під іншим рядком
-          if (!stale || fdIds.has(stale.external_id)) continue
+          // Перепідключаємо лише синтетичні id (≥ 2e9) і лише якщо такого
+          // справжнього id ще немає в базі під іншим рядком
+          if (!stale || stale.external_id < 2_000_000_000 || fdIds.has(stale.external_id)) continue
           await supabase.from('matches')
             .update({ external_id: fresh.external_id })
             .eq('id', stale.id)
         }
+      }
+
+      // Емблеми, вже збережені в базі, мають пріоритет над fd.org: у нього
+      // подекуди застарілі версії (напр. старий щит Ліверпуля замість чинного).
+      for (const fresh of matchesData) {
+        const known = byKey[key(fresh)]
+        if (known?.home_logo) fresh.home_logo = known.home_logo
+        if (known?.away_logo) fresh.away_logo = known.away_logo
       }
 
       const { error } = await supabase

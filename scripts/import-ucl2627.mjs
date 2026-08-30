@@ -4,8 +4,9 @@
  *
  * Навіщо ESPN: після жеребкування football-data.org ще не опублікував сітку
  * (competitions/CL/matches?season=2026 → 0), а ESPN уже має всі 144 матчі
- * лігового етапу. Назви команд і емблеми беремо з fd.org — щоб вони збіглися
- * з рештою додатка й щоб пізніший sync-matches підхопив ці ж матчі без дублів.
+ * лігового етапу. Назви команд беремо з fd.org (канонічні для додатка, щоб
+ * пізніший sync-matches підхопив ці ж матчі без дублів), а емблеми — з ESPN,
+ * бо crests.football-data.org віддає застарілі версії.
  *
  * Запуск:  node --env-file=.env.local scripts/import-ucl2627.mjs [--dry]
  */
@@ -70,9 +71,12 @@ function resolveTeam(espnName) {
   throw new Error(`Не зіставлено команду ESPN: "${espnName}"`)
 }
 
-function teamInfo(espnName) {
+// Назву беремо з fd.org (канонічна для додатка), а емблему — з ESPN:
+// crests.football-data.org віддає застарілі версії (напр. у Ліверпуля досі
+// старий щит замість чинної «ліверпулівської пташки»).
+function teamInfo(espnName, espnLogo) {
   const t = resolveTeam(espnName)
-  return { id: t.id, name: t.shortName || t.name, crest: t.crest || null }
+  return { id: t.id, name: t.shortName || t.name, crest: espnLogo || t.crest || null }
 }
 
 // ── 2. Календар з ESPN ───────────────────────────────────────────────────────
@@ -98,8 +102,8 @@ const rows = events.map(e => {
   const comp = e.competitions[0]
   const home = comp.competitors.find(c => c.homeAway === 'home')
   const away = comp.competitors.find(c => c.homeAway === 'away')
-  const h = teamInfo(home.team.displayName)
-  const a = teamInfo(away.team.displayName)
+  const h = teamInfo(home.team.displayName, home.team.logo)
+  const a = teamInfo(away.team.displayName, away.team.logo)
   const finished = comp.status?.type?.completed === true
 
   return {

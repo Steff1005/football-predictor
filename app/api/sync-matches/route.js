@@ -138,6 +138,33 @@ export async function GET(request) {
 
       if (!matchesData.length) continue
 
+      // ── Крок 3.5: звірка з матчами, залитими не з fd.org ──────────────────
+      // Календар турніру міг бути імпортований з ESPN (коли fd.org ще не мав
+      // сітки) — у таких рядків синтетичний external_id ≥ 2e9. Щойно fd.org
+      // публікує свій календар, ці рядки треба «перепідключити» на справжній
+      // id, інакше upsert створить другий комплект тих самих матчів.
+      // Прогнози прив'язані до matches.id (uuid), тож заміна id їх не зачіпає.
+      const { data: existing } = await supabase
+        .from('matches')
+        .select('id, external_id, home_team, away_team, kickoff_at')
+        .eq('tournament_id', tournament.id)
+        .gte('external_id', 2_000_000_000)
+
+      if (existing?.length) {
+        const key = m => `${m.home_team}|${m.away_team}|${m.kickoff_at.slice(0, 10)}`
+        const byKey = Object.fromEntries(existing.map(m => [key(m), m]))
+        const fdIds = new Set(matchesData.map(m => m.external_id))
+
+        for (const fresh of matchesData) {
+          const stale = byKey[key(fresh)]
+          // Не чіпаємо, якщо такий id уже є в базі під іншим рядком
+          if (!stale || fdIds.has(stale.external_id)) continue
+          await supabase.from('matches')
+            .update({ external_id: fresh.external_id })
+            .eq('id', stale.id)
+        }
+      }
+
       const { error } = await supabase
         .from('matches')
         .upsert(matchesData, { onConflict: 'external_id' })

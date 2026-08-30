@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useToast } from './ToastProvider'
 import { markDirty, markClean } from '../lib/unsaved-guard'
+import { tn } from '../lib/team-names-uk'
 
 function StatsUrlEditor({ matchId, initialUrl }) {
   const [url, setUrl]       = useState(initialUrl ?? '')
@@ -198,7 +199,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight, is
           <div className="space-y-2 mb-2">
             <div className="flex items-center gap-2">
               {match.home_logo && <img src={match.home_logo} alt="" className="w-6 h-6 object-contain flex-shrink-0" />}
-              <span className="font-semibold text-sm text-gray-900 dark:text-white">{match.home_team}</span>
+              <span className="font-semibold text-sm text-gray-900 dark:text-white">{tn(match.home_team)}</span>
             </div>
             <div className="flex justify-center">
               <div className="bg-gray-100 dark:bg-gray-800 px-4 py-1.5 rounded-lg font-bold text-xl text-gray-900 dark:text-white">
@@ -207,14 +208,14 @@ export default function MatchCard({ match, userPrediction, userId, highlight, is
             </div>
             <div className="flex items-center gap-2">
               {match.away_logo && <img src={match.away_logo} alt="" className="w-6 h-6 object-contain flex-shrink-0" />}
-              <span className="font-semibold text-sm text-gray-900 dark:text-white">{match.away_team}</span>
+              <span className="font-semibold text-sm text-gray-900 dark:text-white">{tn(match.away_team)}</span>
             </div>
           </div>
         ) : (
           <div className="mb-2">
             <div className="flex items-center gap-2">
               {match.home_logo && <img src={match.home_logo} alt="" className="w-6 h-6 object-contain flex-shrink-0" />}
-              <span className="font-semibold text-sm text-gray-900 dark:text-white flex-1 min-w-0">{match.home_team}</span>
+              <span className="font-semibold text-sm text-gray-900 dark:text-white flex-1 min-w-0">{tn(match.home_team)}</span>
               <input
                 type="number" inputMode="numeric" min="0" max="9" value={home}
                 onChange={e => {
@@ -233,7 +234,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight, is
             </div>
             <div className="flex items-center gap-2">
               {match.away_logo && <img src={match.away_logo} alt="" className="w-6 h-6 object-contain flex-shrink-0" />}
-              <span className="font-semibold text-sm text-gray-900 dark:text-white flex-1 min-w-0">{match.away_team}</span>
+              <span className="font-semibold text-sm text-gray-900 dark:text-white flex-1 min-w-0">{tn(match.away_team)}</span>
               <input
                 ref={mobileAwayRef}
                 type="number" inputMode="numeric" min="0" max="9" value={away}
@@ -274,7 +275,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight, is
         <div className="flex items-center gap-3">
           {/* Home: name right-aligned, logo at right edge */}
           <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
-            <span className="font-semibold text-gray-900 dark:text-white text-sm text-right truncate">{match.home_team}</span>
+            <span className="font-semibold text-gray-900 dark:text-white text-sm text-right truncate">{tn(match.home_team)}</span>
             {match.home_logo && <img src={match.home_logo} alt="" className="w-7 h-5 object-contain flex-shrink-0" />}
           </div>
 
@@ -315,7 +316,7 @@ export default function MatchCard({ match, userPrediction, userId, highlight, is
           {/* Away: logo at left edge, name left-aligned */}
           <div className="flex-1 flex items-center gap-1.5 min-w-0">
             {match.away_logo && <img src={match.away_logo} alt="" className="w-7 h-5 object-contain flex-shrink-0" />}
-            <span className="font-semibold text-gray-900 dark:text-white text-sm truncate">{match.away_team}</span>
+            <span className="font-semibold text-gray-900 dark:text-white text-sm truncate">{tn(match.away_team)}</span>
           </div>
         </div>
 

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
 import { getLiveStatus, getGameTime } from '../../../lib/liveStatus'
+import { tn } from '../../../lib/team-names-uk'
 
 function statusCls(v) {
   if (v === 'good')            return 'bg-green-500/10 text-green-600 dark:text-green-400'
@@ -215,8 +216,8 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                       {match.away_logo ? <img src={match.away_logo} alt="" className="w-5 h-5 object-contain" /> : <div className="w-5 h-5" />}
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.home_team}</span>
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.away_team}</span>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{tn(match.home_team)}</span>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{tn(match.away_team)}</span>
                     </div>
                     {(match.home_score != null && match.away_score != null) && (
                       <span className="text-lg font-bold tabular-nums text-red-500 dark:text-red-400 flex-shrink-0">
@@ -231,7 +232,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                   <span className="text-xs text-gray-400 dark:text-gray-500 w-24 flex-shrink-0" suppressHydrationWarning>{dateStr}, {timeStr}</span>
 
                   <div className="flex items-center gap-1.5 w-[35%] justify-end min-w-0">
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white truncate text-right">{match.home_team}</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white truncate text-right">{tn(match.home_team)}</span>
                     {match.home_logo && <img src={match.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
                   </div>
 
@@ -254,7 +255,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
 
                   <div className="flex items-center gap-1.5 w-[35%] justify-start min-w-0">
                     {match.away_logo && <img src={match.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{match.away_team}</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{tn(match.away_team)}</span>
                   </div>
 
                   <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 flex items-center gap-2">

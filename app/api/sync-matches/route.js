@@ -149,26 +149,42 @@ export async function GET(request) {
         .select('id, external_id, home_team, away_team, kickoff_at, home_logo, away_logo')
         .eq('tournament_id', tournament.id)
 
-      const key = m => `${m.home_team}|${m.away_team}|${m.kickoff_at.slice(0, 10)}`
-      const byKey = Object.fromEntries((existing ?? []).map(m => [key(m), m]))
+      // Зіставляти за точною назвою не можна: одне джерело дає «Club Brugge»,
+      // інше — «Club Brugge KV». Тому ключ — дата матчу, а команди звіряємо
+      // за нормалізованою назвою з допуском на префікс/суфікс (FC, KV, CF…).
+      const norm = s => (s ?? '').toLowerCase()
+        .replace(/ø/g, 'o').replace(/ł/g, 'l').replace(/š/g, 's').replace(/ß/g, 'ss')
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]/g, '')
+      const sameTeam = (a, b) => {
+        const x = norm(a), y = norm(b)
+        if (!x || !y) return false
+        return x === y || (x.length >= 4 && y.length >= 4 && (x.includes(y) || y.includes(x)))
+      }
+      const sameFixture = (a, b) =>
+        a.kickoff_at.slice(0, 10) === b.kickoff_at.slice(0, 10) &&
+        sameTeam(a.home_team, b.home_team) && sameTeam(a.away_team, b.away_team)
+
+      const findExisting = fresh => (existing ?? []).find(m => sameFixture(m, fresh))
 
       if (existing?.length) {
         const fdIds = new Set(matchesData.map(m => m.external_id))
         for (const fresh of matchesData) {
-          const stale = byKey[key(fresh)]
+          const stale = findExisting(fresh)
           // Перепідключаємо лише синтетичні id (≥ 2e9) і лише якщо такого
           // справжнього id ще немає в базі під іншим рядком
           if (!stale || stale.external_id < 2_000_000_000 || fdIds.has(stale.external_id)) continue
           await supabase.from('matches')
             .update({ external_id: fresh.external_id })
             .eq('id', stale.id)
+          stale.external_id = fresh.external_id
         }
       }
 
       // Емблеми, вже збережені в базі, мають пріоритет над fd.org: у нього
       // подекуди застарілі версії (напр. старий щит Ліверпуля замість чинного).
       for (const fresh of matchesData) {
-        const known = byKey[key(fresh)]
+        const known = findExisting(fresh)
         if (known?.home_logo) fresh.home_logo = known.home_logo
         if (known?.away_logo) fresh.away_logo = known.away_logo
       }

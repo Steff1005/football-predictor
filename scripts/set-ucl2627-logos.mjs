@@ -19,7 +19,9 @@ const COMPARE = process.argv.includes('--compare')
 // Клуби, де емблема fd.org застаріла → беремо з ESPN.
 // Додавати сюди лише після візуальної перевірки обох варіантів (--compare).
 const PREFER_ESPN = new Set([
-  'Liverpool FC',   // fd.org: старий щит «You'll Never Walk Alone»; чинна — пташка L.F.C.
+  'Liverpool FC',                 // fd.org: старий щит «You'll Never Walk Alone»; чинна — пташка L.F.C.
+  'Sporting Clube de Portugal',   // чинна — зелений щит із левом і «SCP»
+  'Sabah FK',                     // чинна — рожево-чорний щит із совою
 ])
 
 const sb = createClient(

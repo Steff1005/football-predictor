@@ -24,6 +24,13 @@ const PREFER_ESPN = new Set([
   'Sabah FK',                     // чинна — рожево-чорний щит із совою
 ])
 
+// Клуби, де застаріли ОБИДВА джерела — емблему тримаємо у власному сховищі.
+const CUSTOM = {
+  // Viking FK змінив емблему у 2020: бордово-золота замість яскраво-червоної.
+  // І fd.org, і ESPN досі віддають стару.
+  'Viking FK': 'https://ewzuvgxkftoivmzruuaj.supabase.co/storage/v1/object/public/club-crests/viking-2020.png',
+}
+
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -94,13 +101,16 @@ const logoFor = {}
 const missing = []
 for (const t of teams) {
   const fd = fdLogoFor(t), es = espnLogoFor(t)
-  const pick = PREFER_ESPN.has(t) ? (es ?? fd) : (fd ?? es)
+  const pick = CUSTOM[t] ?? (PREFER_ESPN.has(t) ? (es ?? fd) : (fd ?? es))
   if (!pick) missing.push(t)
   logoFor[t] = pick
 }
 if (missing.length) throw new Error('без емблеми: ' + missing.join(', '))
 
-console.log(`команд: ${teams.length} | з ESPN: ${teams.filter(t => PREFER_ESPN.has(t)).length} | решта з fd.org`)
+console.log(`команд: ${teams.length}`
+  + ` | власні: ${teams.filter(t => CUSTOM[t]).length}`
+  + ` | ESPN: ${teams.filter(t => !CUSTOM[t] && PREFER_ESPN.has(t)).length}`
+  + ` | решта з fd.org`)
 if (DRY) { console.log('--dry: у базу не пишемо'); process.exit(0) }
 
 let updated = 0

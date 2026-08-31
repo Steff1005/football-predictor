@@ -126,49 +126,47 @@ export default async function TournamentPage({ params, searchParams }) {
   const liveMatches      = allMatches.filter(m => m.status === 'live' || (new Date(m.kickoff_at) < now && m.status !== 'finished'))
   const liveMatchIds     = liveMatches.map(m => m.id)
 
-  // Current user's predictions (for matches tab progress bar)
-  let userPredictions = {}
-  if (userId) {
-    const { data: preds } = await supabase
-      .from('predictions').select('*').eq('user_id', userId)
-    preds?.forEach(p => { userPredictions[p.match_id] = p })
-  }
-
   // Fix #5: only fetch calcPreds when needed (not for matches/live tabs)
   const needCalcPreds = !['matches', 'live'].includes(tab)
-
-  let calcPreds = []
-  if (needCalcPreds && matchIds.length > 0) {
-    calcPreds = await fetchAllRows((from, to) =>
-      supabase
-        .from('predictions')
-        .select('user_id, match_id, predicted_home, predicted_away, points, points_exact, points_result')
-        .in('match_id', matchIds)
-        .not('points', 'is', null)
-        .range(from, to)
-    )
-  }
-
-  // Live match predictions (visible to all while match is ongoing)
-  let livePreds = []
-  if (liveMatchIds.length > 0) {
-    const { data } = await supabase
-      .from('predictions')
-      .select('user_id, match_id, predicted_home, predicted_away')
-      .in('match_id', liveMatchIds)
-    livePreds = data ?? []
-  }
-
-  // Upcoming predictions (to surface late joiners in standings)
   const upcomingMatchIds = allMatches.filter(m => new Date(m.kickoff_at) > now).map(m => m.id)
-  let upcomingPreds = []
-  if (upcomingMatchIds.length > 0) {
-    const { data } = await supabase
-      .from('predictions')
-      .select('user_id, match_id, predicted_home, predicted_away')
-      .in('match_id', upcomingMatchIds)
-    upcomingPreds = data ?? []
-  }
+
+  // Ці чотири вибірки не залежать одна від одної — виконуємо їх паралельно.
+  // Послідовно вони коштували чотири окремі поїздки до бази (~150 мс кожна
+  // з мобільного), паралельно — одну.
+  const [ownPreds, calcPreds, livePreds, upcomingPreds] = await Promise.all([
+    // Прогнози поточного користувача (прогрес-бар на вкладці «Матчі»)
+    userId
+      ? supabase.from('predictions').select('*').eq('user_id', userId).then(r => r.data ?? [])
+      : Promise.resolve([]),
+
+    needCalcPreds && matchIds.length > 0
+      ? fetchAllRows((from, to) =>
+          supabase
+            .from('predictions')
+            .select('user_id, match_id, predicted_home, predicted_away, points, points_exact, points_result')
+            .in('match_id', matchIds)
+            .not('points', 'is', null)
+            .range(from, to)
+        )
+      : Promise.resolve([]),
+
+    // Прогнози на матчі, що тривають (видимі всім під час гри)
+    liveMatchIds.length > 0
+      ? supabase.from('predictions')
+          .select('user_id, match_id, predicted_home, predicted_away')
+          .in('match_id', liveMatchIds).then(r => r.data ?? [])
+      : Promise.resolve([]),
+
+    // Прогнози на майбутні матчі (щоб у таблиці з'являлися ті, хто приєднався пізніше)
+    upcomingMatchIds.length > 0
+      ? supabase.from('predictions')
+          .select('user_id, match_id, predicted_home, predicted_away')
+          .in('match_id', upcomingMatchIds).then(r => r.data ?? [])
+      : Promise.resolve([]),
+  ])
+
+  const userPredictions = {}
+  ownPreds.forEach(p => { userPredictions[p.match_id] = p })
 
   // Profiles for everyone who has predictions
   const allUserIds = [...new Set([

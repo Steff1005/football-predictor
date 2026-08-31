@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { tn } from '../lib/team-names-uk'
+import { translateTeam } from '../lib/team-translations'
 
 function dotCls(pts) {
   if (pts === 4) return 'bg-yellow-400'
@@ -49,7 +49,7 @@ function Tooltip({ entry, anchorRect }) {
     >
       <div className="bg-gray-900 dark:bg-gray-950 text-white rounded-xl shadow-2xl border border-white/10 px-3 py-2.5 w-44">
         <div className="text-xs font-semibold text-white mb-1.5 leading-snug">
-          {tn(entry.home)} — {tn(entry.away)}
+          {translateTeam(entry.home)} — {translateTeam(entry.away)}
         </div>
         <div className="flex items-center justify-between text-xs mb-0.5">
           <span className="text-gray-400">⚽ Рахунок</span>

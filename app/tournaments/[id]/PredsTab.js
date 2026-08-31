@@ -3,7 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import PredictionBadge from '../../../components/PredictionBadge'
 import { groupAndSortMatches } from '../../../lib/round-sort'
-import { tn } from '../../../lib/team-names-uk'
+import { translateTeam } from '../../../lib/team-translations'
 
 function displayName(profile) {
   return [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || '—'
@@ -149,8 +149,8 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
 
                   {/* Team names — flex-1 column, aligned with player names */}
                   <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight truncate">{tn(match.home_team)}</span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight truncate">{tn(match.away_team)}</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight truncate">{translateTeam(match.home_team)}</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white leading-tight truncate">{translateTeam(match.away_team)}</span>
                   </div>
 
                   {/* Match score — styled chip to stand out from player predictions */}
@@ -171,7 +171,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                 <span className="text-xs text-gray-400 dark:text-gray-500 w-20 flex-shrink-0" suppressHydrationWarning>{dateStr}</span>
 
                 <div className="flex items-center gap-1.5 w-[38%] justify-end min-w-0">
-                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate text-right">{tn(match.home_team)}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate text-right">{translateTeam(match.home_team)}</span>
                   {match.home_logo && <img src={match.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
                 </div>
 
@@ -181,7 +181,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
 
                 <div className="flex items-center gap-1.5 w-[38%] justify-start min-w-0">
                   {match.away_logo && <img src={match.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
-                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{tn(match.away_team)}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{translateTeam(match.away_team)}</span>
                 </div>
 
                 <Chevron open={isOpen} />

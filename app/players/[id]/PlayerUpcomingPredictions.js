@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { getRoundLabel } from '../../../lib/round-sort'
 import { formatMatchy } from '../../../lib/formatters'
-import { tn } from '../../../lib/team-names-uk'
+import { translateTeam } from '../../../lib/team-translations'
 
 const PAGE_SIZE = 20
 
@@ -40,13 +40,13 @@ export default function PlayerUpcomingPredictions({ items, isOwn }) {
 
               <div className="flex items-center gap-2 mb-3">
                 <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
-                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate text-right">{tn(m.home_team)}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate text-right">{translateTeam(m.home_team)}</span>
                   {m.home_logo && <img src={m.home_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
                 </div>
                 <span className="text-gray-400 dark:text-gray-500 text-xs flex-shrink-0">vs</span>
                 <div className="flex items-center gap-1.5 flex-1 justify-start min-w-0">
                   {m.away_logo && <img src={m.away_logo} alt="" className="w-5 h-5 object-contain flex-shrink-0" />}
-                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{tn(m.away_team)}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{translateTeam(m.away_team)}</span>
                 </div>
               </div>
 

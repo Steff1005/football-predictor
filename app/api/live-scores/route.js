@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { calcPredictions } from '../../../lib/calc-predictions'
+import { pickEspnEvent } from '@/lib/match-espn'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -7,19 +8,38 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 )
 
+// Стрічка ESPN для кожної ліги. Раніше тут був жорстко зашитий `fifa.world`,
+// тож після ЧС лайв узагалі не знаходив матчів — Ліга чемпіонів показувала
+// лише те, що встиг записати крон синхронізації.
+const ESPN_SLUG = {
+  WC:  'fifa.world',
+  CL:  'uefa.champions',
+  EC:  'uefa.euro',
+  PL:  'eng.1',
+  PD:  'esp.1',
+  BL1: 'ger.1',
+  SA:  'ita.1',
+  FL1: 'fra.1',
+}
+
 // Fetch ESPN scores — live and recently finished
-async function fetchEspnScores() {
+async function fetchEspnScores(slugs) {
   try {
     // Fetch general scoreboard (today's matches) — includes live and recently finished
     const now = new Date()
     const today = now.toISOString().slice(0, 10).replace(/-/g, '')
-    const [resLive, resDate] = await Promise.all([
-      fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard', { next: { revalidate: 0 } }),
-      fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${today}`, { next: { revalidate: 0 } }),
+    const jobs = slugs.flatMap(slug => [
+      { slug, url: `https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard` },
+      { slug, url: `https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${today}` },
     ])
+    const responses = await Promise.all(jobs.map(j => fetch(j.url, { next: { revalidate: 0 } })))
     const events = []
-    if (resLive.ok)  { const d = await resLive.json();  events.push(...(d.events ?? [])) }
-    if (resDate.ok)  { const d = await resDate.json();  events.push(...(d.events ?? [])) }
+    for (let i = 0; i < responses.length; i++) {
+      if (!responses[i].ok) continue
+      const d = await responses[i].json()
+      // Запам'ятовуємо лігу — вона потрібна, щоб дотягнути деталі матчу (голи)
+      for (const e of d.events ?? []) events.push({ ...e, __slug: jobs[i].slug })
+    }
 
     // Store as array per kickoff minute — two matches can start simultaneously (group stage)
     const map = {} // kickoff ISO minute → Array<{ homeName, awayName, home, away, clock, halftime, finished }>
@@ -62,6 +82,7 @@ async function fetchEspnScores() {
         finished: isFinished,
         pastRegulation,
         eventId:  event.id,
+        slug:     event.__slug,
       })
     }
     return map
@@ -72,10 +93,10 @@ async function fetchEspnScores() {
 
 // Regulation-time score (incl. stoppage time) for a match that went to ET/pens.
 // Tally goals whose clock base minute is ≤ 90: "90'+4'" (stoppage) counts, "103'" (ET) doesn't.
-async function regulationScore(eventId, homeTeam, awayTeam) {
+async function regulationScore(eventId, homeTeam, awayTeam, slug = 'fifa.world') {
   try {
     const res = await fetch(
-      `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${eventId}`,
+      `https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/summary?event=${eventId}`,
       { next: { revalidate: 0 } }
     )
     if (!res.ok) return null
@@ -124,8 +145,17 @@ export async function GET(request) {
   const { data: matches, error } = await query
   if (error) return Response.json({ error: error.message }, { status: 500 })
 
+  // Стрічки ESPN — лише для ліг, чиї матчі зараз у вибірці
+  const tids = [...new Set((matches ?? []).map(m => m.tournament_id))]
+  const { data: tours } = tids.length
+    ? await supabase.from('tournaments').select('id, league_id').in('id', tids)
+    : { data: [] }
+  const slugs = [...new Set((tours ?? [])
+    .map(t => ESPN_SLUG[t.league_id])
+    .filter(Boolean))]
+
   // Enrich with ESPN live data
-  const espn = await fetchEspnScores()
+  const espn = slugs.length ? await fetchEspnScores(slugs) : {}
 
   const enriched = []
   const toFinish = []
@@ -135,17 +165,10 @@ export async function GET(request) {
     const candidates = espn[key]
     if (!candidates?.length) return null
     if (candidates.length === 1) return candidates[0]
-    // Multiple matches at same kickoff time — pick by team name similarity
-    const norm = s => (s ?? '').toLowerCase().replace(/[^a-zа-яіїєё]/gi, '')
-    const homeNorm = norm(m.home_team)
-    const awayNorm = norm(m.away_team)
-    let best = null, bestScore = -1
-    for (const c of candidates) {
-      const score = (homeNorm.includes(norm(c.homeName)) || norm(c.homeName).includes(homeNorm) ? 1 : 0)
-                  + (awayNorm.includes(norm(c.awayName)) || norm(c.awayName).includes(awayNorm) ? 1 : 0)
-      if (score > bestScore) { bestScore = score; best = c }
-    }
-    return best
+    // Кілька матчів у ту саму хвилину — обираємо за назвами команд.
+    // Раніше тут повертався «перший-ліпший» кандидат навіть без жодного збігу
+    // (bestScore стартував з −1), через що рахунок міг протекти в чужий матч.
+    return pickEspnEvent(candidates, m)
   }
 
   for (const m of matches ?? []) {
@@ -155,7 +178,7 @@ export async function GET(request) {
     } else if (espnM.pastRegulation) {
       // Match went to extra time / penalties — for this game only the 90' result counts.
       // Lock the regulation score (incl. stoppage time) from key events and finalize now.
-      const reg = await regulationScore(espnM.eventId, m.home_team, m.away_team)
+      const reg = await regulationScore(espnM.eventId, m.home_team, m.away_team, espnM.slug)
       if (reg) toFinish.push({ id: m.id, home_score: reg.home, away_score: reg.away })
       // Couldn't resolve key events yet — keep showing live (sync-matches will finalize via regularTime)
       else enriched.push({ ...m, status: 'live', clock: 'ET' })

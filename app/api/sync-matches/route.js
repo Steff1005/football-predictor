@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { calcPredictions } from '@/lib/calc-predictions'
+import { pickEspnEvent, sameTeam } from '@/lib/match-espn'
 
 // Postponed/cancelled matches that football-data.org never marks as FINISHED
 const BLOCKED_EXTERNAL_IDS = new Set([554770, 554771, 554775])
@@ -20,9 +21,11 @@ const ESPN_SLUG = {
   2015: 'fra.1',            // Ligue 1
 }
 
-// Fetch ESPN scoreboard for today + yesterday (to catch recently finished matches)
+// Fetch ESPN scoreboard for today + yesterday (to catch recently finished matches).
+// Значення — МАСИВ подій на цю хвилину: у ЛЧ до 6 матчів стартують одночасно,
+// і раніше вони затирали одне одного (лишався рахунок останнього для всіх).
 async function fetchEspnMap(slug) {
-  const map = {} // "YYYY-MM-DDTHH:MM" → { home, away, status }
+  const map = {} // "YYYY-MM-DDTHH:MM" → [{ home, away, finished, live, homeName, awayName }]
   const dates = []
   const now = new Date()
   for (let d = -1; d <= 0; d++) {
@@ -51,12 +54,14 @@ async function fetchEspnMap(slug) {
         if (!homeC || !awayC) continue
         const key    = comp.date?.slice(0, 16) // "2026-06-11T19:00"
         if (!key) continue
-        map[key] = {
+        ;(map[key] = map[key] ?? []).push({
           home:     parseInt(homeC.score ?? '0', 10),
           away:     parseInt(awayC.score ?? '0', 10),
           finished: isFin,
           live:     isLive,
-        }
+          homeName: homeC.team?.displayName ?? homeC.team?.name ?? '',
+          awayName: awayC.team?.displayName ?? awayC.team?.name ?? '',
+        })
       }
     } catch { /* ignore per-date failures */ }
   }
@@ -100,7 +105,12 @@ export async function GET(request) {
       // ── Step 3: merge & upsert ────────────────────────────────────────────
       const matchesData = fdMatches.map(m => {
         const kickoffKey = new Date(m.utcDate).toISOString().slice(0, 16)
-        const espn       = espnMap[kickoffKey]
+        // Серед подій цієї хвилини обираємо свою за назвами команд.
+        // Без збігу — null: краще лишити рахунок з fd.org, ніж узяти чужий.
+        const espn       = pickEspnEvent(espnMap[kickoffKey], {
+          home_team: m.homeTeam.name,
+          away_team: m.awayTeam.name,
+        })
 
         // Score = regulation time only (90'), excluding extra time and penalties.
         // fd.org's `fullTime` lumps in ET + shootout for knockout games (e.g. a
@@ -151,17 +161,8 @@ export async function GET(request) {
         .eq('tournament_id', tournament.id)
 
       // Зіставляти за точною назвою не можна: одне джерело дає «Club Brugge»,
-      // інше — «Club Brugge KV». Тому ключ — дата матчу, а команди звіряємо
-      // за нормалізованою назвою з допуском на префікс/суфікс (FC, KV, CF…).
-      const norm = s => (s ?? '').toLowerCase()
-        .replace(/ø/g, 'o').replace(/ł/g, 'l').replace(/š/g, 's').replace(/ß/g, 'ss')
-        .normalize('NFD').replace(/[̀-ͯ]/g, '')
-        .replace(/[^a-z0-9]/g, '')
-      const sameTeam = (a, b) => {
-        const x = norm(a), y = norm(b)
-        if (!x || !y) return false
-        return x === y || (x.length >= 4 && y.length >= 4 && (x.includes(y) || y.includes(x)))
-      }
+      // інше — «Club Brugge KV». Ключ — дата матчу, команди звіряємо через
+      // спільний sameTeam (lib/match-espn.js).
       const sameFixture = (a, b) =>
         a.kickoff_at.slice(0, 10) === b.kickoff_at.slice(0, 10) &&
         sameTeam(a.home_team, b.home_team) && sameTeam(a.away_team, b.away_team)

@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import CLUB_CRESTS from '../../lib/club-crests'
-import TOURNAMENT_LOGOS from '../../lib/tournament-logos'
+import TOURNAMENT_LOGOS, { tournamentLogo } from '../../lib/tournament-logos'
 import { translateTeam } from '../../lib/team-translations'
 import LiveAllClient from './LiveAllClient'
 
@@ -75,7 +75,7 @@ export default async function LivePage() {
         return {
           tournament: {
             ...tournament,
-            logo: TOURNAMENT_LOGOS[tournament.league_id] ?? null,
+            logo: tournamentLogo(tournament) ?? null,
           },
           matches,
           predsByMatch,

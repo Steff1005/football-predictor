@@ -1,5 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
-import TOURNAMENT_LOGOS from '../../lib/tournament-logos'
+import TOURNAMENT_LOGOS, { tournamentLogo, TOURNAMENT_LOGOS_BY_ID } from '../../lib/tournament-logos'
 import { compareTournamentStandings } from '../../lib/rankings'
 import HallOfFamePageClient from '../../components/HallOfFamePageClient'
 
@@ -137,7 +137,7 @@ export default async function HallOfFamePage() {
       <HallOfFamePageClient
         enriched={withResults}
         medalRows={medalRows}
-        tournamentLogos={TOURNAMENT_LOGOS}
+        tournamentLogos={{ ...TOURNAMENT_LOGOS, ...TOURNAMENT_LOGOS_BY_ID }}
       />
     </div>
   )

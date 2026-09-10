@@ -8,7 +8,7 @@ import PredsTab from './PredsTab'
 import StandingsTab from './StandingsTab'
 import RoundsTab from './RoundsTab'
 import CLUB_CRESTS from '../../../lib/club-crests'
-import TOURNAMENT_LOGOS from '../../../lib/tournament-logos'
+import TOURNAMENT_LOGOS, { tournamentLogo } from '../../../lib/tournament-logos'
 import { groupAndSortMatches } from '../../../lib/round-sort'
 import { translateTeam } from '../../../lib/team-translations'
 import { simulateProbabilities, SAMPLES_FAST, remainingMatchCount } from '../../../lib/probability'
@@ -380,8 +380,8 @@ export default async function TournamentPage({ params, searchParams }) {
       </div>
 
       <div className="flex items-center gap-3 mb-6">
-        {TOURNAMENT_LOGOS[tournament.league_id] && (
-          <img src={TOURNAMENT_LOGOS[tournament.league_id]} alt="" className="w-10 h-10 object-contain flex-shrink-0" />
+        {tournamentLogo(tournament) && (
+          <img src={tournamentLogo(tournament)} alt="" className="w-10 h-10 object-contain flex-shrink-0" />
         )}
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{tournament.name}</h1>
       </div>

@@ -56,8 +56,8 @@ export default function HallOfFamePageClient({ enriched, medalRows, tournamentLo
             return (
               <div key={tournament.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
                 <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-white/10">
-                  {tournamentLogos[tournament.league_id] && (
-                    <img src={tournamentLogos[tournament.league_id]} alt="" className="w-10 h-10 object-contain flex-shrink-0" />
+                  {(tournamentLogos[tournament.id] ?? tournamentLogos[tournament.league_id]) && (
+                    <img src={tournamentLogos[tournament.id] ?? tournamentLogos[tournament.league_id]} alt="" className="w-10 h-10 object-contain flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
                     <h2 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg leading-tight truncate">{tournament.name}</h2>

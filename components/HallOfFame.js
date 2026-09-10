@@ -59,8 +59,8 @@ export default function HallOfFame({ finishedTournaments, hofRankings, medalRows
               <div key={t.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
                 <a href={`/tournaments/${t.id}`}
                   className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
-                  {tournamentLogos[t.league_id]
-                    ? <img src={tournamentLogos[t.league_id]} alt="" className="w-5 h-5 object-contain flex-shrink-0" />
+                  {tournamentLogos[t.id] ?? tournamentLogos[t.league_id]
+                    ? <img src={tournamentLogos[t.id] ?? tournamentLogos[t.league_id]} alt="" className="w-5 h-5 object-contain flex-shrink-0" />
                     : <span className="text-base leading-none">{leagueEmoji[t.league_id] ?? '🏆'}</span>
                   }
                   <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex-1 group-hover:text-green-500 dark:group-hover:text-green-400 transition-colors truncate">{t.name}</span>

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
-import TOURNAMENT_LOGOS from '../lib/tournament-logos'
+import TOURNAMENT_LOGOS, { tournamentLogo, TOURNAMENT_LOGOS_BY_ID } from '../lib/tournament-logos'
 import { formatBaly, formatPrognazy } from '../lib/formatters'
 import AnalyticsTable from '../components/AnalyticsTable'
 import RealtimeRefresher from '../components/RealtimeRefresher'
@@ -502,8 +502,8 @@ export default async function HomePage() {
                     <a key={t.id} href={`/tournaments/${t.id}`}
                       className="block bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800 hover:border-green-500/50 transition-colors group">
                       <div className="flex items-center gap-3 mb-3">
-                        {TOURNAMENT_LOGOS[t.league_id]
-                          ? <img src={TOURNAMENT_LOGOS[t.league_id]} alt="" className="w-8 h-8 object-contain flex-shrink-0" />
+                        {tournamentLogo(t)
+                          ? <img src={tournamentLogo(t)} alt="" className="w-8 h-8 object-contain flex-shrink-0" />
                           : <span className="text-2xl leading-none">{LEAGUE_EMOJI[t.league_id] ?? '🏆'}</span>
                         }
                         <div className="font-semibold text-sm text-gray-900 dark:text-white group-hover:text-green-500 dark:group-hover:text-green-400 transition-colors leading-tight">{t.name}</div>
@@ -557,7 +557,7 @@ export default async function HomePage() {
             finishedTournaments={finishedTournaments}
             hofRankings={hofRankings}
             medalRows={medalRows}
-            tournamentLogos={TOURNAMENT_LOGOS}
+            tournamentLogos={{ ...TOURNAMENT_LOGOS, ...TOURNAMENT_LOGOS_BY_ID }}
             leagueEmoji={LEAGUE_EMOJI}
           />
 

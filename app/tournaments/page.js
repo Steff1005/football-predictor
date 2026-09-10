@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
-import TOURNAMENT_LOGOS from '../../lib/tournament-logos'
+import TOURNAMENT_LOGOS, { tournamentLogo } from '../../lib/tournament-logos'
 import { pluralMatches } from '../../lib/formatters'
 import { SEASON_LABEL, LEAGUES } from '../../lib/season-2026'
 
@@ -75,8 +75,8 @@ export default async function TournamentsPage() {
         }`}>
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0 w-20 h-20 flex items-center justify-center">
-            {TOURNAMENT_LOGOS[tournament.league_id]
-              ? <img src={TOURNAMENT_LOGOS[tournament.league_id]} alt="" className="w-20 h-20 object-contain" />
+            {tournamentLogo(tournament)
+              ? <img src={tournamentLogo(tournament)} alt="" className="w-20 h-20 object-contain" />
               : <span className="text-4xl">{LEAGUE_EMOJI[tournament.league_id] ?? '🏆'}</span>
             }
           </div>

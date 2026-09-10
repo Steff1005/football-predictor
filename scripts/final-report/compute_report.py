@@ -23,12 +23,12 @@ def canon(s):
     return s
 
 # Два акаунти «Олександр Шляхтюк» — розрізняємо як на сайті: (В) і (П)
-USERNAME_SUFFIX = {'oleksandr_shliakhtiuk': ' (В)', 'oleksandr_shliakhtiuk2106': ' (П)'}
+# Плашки-розрізнювачі — (В)/(П)/(Г) — тепер зберігаються у самому профілі,
+# тож імена беремо як є (раніше скрипт додавав їх сам за username)
 def pname(uid):
     p = profiles[uid]
     full = ' '.join(x for x in [p.get('first_name'), p.get('last_name')] if x)
-    name = re.sub(r'\s+', ' ', full).strip() or p.get('username') or 'Гравець'
-    return name + USERNAME_SUFFIX.get(p.get('username'), '')
+    return re.sub(r'\s+', ' ', full).strip() or p.get('username') or 'Гравець'
 
 # ── odds CSV join ─────────────────────────────────────────────
 odds = {}

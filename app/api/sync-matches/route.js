@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { calcPredictions } from '@/lib/calc-predictions'
 
 // Postponed/cancelled matches that football-data.org never marks as FINISHED
 const BLOCKED_EXTERNAL_IDS = new Set([554770, 554771, 554775])
@@ -146,7 +147,7 @@ export async function GET(request) {
       // Прогнози прив'язані до matches.id (uuid), тож заміна id їх не зачіпає.
       const { data: existing } = await supabase
         .from('matches')
-        .select('id, external_id, home_team, away_team, kickoff_at, home_logo, away_logo')
+        .select('id, external_id, home_team, away_team, kickoff_at, home_logo, away_logo, status, home_score, away_score')
         .eq('tournament_id', tournament.id)
 
       // Зіставляти за точною назвою не можна: одне джерело дає «Club Brugge»,
@@ -189,9 +190,33 @@ export async function GET(request) {
         if (known?.away_logo) fresh.away_logo = known.away_logo
       }
 
+      // ── Крок 3.6: рахунок завершеного матчу змінився → перерахувати бали ──
+      // calcPredictions навмисно ідемпотентний (бере лише is_calculated=false),
+      // тож сам він виправлений рахунок не підхопить: бали лишаться нарахованими
+      // проти старого. Скидаємо позначку — і нижче рахуємо заново.
+      const rescore = []
+      for (const fresh of matchesData) {
+        const known = findExisting(fresh)
+        if (!known || known.status !== 'finished') continue
+        if (fresh.home_score == null || fresh.away_score == null) continue
+        if (known.home_score === fresh.home_score && known.away_score === fresh.away_score) continue
+        rescore.push({ id: known.id, home: fresh.home_score, away: fresh.away_score })
+      }
+
       const { error } = await supabase
         .from('matches')
         .upsert(matchesData, { onConflict: 'external_id' })
+
+      for (const r of rescore) {
+        await supabase.from('predictions')
+          .update({ is_calculated: false }).eq('match_id', r.id)
+        const { data: full } = await supabase.from('matches').select('*').eq('id', r.id).single()
+        if (full) {
+          await calcPredictions(supabase, full, r.home, r.away)
+            .catch(e => errors.push(`rescore ${r.id}: ${e.message}`))
+        }
+      }
+      if (rescore.length) console.log(`sync-matches: перераховано матчів зі зміненим рахунком: ${rescore.length}`)
 
       if (!error) totalSynced += matchesData.length
       else errors.push(error.message)

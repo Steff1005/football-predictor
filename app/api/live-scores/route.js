@@ -33,13 +33,27 @@ async function fetchEspnScores(slugs) {
       { slug, url: `https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${today}` },
     ])
     const responses = await Promise.all(jobs.map(j => fetch(j.url, { next: { revalidate: 0 } })))
-    const events = []
+    // Та сама подія приходить з обох стрічок (загальної й датованої), і вони
+    // бувають неоднаково свіжі. Раніше в масив ішли обидві, а вибір брав першу —
+    // тобто могла «застигнути» хвилина з відсталої стрічки. Лишаємо свіжішу.
+    const progress = e => {
+      const st = e.competitions?.[0]?.status
+      if (st?.type?.completed) return 1e6
+      const [base, extra] = String(st?.displayClock ?? '').split('+').map(x => parseInt(x, 10))
+      return (Number.isFinite(base) ? base : 0) * 100 + (Number.isFinite(extra) ? extra : 0)
+    }
+    const byId = new Map()
     for (let i = 0; i < responses.length; i++) {
       if (!responses[i].ok) continue
       const d = await responses[i].json()
-      // Запам'ятовуємо лігу — вона потрібна, щоб дотягнути деталі матчу (голи)
-      for (const e of d.events ?? []) events.push({ ...e, __slug: jobs[i].slug })
+      for (const e of d.events ?? []) {
+        // Запам'ятовуємо лігу — вона потрібна, щоб дотягнути деталі матчу (голи)
+        const ev = { ...e, __slug: jobs[i].slug }
+        const prev = byId.get(e.id)
+        if (!prev || progress(ev) > progress(prev)) byId.set(e.id, ev)
+      }
     }
+    const events = [...byId.values()]
 
     // Store as array per kickoff minute — two matches can start simultaneously (group stage)
     const map = {} // kickoff ISO minute → Array<{ homeName, awayName, home, away, clock, halftime, finished }>

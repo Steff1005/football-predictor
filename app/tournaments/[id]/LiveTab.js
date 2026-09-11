@@ -96,13 +96,16 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
       const res = await fetch(`/api/live-scores?tournamentId=${tournamentId}`)
       if (!res.ok) return
       const { matches: fresh } = await res.json()
-      if (!fresh?.length) return
+      if (!Array.isArray(fresh)) return
       const freshMap = Object.fromEntries(fresh.map(m => [m.id, m]))
+      // Матч, якого немає у відповіді, уже завершено й фіналізовано — прибираємо.
+      // Раніше він лишався в списку із застиглою хвилиною (напр. «84'»), хоча
+      // бали вже нараховані й сповіщення надіслане. Порожня відповідь теж валідна:
+      // означає, що завершились усі.
       setMatches(prev =>
-        prev.map(m => freshMap[m.id]
-          ? { ...m, home_score: freshMap[m.id].home_score, away_score: freshMap[m.id].away_score, status: freshMap[m.id].status, clock: freshMap[m.id].clock, halftime: freshMap[m.id].halftime }
-          : m
-        )
+        prev
+          .filter(m => freshMap[m.id])
+          .map(m => ({ ...m, home_score: freshMap[m.id].home_score, away_score: freshMap[m.id].away_score, status: freshMap[m.id].status, clock: freshMap[m.id].clock, halftime: freshMap[m.id].halftime }))
       )
       setUpdated(Date.now())
     } catch { /* network error — keep showing last known data */ }
@@ -130,10 +133,12 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
         filter: `tournament_id=eq.${tournamentId}`,
       }, ({ new: m }) => {
         setMatches(prev =>
-          prev.map(p => p.id === m.id
-            ? { ...p, home_score: m.home_score, away_score: m.away_score, status: m.status }
-            : p
-          )
+          m.status === 'finished'
+            ? prev.filter(p => p.id !== m.id)   // завершився — з лайву прибираємо
+            : prev.map(p => p.id === m.id
+                ? { ...p, home_score: m.home_score, away_score: m.away_score, status: m.status }
+                : p
+              )
         )
         setUpdated(Date.now())
       })
@@ -146,7 +151,8 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
     return () => clearInterval(id)
   }, [lastUpdated])
 
-  if (!liveMatches.length) {
+  // Поточний список, а не початковий: матчі прибираються щойно завершаться
+  if (!matches.length) {
     return (
       <div className="text-center py-20 text-gray-400 dark:text-gray-600">
         <p className="text-5xl mb-4">🟡</p>
@@ -280,7 +286,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                     <div className="sm:hidden flex items-center px-4 py-2 gap-3">
                       <Link href={`/players/${pred.user_id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-75 transition-opacity">
                         <PlayerAvatar profile={profile} />
-                        <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">{displayName(profile)}</span>
+                        <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 line-clamp-2 break-words leading-tight">{displayName(profile)}</span>
                       </Link>
                       <span className={`font-mono text-sm font-semibold flex-shrink-0 tabular-nums ${isWinning ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
                         {pred.predicted_home}:{pred.predicted_away}
@@ -292,7 +298,7 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
                     <div className="hidden sm:flex items-center px-4 py-2 gap-3">
                       <Link href={`/players/${pred.user_id}`} className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-75 transition-opacity">
                         <PlayerAvatar profile={profile} />
-                        <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">{displayName(profile)}</span>
+                        <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 line-clamp-2 break-words leading-tight">{displayName(profile)}</span>
                       </Link>
                       <span className={`rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold flex-shrink-0 min-w-[2.75rem] text-center transition-colors ${
                         isWinning

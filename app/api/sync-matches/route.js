@@ -189,6 +189,17 @@ export async function GET(request) {
         const known = findExisting(fresh)
         if (known?.home_logo) fresh.home_logo = known.home_logo
         if (known?.away_logo) fresh.away_logo = known.away_logo
+
+        // Завершений матч назад у «live» не повертаємо. fd.org відстає на кілька
+        // хвилин: live-scores уже фіналізував матч за ESPN, а крон бачив IN_PLAY
+        // і перемикав статус назад (Ман Юнайтед — Сабах, 10.09: finished 23:53 →
+        // live 23:55 → finished 23:56). Легітимне виправлення рахунку від fd.org
+        // приходить зі статусом FINISHED і сюди не потрапляє.
+        if (known?.status === 'finished' && fresh.status !== 'finished') {
+          fresh.status = 'finished'
+          fresh.home_score = known.home_score
+          fresh.away_score = known.away_score
+        }
       }
 
       // ── Крок 3.6: рахунок завершеного матчу змінився → перерахувати бали ──

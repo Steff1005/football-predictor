@@ -204,7 +204,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                       <div className="sm:hidden flex items-center px-4 py-2 gap-3">
                         <Link href={`/players/${pred.user_id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-75 transition-opacity">
                           <PlayerAvatar profile={profile} />
-                          <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
+                          <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 line-clamp-2 break-words leading-tight">
                             {displayName(profile)}
                           </span>
                         </Link>
@@ -225,7 +225,7 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
                       <div className="hidden sm:flex items-center px-4 py-2 gap-3">
                         <Link href={`/players/${pred.user_id}`} className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-75 transition-opacity">
                           <PlayerAvatar profile={profile} />
-                          <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">
+                          <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 line-clamp-2 break-words leading-tight">
                             {displayName(profile)}
                           </span>
                         </Link>

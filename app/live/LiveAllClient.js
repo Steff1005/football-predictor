@@ -165,7 +165,7 @@ function MatchCard({ match, preds, profileMap }) {
             <div className="sm:hidden flex items-center px-4 py-2 gap-3">
               <Link href={`/players/${pred.user_id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-75 transition-opacity">
                 <PlayerAvatar profile={profile} />
-                <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">{displayName(profile)}</span>
+                <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 line-clamp-2 break-words leading-tight">{displayName(profile)}</span>
               </Link>
               <span className={`font-mono text-sm font-semibold flex-shrink-0 tabular-nums ${isWinning ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
                 {pred.predicted_home}:{pred.predicted_away}
@@ -177,7 +177,7 @@ function MatchCard({ match, preds, profileMap }) {
             <div className="hidden sm:flex items-center px-4 py-2 gap-3">
               <Link href={`/players/${pred.user_id}`} className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-75 transition-opacity">
                 <PlayerAvatar profile={profile} />
-                <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 truncate">{displayName(profile)}</span>
+                <span className="text-sm text-gray-900 dark:text-white flex-1 min-w-0 line-clamp-2 break-words leading-tight">{displayName(profile)}</span>
               </Link>
               <span className={`rounded-md px-2.5 py-0.5 font-mono text-sm font-semibold flex-shrink-0 min-w-[2.75rem] text-center transition-colors ${
                 isWinning
@@ -210,16 +210,19 @@ export default function LiveAllClient({ groups: initialGroups }) {
       const res = await fetch('/api/live-scores?all=true')
       if (!res.ok) return
       const { matches: fresh } = await res.json()
-      if (!fresh?.length) return
+      if (!Array.isArray(fresh)) return
       const freshMap = Object.fromEntries(fresh.map(m => [m.id, m]))
-      setGroups(prev => prev.map(g => ({
-        ...g,
-        matches: g.matches.map(m =>
-          freshMap[m.id]
-            ? { ...m, home_score: freshMap[m.id].home_score, away_score: freshMap[m.id].away_score, status: freshMap[m.id].status, clock: freshMap[m.id].clock, halftime: freshMap[m.id].halftime }
-            : m
-        ),
-      })))
+      // Матч, якого немає у відповіді, уже завершено — прибираємо його (і порожні
+      // групи турнірів). Раніше він «зависав» у лайві із застиглою хвилиною.
+      setGroups(prev => prev
+        .map(g => ({
+          ...g,
+          matches: g.matches
+            .filter(m => freshMap[m.id])
+            .map(m => ({ ...m, home_score: freshMap[m.id].home_score, away_score: freshMap[m.id].away_score, status: freshMap[m.id].status, clock: freshMap[m.id].clock, halftime: freshMap[m.id].halftime })),
+        }))
+        .filter(g => g.matches.length > 0)
+      )
       setUpdated(Date.now())
     } catch { /* keep last known data */ }
     finally { setRefreshing(false) }
@@ -267,6 +270,13 @@ export default function LiveAllClient({ groups: initialGroups }) {
           </button>
         </div>
       </div>
+
+      {/* Усі матчі завершились під час перегляду — групи прибрані опитуванням */}
+      {!groups.length && (
+        <div className="text-center py-20 text-gray-400 dark:text-gray-600">
+          <p className="text-sm">Зараз немає матчів, що тривають</p>
+        </div>
+      )}
 
       <div className="space-y-6">
         {groups.map(({ tournament, matches, predsByMatch, profileMap }) => (

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import PredictionBadge from '../../../components/PredictionBadge'
 import { groupAndSortMatches } from '../../../lib/round-sort'
+import { scoreDistance, compareScores, compareNames } from '../../../lib/pred-sort'
 import { translateTeam } from '../../../lib/team-translations'
 
 function displayName(profile) {
@@ -106,14 +107,11 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
           .sort((a, b) => {
             const byPoints = (b.points ?? -1) - (a.points ?? -1)
             if (byPoints) return byPoints
-            // при рівних балах — ближчий прогноз вище (сума відхилень по голах)
-            if (match.home_score != null && match.away_score != null) {
-              const dist = p => Math.abs(p.predicted_home - match.home_score)
-                              + Math.abs(p.predicted_away - match.away_score)
-              const byDist = dist(a) - dist(b)
-              if (byDist) return byDist
-            }
-            return displayName(profileMap[a.user_id]).localeCompare(displayName(profileMap[b.user_id]), 'uk')
+            // при рівних балах — ближчий прогноз вище, однакові рахунки поруч
+            return scoreDistance(a, match.home_score, match.away_score)
+                 - scoreDistance(b, match.home_score, match.away_score)
+              || compareScores(a, b)
+              || compareNames(a, b, p => displayName(profileMap[p.user_id]))
           })
 
         const isOpen  = !!openMatches[match.id]

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
 import { getLiveStatus, getGameTime } from '../../../lib/liveStatus'
+import { scoreDistance, compareScores, compareNames } from '../../../lib/pred-sort'
 import { translateTeam } from '../../../lib/team-translations'
 
 function statusCls(v) {
@@ -189,11 +190,11 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
               const aPct = getLiveStatus(a.predicted_home - match.home_score, a.predicted_away - match.away_score, elapsed, fullTime).pct ?? -1
               const bPct = getLiveStatus(b.predicted_home - match.home_score, b.predicted_away - match.away_score, elapsed, fullTime).pct ?? -1
               if (bPct !== aPct) return bPct - aPct
-              // рівні шанси (напр. усі «Неможливо») — ближчий до поточного рахунку вище
-              const dist = p => Math.abs(p.predicted_home - match.home_score)
-                              + Math.abs(p.predicted_away - match.away_score)
-              return dist(a) - dist(b)
-                || displayName(profileMap[a.user_id]).localeCompare(displayName(profileMap[b.user_id]), 'uk')
+              // рівні шанси — ближчий до табло вище, однакові рахунки поруч
+              return scoreDistance(a, match.home_score, match.away_score)
+                   - scoreDistance(b, match.home_score, match.away_score)
+                || compareScores(a, b)
+                || compareNames(a, b, p => displayName(profileMap[p.user_id]))
             })
           const kickoff = new Date(match.kickoff_at)
           const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', timeZone: 'Europe/Kyiv' })

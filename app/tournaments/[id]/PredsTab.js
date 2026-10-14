@@ -103,7 +103,18 @@ export default function PredsTab({ finishedMatches, predsByMatch, profileMap, de
       {activeMatches.map(match => {
         const preds = (predsByMatch[match.id] ?? [])
           .filter(p => profileMap[p.user_id])
-          .sort((a, b) => (b.points ?? -1) - (a.points ?? -1))
+          .sort((a, b) => {
+            const byPoints = (b.points ?? -1) - (a.points ?? -1)
+            if (byPoints) return byPoints
+            // при рівних балах — ближчий прогноз вище (сума відхилень по голах)
+            if (match.home_score != null && match.away_score != null) {
+              const dist = p => Math.abs(p.predicted_home - match.home_score)
+                              + Math.abs(p.predicted_away - match.away_score)
+              const byDist = dist(a) - dist(b)
+              if (byDist) return byDist
+            }
+            return displayName(profileMap[a.user_id]).localeCompare(displayName(profileMap[b.user_id]), 'uk')
+          })
 
         const isOpen  = !!openMatches[match.id]
         const kickoff = new Date(match.kickoff_at)

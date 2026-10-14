@@ -188,7 +188,12 @@ export default function LiveTab({ liveMatches, predsByMatch, profileMap, tournam
               if (match.home_score == null || match.away_score == null) return 0
               const aPct = getLiveStatus(a.predicted_home - match.home_score, a.predicted_away - match.away_score, elapsed, fullTime).pct ?? -1
               const bPct = getLiveStatus(b.predicted_home - match.home_score, b.predicted_away - match.away_score, elapsed, fullTime).pct ?? -1
-              return bPct - aPct
+              if (bPct !== aPct) return bPct - aPct
+              // рівні шанси (напр. усі «Неможливо») — ближчий до поточного рахунку вище
+              const dist = p => Math.abs(p.predicted_home - match.home_score)
+                              + Math.abs(p.predicted_away - match.away_score)
+              return dist(a) - dist(b)
+                || displayName(profileMap[a.user_id]).localeCompare(displayName(profileMap[b.user_id]), 'uk')
             })
           const kickoff = new Date(match.kickoff_at)
           const dateStr = kickoff.toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', timeZone: 'Europe/Kyiv' })
